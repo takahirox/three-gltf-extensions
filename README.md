@@ -1,1 +1,1 @@
-# three-gltf-extensions
+# three-gltf-plugins
