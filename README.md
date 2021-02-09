@@ -20,7 +20,7 @@ This project provides you Three.js glTF loader/extension plugins even for such e
 
 ## Compatible Three.js revision
 
-&gt;= r126dev (with [#21207](https://github.com/mrdoob/three.js/pull/21207))
+&gt;= r126dev
 
 ## How to use
 
