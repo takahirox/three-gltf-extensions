@@ -10,7 +10,7 @@ This project provides you Three.js glTF loader/extension plugins even for such e
 
 ## Goals
 
-* Provide reusablity and easiness to use even for the the extensions the spec of which isn't great fit
+* Provide reusablity and easiness to use even for the the extensions the spec of which isn't great fit to Three.js API or structure
 * Allow early trial of glTF extensions the spec of which is not finalized yet
 * Send feedback to Three.js glTF loader/exporter plugin system APIs
 
