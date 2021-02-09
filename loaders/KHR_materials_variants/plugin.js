@@ -6,7 +6,7 @@
 export default class GLTFMaterialsVariantsExtension {
   constructor(parser) {
     this.parser = parser;
-	this.name = 'KHR_materials_variants';
+    this.name = 'KHR_materials_variants';
   }
 
   afterRoot(gltf) {
@@ -14,7 +14,7 @@ export default class GLTFMaterialsVariantsExtension {
     const json = parser.json;
     const name = this.name;
 
-	if (!json.extensions || !json.extensions[name]) {
+    if (!json.extensions || !json.extensions[name]) {
       return null;
     }
 
@@ -39,7 +39,6 @@ export default class GLTFMaterialsVariantsExtension {
         }
 
         const nodeDef = json.nodes[association.index];
-
         const meshIndex = nodeDef.mesh;
 
         if (meshIndex === undefined) {
@@ -88,10 +87,10 @@ export default class GLTFMaterialsVariantsExtension {
         if (!object.isMesh || !object.userData.gltfExtensions ||
          !object.userData.gltfExtensions[name]) {
           return;
-	    }
+        }
 
         const meshVariantDef = object.userData.gltfExtensions[name];
-		const mapping = meshVariantDef.mappings.find(mapping => mapping.variants.includes(variantIndex));
+        const mapping = meshVariantDef.mappings.find(mapping => mapping.variants.includes(variantIndex));
 
         if (mapping) {
           if (!object.userData.originalMaterial) {
