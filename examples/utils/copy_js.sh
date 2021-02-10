@@ -12,6 +12,7 @@ cp ${three_dir}/build/three.module.js ./three/
 for file in \
   'loaders/GLTFLoader.js' \
   'loaders/RGBELoader.js' \
+  'exporters/GLTFExporter.js' \
   'controls/OrbitControls.js'
 do
   echo [log] copy ${three_dir}/examples/jsm/${file}

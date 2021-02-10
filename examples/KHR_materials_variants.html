@@ -1,135 +1,151 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<title>Three.js glTF loader/exporter KHR_materials_variants extension</title>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-		<link type="text/css" rel="stylesheet" href="main.css">
-	</head>
+  <head>
+    <title>Three.js glTF loader/exporter KHR_materials_variants extension</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <link type="text/css" rel="stylesheet" href="main.css">
+  </head>
 
-	<body>
-		<div id="info">
-			<a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> - GLTFLoader + <a href="https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Khronos/KHR_materials_variants" target="_blank" rel="noopener">KHR_materials_variants</a> extension<br />
-			<a href="https://github.com/pushmatrix/glTF-Sample-Models/tree/master/2.0/MaterialsVariantsShoe" target="_blank" rel="noopener">Materials Variants Shoe</a> by
-			<a href="https://github.com/Shopify" target="_blank" rel="noopener">Shopify, Inc</a><br />
-			<a href="https://hdrihaven.com/hdri/?h=royal_esplanade" target="_blank" rel="noopener">Royal Esplanade</a> by <a href="https://hdrihaven.com/" target="_blank" rel="noopener">HDRI Haven</a>
-		</div>
+  <body>
+    <div id="info">
+      <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> - GLTFLoader + <a href="https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Khronos/KHR_materials_variants" target="_blank" rel="noopener">KHR_materials_variants</a> extension<br />
+      <a href="https://github.com/pushmatrix/glTF-Sample-Models/tree/master/2.0/MaterialsVariantsShoe" target="_blank" rel="noopener">Materials Variants Shoe</a> by
+      <a href="https://github.com/Shopify" target="_blank" rel="noopener">Shopify, Inc</a><br />
+      <a href="https://hdrihaven.com/hdri/?h=royal_esplanade" target="_blank" rel="noopener">Royal Esplanade</a> by <a href="https://hdrihaven.com/" target="_blank" rel="noopener">HDRI Haven</a>
+    </div>
 
-		<script type="module">
+    <script type="module">
+      import * as THREE from './three/three.module.js';
 
-			import * as THREE from './three/three.module.js';
+      import {GUI} from './libs/dat.gui.module.js';
+      import {OrbitControls} from './three/controls/OrbitControls.js';
+      import {GLTFLoader} from './three/loaders/GLTFLoader.js';
+      import {GLTFExporter} from './three/exporters/GLTFExporter.js';
+      import {RGBELoader} from './three/loaders/RGBELoader.js';
 
-			import { GUI } from './libs/dat.gui.module.js';
-			import { OrbitControls } from './three/controls/OrbitControls.js';
-			import { GLTFLoader } from './three/loaders/GLTFLoader.js';
-			import { RGBELoader } from './three/loaders/RGBELoader.js';
+      import GLTFMaterialsVariantsExtension from '../loaders/KHR_materials_variants/KHR_materials_variants.js';
+      import GLTFExporterMaterialsVariantsExtension from '../exporters/KHR_materials_variants/KHR_materials_variants_exporter.js';
 
-			import GLTFMaterialsVariantsExtension from '../loaders/KHR_materials_variants/plugin.js';
+      import {saveArrayBuffer} from './utils/save.js';
 
-			let camera, scene, renderer;
-			let gui;
+      let camera, scene, renderer;
+      let gui;
 
-			const state = { variant: 'midnight' };
+      const init = () => {
+        const container = document.createElement('div');
+        document.body.appendChild(container);
 
-			init();
-			render();
+        camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.25, 20);
+        camera.position.set(2.5, 1.5, 3.0);
 
-			function init() {
+        scene = new THREE.Scene();
 
-				const container = document.createElement( 'div' );
-				document.body.appendChild( container );
+        new RGBELoader()
+          .setDataType(THREE.UnsignedByteType)
+          .setPath('./assets/textures/equirectangular/')
+          .load('quarry_01_1k.hdr', texture => {
+            const envMap = pmremGenerator.fromEquirectangular(texture).texture;
 
-				camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.25, 20 );
-				camera.position.set( 2.5, 1.5, 3.0 );
+            scene.background = envMap;
+            scene.environment = envMap;
 
-				scene = new THREE.Scene();
+            texture.dispose();
+            pmremGenerator.dispose();
 
-				new RGBELoader()
-					.setDataType( THREE.UnsignedByteType )
-					.setPath( './assets/textures/equirectangular/' )
-					.load( 'quarry_01_1k.hdr', function ( texture ) {
+            render();
 
-						const envMap = pmremGenerator.fromEquirectangular( texture ).texture;
+            // model
 
-						scene.background = envMap;
-						scene.environment = envMap;
+            const loader = new GLTFLoader().setPath('assets/gltf/MaterialsVariantsShoe/glTF/');
+            loader.register(parser => new GLTFMaterialsVariantsExtension(parser));
+            loader.load('MaterialsVariantsShoe.gltf', gltf => {
+              gltf.scene.scale.set(10.0, 10.0, 10.0);
+              scene.add(gltf.scene);
+              initExporter(gltf);
 
-						texture.dispose();
-						pmremGenerator.dispose();
+              // GUI
+              gui = new GUI();
+              const variantsCtrl = gui.add({variant: 'midnight'}, 'variant', gltf.userData.variants).name('Variant');
+              variantsCtrl.onChange(async value => {
+                await gltf.functions.selectVariantByName(scene, value);
+                render();
+              });
+              render();
+            });
+          });
 
-						render();
+        const initExporter = gltf => {
+          const exporter = new GLTFExporter();
+          exporter.register(writer => new GLTFExporterMaterialsVariantsExtension(writer));
 
-						// model
+          const saveButton = document.createElement('button');
+          saveButton.innerText = 'Save glb';
+          saveButton.addEventListener('click', async () => {
+            saveButton.disabled = true;
+            await gltf.functions.ensureLoadVariants(scene);
+            exporter.parse(scene, async result => {
+              saveArrayBuffer(result, 'scene.glb');
+              saveButton.disabled = false;
+            }, {binary: true});
+          });
 
-						const loader = new GLTFLoader().setPath( 'assets/gltf/MaterialsVariantsShoe/glTF/' );
-						loader.register( function ( parser ) {
+          const dumpButton = document.createElement('button');
+          dumpButton.innerText = 'Dump to console';
+          dumpButton.addEventListener('click', async () => {
+            dumpButton.disabled = true;
+            await gltf.functions.ensureLoadVariants(scene);
+            exporter.parse(scene, result => {
+              console.log(result);
+              dumpButton.disabled = false;
+            });
+          });
 
-							return new GLTFMaterialsVariantsExtension( parser );
+          const buttons = document.createElement('div');
+          buttons.style.position = 'fixed';
+          buttons.style.bottom = 0;
 
-						} );
-						loader.load( 'MaterialsVariantsShoe.gltf', function ( gltf ) {
+          buttons.appendChild(saveButton);
+          buttons.appendChild(dumpButton);
+          container.appendChild(buttons);
+        };
 
-							gltf.scene.scale.set( 10.0, 10.0, 10.0 );
+        renderer = new THREE.WebGLRenderer({antialias: true});
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1;
+        renderer.outputEncoding = THREE.sRGBEncoding;
+        container.appendChild(renderer.domElement);
 
-							scene.add( gltf.scene );
+        const pmremGenerator = new THREE.PMREMGenerator(renderer);
+        pmremGenerator.compileEquirectangularShader();
 
-							// GUI
-							gui = new GUI();
-							const variantsCtrl = gui.add( state, 'variant', gltf.userData.variants ).name( 'Variant' );
-							variantsCtrl.onChange( async value => {
-			
-								await gltf.functions.selectVariant( scene, value );
-								render();
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.addEventListener('change', render); // use if there is no animation loop
+        controls.minDistance = 2;
+        controls.maxDistance = 10;
+        controls.target.set(0, 0.5, - 0.2);
+        controls.update();
 
-							} );
-							render();
+        window.addEventListener('resize', onWindowResize);
+      };
 
-						} );
+      const onWindowResize = () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        render();
+      };
 
-					} );
+      //
 
-				renderer = new THREE.WebGLRenderer( { antialias: true } );
-				renderer.setPixelRatio( window.devicePixelRatio );
-				renderer.setSize( window.innerWidth, window.innerHeight );
-				renderer.toneMapping = THREE.ACESFilmicToneMapping;
-				renderer.toneMappingExposure = 1;
-				renderer.outputEncoding = THREE.sRGBEncoding;
-				container.appendChild( renderer.domElement );
+      const render = () => {
+        renderer.render(scene, camera);
+      };
 
-				const pmremGenerator = new THREE.PMREMGenerator( renderer );
-				pmremGenerator.compileEquirectangularShader();
-
-				const controls = new OrbitControls( camera, renderer.domElement );
-				controls.addEventListener( 'change', render ); // use if there is no animation loop
-				controls.minDistance = 2;
-				controls.maxDistance = 10;
-				controls.target.set( 0, 0.5, - 0.2 );
-				controls.update();
-
-				window.addEventListener( 'resize', onWindowResize );
-
-			}
-
-			function onWindowResize() {
-
-				camera.aspect = window.innerWidth / window.innerHeight;
-				camera.updateProjectionMatrix();
-
-				renderer.setSize( window.innerWidth, window.innerHeight );
-
-				render();
-
-			}
-
-			//
-
-			function render() {
-
-				renderer.render( scene, camera );
-
-			}
-
-		</script>
-
-	</body>
+      init();
+      render();
+    </script>
+  </body>
 </html>

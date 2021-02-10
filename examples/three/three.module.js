@@ -2414,6 +2414,7 @@ class WebGLRenderTarget extends EventDispatcher {
 
 		this.width = width;
 		this.height = height;
+		this.depth = 1;
 
 		this.scissor = new Vector4( 0, 0, width, height );
 		this.scissorTest = false;
@@ -2427,6 +2428,7 @@ class WebGLRenderTarget extends EventDispatcher {
 		this.texture.image = {};
 		this.texture.image.width = width;
 		this.texture.image.height = height;
+		this.texture.image.depth = 1;
 
 		this.texture.generateMipmaps = options.generateMipmaps !== undefined ? options.generateMipmaps : false;
 		this.texture.minFilter = options.minFilter !== undefined ? options.minFilter : LinearFilter;
@@ -2437,15 +2439,29 @@ class WebGLRenderTarget extends EventDispatcher {
 
 	}
 
-	setSize( width, height ) {
+	setTexture( texture ) {
 
-		if ( this.width !== width || this.height !== height ) {
+		texture.image = {
+			width: this.width,
+			height: this.height,
+			depth: this.depth
+		};
+
+		this.texture = texture;
+
+	}
+
+	setSize( width, height, depth = 1 ) {
+
+		if ( this.width !== width || this.height !== height || this.depth !== depth ) {
 
 			this.width = width;
 			this.height = height;
+			this.depth = depth;
 
 			this.texture.image.width = width;
 			this.texture.image.height = height;
+			this.texture.image.depth = depth;
 
 			this.dispose();
 
@@ -2466,6 +2482,7 @@ class WebGLRenderTarget extends EventDispatcher {
 
 		this.width = source.width;
 		this.height = source.height;
+		this.depth = source.depth;
 
 		this.viewport.copy( source.viewport );
 
@@ -6780,9 +6797,9 @@ Object3D.prototype = Object.assign( Object.create( EventDispatcher.prototype ), 
 
 		object.applyMatrix4( _m1$1 );
 
-		object.updateWorldMatrix( false, false );
-
 		this.add( object );
+
+		object.updateWorldMatrix( false, true );
 
 		return this;
 
@@ -7838,7 +7855,6 @@ function Material() {
 
 	this.blending = NormalBlending;
 	this.side = FrontSide;
-	this.flatShading = false;
 	this.vertexColors = false;
 
 	this.opacity = 1;
@@ -8086,7 +8102,6 @@ Material.prototype = Object.assign( Object.create( EventDispatcher.prototype ), 
 		if ( this.sizeAttenuation !== undefined ) data.sizeAttenuation = this.sizeAttenuation;
 
 		if ( this.blending !== NormalBlending ) data.blending = this.blending;
-		if ( this.flatShading === true ) data.flatShading = this.flatShading;
 		if ( this.side !== FrontSide ) data.side = this.side;
 		if ( this.vertexColors ) data.vertexColors = true;
 
@@ -8131,6 +8146,8 @@ Material.prototype = Object.assign( Object.create( EventDispatcher.prototype ), 
 		if ( this.morphTargets === true ) data.morphTargets = true;
 		if ( this.morphNormals === true ) data.morphNormals = true;
 		if ( this.skinning === true ) data.skinning = true;
+
+		if ( this.flatShading === true ) data.flatShading = this.flatShading;
 
 		if ( this.visible === false ) data.visible = false;
 
@@ -8184,7 +8201,6 @@ Material.prototype = Object.assign( Object.create( EventDispatcher.prototype ), 
 
 		this.blending = source.blending;
 		this.side = source.side;
-		this.flatShading = source.flatShading;
 		this.vertexColors = source.vertexColors;
 
 		this.opacity = source.opacity;
@@ -11016,7 +11032,7 @@ function checkBufferGeometryIntersection( object, material, raycaster, ray, posi
 
 	}
 
-	if ( object.isSkinnedMesh ) {
+	if ( object.isSkinnedMesh && material.skinning ) {
 
 		object.boneTransform( a, _vA );
 		object.boneTransform( b, _vB );
@@ -12597,7 +12613,7 @@ var beginnormal_vertex = "vec3 objectNormal = vec3( normal );\n#ifdef USE_TANGEN
 
 var bsdfs = "vec2 integrateSpecularBRDF( const in float dotNV, const in float roughness ) {\n\tconst vec4 c0 = vec4( - 1, - 0.0275, - 0.572, 0.022 );\n\tconst vec4 c1 = vec4( 1, 0.0425, 1.04, - 0.04 );\n\tvec4 r = roughness * c0 + c1;\n\tfloat a004 = min( r.x * r.x, exp2( - 9.28 * dotNV ) ) * r.x + r.y;\n\treturn vec2( -1.04, 1.04 ) * a004 + r.zw;\n}\nfloat punctualLightIntensityToIrradianceFactor( const in float lightDistance, const in float cutoffDistance, const in float decayExponent ) {\n#if defined ( PHYSICALLY_CORRECT_LIGHTS )\n\tfloat distanceFalloff = 1.0 / max( pow( lightDistance, decayExponent ), 0.01 );\n\tif( cutoffDistance > 0.0 ) {\n\t\tdistanceFalloff *= pow2( saturate( 1.0 - pow4( lightDistance / cutoffDistance ) ) );\n\t}\n\treturn distanceFalloff;\n#else\n\tif( cutoffDistance > 0.0 && decayExponent > 0.0 ) {\n\t\treturn pow( saturate( -lightDistance / cutoffDistance + 1.0 ), decayExponent );\n\t}\n\treturn 1.0;\n#endif\n}\nvec3 BRDF_Diffuse_Lambert( const in vec3 diffuseColor ) {\n\treturn RECIPROCAL_PI * diffuseColor;\n}\nvec3 F_Schlick( const in vec3 specularColor, const in float dotLH ) {\n\tfloat fresnel = exp2( ( -5.55473 * dotLH - 6.98316 ) * dotLH );\n\treturn ( 1.0 - specularColor ) * fresnel + specularColor;\n}\nvec3 F_Schlick_RoughnessDependent( const in vec3 F0, const in float dotNV, const in float roughness ) {\n\tfloat fresnel = exp2( ( -5.55473 * dotNV - 6.98316 ) * dotNV );\n\tvec3 Fr = max( vec3( 1.0 - roughness ), F0 ) - F0;\n\treturn Fr * fresnel + F0;\n}\nfloat G_GGX_Smith( const in float alpha, const in float dotNL, const in float dotNV ) {\n\tfloat a2 = pow2( alpha );\n\tfloat gl = dotNL + sqrt( a2 + ( 1.0 - a2 ) * pow2( dotNL ) );\n\tfloat gv = dotNV + sqrt( a2 + ( 1.0 - a2 ) * pow2( dotNV ) );\n\treturn 1.0 / ( gl * gv );\n}\nfloat G_GGX_SmithCorrelated( const in float alpha, const in float dotNL, const in float dotNV ) {\n\tfloat a2 = pow2( alpha );\n\tfloat gv = dotNL * sqrt( a2 + ( 1.0 - a2 ) * pow2( dotNV ) );\n\tfloat gl = dotNV * sqrt( a2 + ( 1.0 - a2 ) * pow2( dotNL ) );\n\treturn 0.5 / max( gv + gl, EPSILON );\n}\nfloat D_GGX( const in float alpha, const in float dotNH ) {\n\tfloat a2 = pow2( alpha );\n\tfloat denom = pow2( dotNH ) * ( a2 - 1.0 ) + 1.0;\n\treturn RECIPROCAL_PI * a2 / pow2( denom );\n}\nvec3 BRDF_Specular_GGX( const in IncidentLight incidentLight, const in vec3 viewDir, const in vec3 normal, const in vec3 specularColor, const in float roughness ) {\n\tfloat alpha = pow2( roughness );\n\tvec3 halfDir = normalize( incidentLight.direction + viewDir );\n\tfloat dotNL = saturate( dot( normal, incidentLight.direction ) );\n\tfloat dotNV = saturate( dot( normal, viewDir ) );\n\tfloat dotNH = saturate( dot( normal, halfDir ) );\n\tfloat dotLH = saturate( dot( incidentLight.direction, halfDir ) );\n\tvec3 F = F_Schlick( specularColor, dotLH );\n\tfloat G = G_GGX_SmithCorrelated( alpha, dotNL, dotNV );\n\tfloat D = D_GGX( alpha, dotNH );\n\treturn F * ( G * D );\n}\nvec2 LTC_Uv( const in vec3 N, const in vec3 V, const in float roughness ) {\n\tconst float LUT_SIZE = 64.0;\n\tconst float LUT_SCALE = ( LUT_SIZE - 1.0 ) / LUT_SIZE;\n\tconst float LUT_BIAS = 0.5 / LUT_SIZE;\n\tfloat dotNV = saturate( dot( N, V ) );\n\tvec2 uv = vec2( roughness, sqrt( 1.0 - dotNV ) );\n\tuv = uv * LUT_SCALE + LUT_BIAS;\n\treturn uv;\n}\nfloat LTC_ClippedSphereFormFactor( const in vec3 f ) {\n\tfloat l = length( f );\n\treturn max( ( l * l + f.z ) / ( l + 1.0 ), 0.0 );\n}\nvec3 LTC_EdgeVectorFormFactor( const in vec3 v1, const in vec3 v2 ) {\n\tfloat x = dot( v1, v2 );\n\tfloat y = abs( x );\n\tfloat a = 0.8543985 + ( 0.4965155 + 0.0145206 * y ) * y;\n\tfloat b = 3.4175940 + ( 4.1616724 + y ) * y;\n\tfloat v = a / b;\n\tfloat theta_sintheta = ( x > 0.0 ) ? v : 0.5 * inversesqrt( max( 1.0 - x * x, 1e-7 ) ) - v;\n\treturn cross( v1, v2 ) * theta_sintheta;\n}\nvec3 LTC_Evaluate( const in vec3 N, const in vec3 V, const in vec3 P, const in mat3 mInv, const in vec3 rectCoords[ 4 ] ) {\n\tvec3 v1 = rectCoords[ 1 ] - rectCoords[ 0 ];\n\tvec3 v2 = rectCoords[ 3 ] - rectCoords[ 0 ];\n\tvec3 lightNormal = cross( v1, v2 );\n\tif( dot( lightNormal, P - rectCoords[ 0 ] ) < 0.0 ) return vec3( 0.0 );\n\tvec3 T1, T2;\n\tT1 = normalize( V - N * dot( V, N ) );\n\tT2 = - cross( N, T1 );\n\tmat3 mat = mInv * transposeMat3( mat3( T1, T2, N ) );\n\tvec3 coords[ 4 ];\n\tcoords[ 0 ] = mat * ( rectCoords[ 0 ] - P );\n\tcoords[ 1 ] = mat * ( rectCoords[ 1 ] - P );\n\tcoords[ 2 ] = mat * ( rectCoords[ 2 ] - P );\n\tcoords[ 3 ] = mat * ( rectCoords[ 3 ] - P );\n\tcoords[ 0 ] = normalize( coords[ 0 ] );\n\tcoords[ 1 ] = normalize( coords[ 1 ] );\n\tcoords[ 2 ] = normalize( coords[ 2 ] );\n\tcoords[ 3 ] = normalize( coords[ 3 ] );\n\tvec3 vectorFormFactor = vec3( 0.0 );\n\tvectorFormFactor += LTC_EdgeVectorFormFactor( coords[ 0 ], coords[ 1 ] );\n\tvectorFormFactor += LTC_EdgeVectorFormFactor( coords[ 1 ], coords[ 2 ] );\n\tvectorFormFactor += LTC_EdgeVectorFormFactor( coords[ 2 ], coords[ 3 ] );\n\tvectorFormFactor += LTC_EdgeVectorFormFactor( coords[ 3 ], coords[ 0 ] );\n\tfloat result = LTC_ClippedSphereFormFactor( vectorFormFactor );\n\treturn vec3( result );\n}\nvec3 BRDF_Specular_GGX_Environment( const in vec3 viewDir, const in vec3 normal, const in vec3 specularColor, const in float roughness ) {\n\tfloat dotNV = saturate( dot( normal, viewDir ) );\n\tvec2 brdf = integrateSpecularBRDF( dotNV, roughness );\n\treturn specularColor * brdf.x + brdf.y;\n}\nvoid BRDF_Specular_Multiscattering_Environment( const in GeometricContext geometry, const in vec3 specularColor, const in float roughness, inout vec3 singleScatter, inout vec3 multiScatter ) {\n\tfloat dotNV = saturate( dot( geometry.normal, geometry.viewDir ) );\n\tvec3 F = F_Schlick_RoughnessDependent( specularColor, dotNV, roughness );\n\tvec2 brdf = integrateSpecularBRDF( dotNV, roughness );\n\tvec3 FssEss = F * brdf.x + brdf.y;\n\tfloat Ess = brdf.x + brdf.y;\n\tfloat Ems = 1.0 - Ess;\n\tvec3 Favg = specularColor + ( 1.0 - specularColor ) * 0.047619;\tvec3 Fms = FssEss * Favg / ( 1.0 - Ems * Favg );\n\tsingleScatter += FssEss;\n\tmultiScatter += Fms * Ems;\n}\nfloat G_BlinnPhong_Implicit( ) {\n\treturn 0.25;\n}\nfloat D_BlinnPhong( const in float shininess, const in float dotNH ) {\n\treturn RECIPROCAL_PI * ( shininess * 0.5 + 1.0 ) * pow( dotNH, shininess );\n}\nvec3 BRDF_Specular_BlinnPhong( const in IncidentLight incidentLight, const in GeometricContext geometry, const in vec3 specularColor, const in float shininess ) {\n\tvec3 halfDir = normalize( incidentLight.direction + geometry.viewDir );\n\tfloat dotNH = saturate( dot( geometry.normal, halfDir ) );\n\tfloat dotLH = saturate( dot( incidentLight.direction, halfDir ) );\n\tvec3 F = F_Schlick( specularColor, dotLH );\n\tfloat G = G_BlinnPhong_Implicit( );\n\tfloat D = D_BlinnPhong( shininess, dotNH );\n\treturn F * ( G * D );\n}\nfloat GGXRoughnessToBlinnExponent( const in float ggxRoughness ) {\n\treturn ( 2.0 / pow2( ggxRoughness + 0.0001 ) - 2.0 );\n}\nfloat BlinnExponentToGGXRoughness( const in float blinnExponent ) {\n\treturn sqrt( 2.0 / ( blinnExponent + 2.0 ) );\n}\n#if defined( USE_SHEEN )\nfloat D_Charlie(float roughness, float NoH) {\n\tfloat invAlpha = 1.0 / roughness;\n\tfloat cos2h = NoH * NoH;\n\tfloat sin2h = max(1.0 - cos2h, 0.0078125);\treturn (2.0 + invAlpha) * pow(sin2h, invAlpha * 0.5) / (2.0 * PI);\n}\nfloat V_Neubelt(float NoV, float NoL) {\n\treturn saturate(1.0 / (4.0 * (NoL + NoV - NoL * NoV)));\n}\nvec3 BRDF_Specular_Sheen( const in float roughness, const in vec3 L, const in GeometricContext geometry, vec3 specularColor ) {\n\tvec3 N = geometry.normal;\n\tvec3 V = geometry.viewDir;\n\tvec3 H = normalize( V + L );\n\tfloat dotNH = saturate( dot( N, H ) );\n\treturn specularColor * D_Charlie( roughness, dotNH ) * V_Neubelt( dot(N, V), dot(N, L) );\n}\n#endif";
 
-var bumpmap_pars_fragment = "#ifdef USE_BUMPMAP\n\tuniform sampler2D bumpMap;\n\tuniform float bumpScale;\n\tvec2 dHdxy_fwd() {\n\t\tvec2 dSTdx = dFdx( vUv );\n\t\tvec2 dSTdy = dFdy( vUv );\n\t\tfloat Hll = bumpScale * texture2D( bumpMap, vUv ).x;\n\t\tfloat dBx = bumpScale * texture2D( bumpMap, vUv + dSTdx ).x - Hll;\n\t\tfloat dBy = bumpScale * texture2D( bumpMap, vUv + dSTdy ).x - Hll;\n\t\treturn vec2( dBx, dBy );\n\t}\n\tvec3 perturbNormalArb( vec3 surf_pos, vec3 surf_norm, vec2 dHdxy ) {\n\t\tvec3 vSigmaX = vec3( dFdx( surf_pos.x ), dFdx( surf_pos.y ), dFdx( surf_pos.z ) );\n\t\tvec3 vSigmaY = vec3( dFdy( surf_pos.x ), dFdy( surf_pos.y ), dFdy( surf_pos.z ) );\n\t\tvec3 vN = surf_norm;\n\t\tvec3 R1 = cross( vSigmaY, vN );\n\t\tvec3 R2 = cross( vN, vSigmaX );\n\t\tfloat fDet = dot( vSigmaX, R1 );\n\t\tfDet *= ( float( gl_FrontFacing ) * 2.0 - 1.0 );\n\t\tvec3 vGrad = sign( fDet ) * ( dHdxy.x * R1 + dHdxy.y * R2 );\n\t\treturn normalize( abs( fDet ) * surf_norm - vGrad );\n\t}\n#endif";
+var bumpmap_pars_fragment = "#ifdef USE_BUMPMAP\n\tuniform sampler2D bumpMap;\n\tuniform float bumpScale;\n\tvec2 dHdxy_fwd() {\n\t\tvec2 dSTdx = dFdx( vUv );\n\t\tvec2 dSTdy = dFdy( vUv );\n\t\tfloat Hll = bumpScale * texture2D( bumpMap, vUv ).x;\n\t\tfloat dBx = bumpScale * texture2D( bumpMap, vUv + dSTdx ).x - Hll;\n\t\tfloat dBy = bumpScale * texture2D( bumpMap, vUv + dSTdy ).x - Hll;\n\t\treturn vec2( dBx, dBy );\n\t}\n\tvec3 perturbNormalArb( vec3 surf_pos, vec3 surf_norm, vec2 dHdxy, float faceDirection ) {\n\t\tvec3 vSigmaX = vec3( dFdx( surf_pos.x ), dFdx( surf_pos.y ), dFdx( surf_pos.z ) );\n\t\tvec3 vSigmaY = vec3( dFdy( surf_pos.x ), dFdy( surf_pos.y ), dFdy( surf_pos.z ) );\n\t\tvec3 vN = surf_norm;\n\t\tvec3 R1 = cross( vSigmaY, vN );\n\t\tvec3 R2 = cross( vN, vSigmaX );\n\t\tfloat fDet = dot( vSigmaX, R1 ) * faceDirection;\n\t\tvec3 vGrad = sign( fDet ) * ( dHdxy.x * R1 + dHdxy.y * R2 );\n\t\treturn normalize( abs( fDet ) * surf_norm - vGrad );\n\t}\n#endif";
 
 var clipping_planes_fragment = "#if NUM_CLIPPING_PLANES > 0\n\tvec4 plane;\n\t#pragma unroll_loop_start\n\tfor ( int i = 0; i < UNION_CLIPPING_PLANES; i ++ ) {\n\t\tplane = clippingPlanes[ i ];\n\t\tif ( dot( vClipPosition, plane.xyz ) > plane.w ) discard;\n\t}\n\t#pragma unroll_loop_end\n\t#if UNION_CLIPPING_PLANES < NUM_CLIPPING_PLANES\n\t\tbool clipped = true;\n\t\t#pragma unroll_loop_start\n\t\tfor ( int i = UNION_CLIPPING_PLANES; i < NUM_CLIPPING_PLANES; i ++ ) {\n\t\t\tplane = clippingPlanes[ i ];\n\t\t\tclipped = ( dot( vClipPosition, plane.xyz ) > plane.w ) && clipped;\n\t\t}\n\t\t#pragma unroll_loop_end\n\t\tif ( clipped ) discard;\n\t#endif\n#endif";
 
@@ -12707,15 +12723,15 @@ var morphtarget_pars_vertex = "#ifdef USE_MORPHTARGETS\n\tuniform float morphTar
 
 var morphtarget_vertex = "#ifdef USE_MORPHTARGETS\n\ttransformed *= morphTargetBaseInfluence;\n\ttransformed += morphTarget0 * morphTargetInfluences[ 0 ];\n\ttransformed += morphTarget1 * morphTargetInfluences[ 1 ];\n\ttransformed += morphTarget2 * morphTargetInfluences[ 2 ];\n\ttransformed += morphTarget3 * morphTargetInfluences[ 3 ];\n\t#ifndef USE_MORPHNORMALS\n\t\ttransformed += morphTarget4 * morphTargetInfluences[ 4 ];\n\t\ttransformed += morphTarget5 * morphTargetInfluences[ 5 ];\n\t\ttransformed += morphTarget6 * morphTargetInfluences[ 6 ];\n\t\ttransformed += morphTarget7 * morphTargetInfluences[ 7 ];\n\t#endif\n#endif";
 
-var normal_fragment_begin = "#ifdef FLAT_SHADED\n\tvec3 fdx = vec3( dFdx( vViewPosition.x ), dFdx( vViewPosition.y ), dFdx( vViewPosition.z ) );\n\tvec3 fdy = vec3( dFdy( vViewPosition.x ), dFdy( vViewPosition.y ), dFdy( vViewPosition.z ) );\n\tvec3 normal = normalize( cross( fdx, fdy ) );\n#else\n\tvec3 normal = normalize( vNormal );\n\t#ifdef DOUBLE_SIDED\n\t\tnormal = normal * ( float( gl_FrontFacing ) * 2.0 - 1.0 );\n\t#endif\n\t#ifdef USE_TANGENT\n\t\tvec3 tangent = normalize( vTangent );\n\t\tvec3 bitangent = normalize( vBitangent );\n\t\t#ifdef DOUBLE_SIDED\n\t\t\ttangent = tangent * ( float( gl_FrontFacing ) * 2.0 - 1.0 );\n\t\t\tbitangent = bitangent * ( float( gl_FrontFacing ) * 2.0 - 1.0 );\n\t\t#endif\n\t\t#if defined( TANGENTSPACE_NORMALMAP ) || defined( USE_CLEARCOAT_NORMALMAP )\n\t\t\tmat3 vTBN = mat3( tangent, bitangent, normal );\n\t\t#endif\n\t#endif\n#endif\nvec3 geometryNormal = normal;";
+var normal_fragment_begin = "float faceDirection = float( gl_FrontFacing ) * 2.0 - 1.0;\n#ifdef FLAT_SHADED\n\tvec3 fdx = vec3( dFdx( vViewPosition.x ), dFdx( vViewPosition.y ), dFdx( vViewPosition.z ) );\n\tvec3 fdy = vec3( dFdy( vViewPosition.x ), dFdy( vViewPosition.y ), dFdy( vViewPosition.z ) );\n\tvec3 normal = normalize( cross( fdx, fdy ) );\n#else\n\tvec3 normal = normalize( vNormal );\n\t#ifdef DOUBLE_SIDED\n\t\tnormal = normal * faceDirection;\n\t#endif\n\t#ifdef USE_TANGENT\n\t\tvec3 tangent = normalize( vTangent );\n\t\tvec3 bitangent = normalize( vBitangent );\n\t\t#ifdef DOUBLE_SIDED\n\t\t\ttangent = tangent * faceDirection;\n\t\t\tbitangent = bitangent * faceDirection;\n\t\t#endif\n\t\t#if defined( TANGENTSPACE_NORMALMAP ) || defined( USE_CLEARCOAT_NORMALMAP )\n\t\t\tmat3 vTBN = mat3( tangent, bitangent, normal );\n\t\t#endif\n\t#endif\n#endif\nvec3 geometryNormal = normal;";
 
-var normal_fragment_maps = "#ifdef OBJECTSPACE_NORMALMAP\n\tnormal = texture2D( normalMap, vUv ).xyz * 2.0 - 1.0;\n\t#ifdef FLIP_SIDED\n\t\tnormal = - normal;\n\t#endif\n\t#ifdef DOUBLE_SIDED\n\t\tnormal = normal * ( float( gl_FrontFacing ) * 2.0 - 1.0 );\n\t#endif\n\tnormal = normalize( normalMatrix * normal );\n#elif defined( TANGENTSPACE_NORMALMAP )\n\tvec3 mapN = texture2D( normalMap, vUv ).xyz * 2.0 - 1.0;\n\tmapN.xy *= normalScale;\n\t#ifdef USE_TANGENT\n\t\tnormal = normalize( vTBN * mapN );\n\t#else\n\t\tnormal = perturbNormal2Arb( -vViewPosition, normal, mapN );\n\t#endif\n#elif defined( USE_BUMPMAP )\n\tnormal = perturbNormalArb( -vViewPosition, normal, dHdxy_fwd() );\n#endif";
+var normal_fragment_maps = "#ifdef OBJECTSPACE_NORMALMAP\n\tnormal = texture2D( normalMap, vUv ).xyz * 2.0 - 1.0;\n\t#ifdef FLIP_SIDED\n\t\tnormal = - normal;\n\t#endif\n\t#ifdef DOUBLE_SIDED\n\t\tnormal = normal * faceDirection;\n\t#endif\n\tnormal = normalize( normalMatrix * normal );\n#elif defined( TANGENTSPACE_NORMALMAP )\n\tvec3 mapN = texture2D( normalMap, vUv ).xyz * 2.0 - 1.0;\n\tmapN.xy *= normalScale;\n\t#ifdef USE_TANGENT\n\t\tnormal = normalize( vTBN * mapN );\n\t#else\n\t\tnormal = perturbNormal2Arb( -vViewPosition, normal, mapN, faceDirection );\n\t#endif\n#elif defined( USE_BUMPMAP )\n\tnormal = perturbNormalArb( -vViewPosition, normal, dHdxy_fwd(), faceDirection );\n#endif";
 
-var normalmap_pars_fragment = "#ifdef USE_NORMALMAP\n\tuniform sampler2D normalMap;\n\tuniform vec2 normalScale;\n#endif\n#ifdef OBJECTSPACE_NORMALMAP\n\tuniform mat3 normalMatrix;\n#endif\n#if ! defined ( USE_TANGENT ) && ( defined ( TANGENTSPACE_NORMALMAP ) || defined ( USE_CLEARCOAT_NORMALMAP ) )\n\tvec3 perturbNormal2Arb( vec3 eye_pos, vec3 surf_norm, vec3 mapN ) {\n\t\tvec3 q0 = vec3( dFdx( eye_pos.x ), dFdx( eye_pos.y ), dFdx( eye_pos.z ) );\n\t\tvec3 q1 = vec3( dFdy( eye_pos.x ), dFdy( eye_pos.y ), dFdy( eye_pos.z ) );\n\t\tvec2 st0 = dFdx( vUv.st );\n\t\tvec2 st1 = dFdy( vUv.st );\n\t\tfloat scale = sign( st1.t * st0.s - st0.t * st1.s );\n\t\tvec3 S = normalize( ( q0 * st1.t - q1 * st0.t ) * scale );\n\t\tvec3 T = normalize( ( - q0 * st1.s + q1 * st0.s ) * scale );\n\t\tvec3 N = normalize( surf_norm );\n\t\tmat3 tsn = mat3( S, T, N );\n\t\tmapN.xy *= ( float( gl_FrontFacing ) * 2.0 - 1.0 );\n\t\treturn normalize( tsn * mapN );\n\t}\n#endif";
+var normalmap_pars_fragment = "#ifdef USE_NORMALMAP\n\tuniform sampler2D normalMap;\n\tuniform vec2 normalScale;\n#endif\n#ifdef OBJECTSPACE_NORMALMAP\n\tuniform mat3 normalMatrix;\n#endif\n#if ! defined ( USE_TANGENT ) && ( defined ( TANGENTSPACE_NORMALMAP ) || defined ( USE_CLEARCOAT_NORMALMAP ) )\n\tvec3 perturbNormal2Arb( vec3 eye_pos, vec3 surf_norm, vec3 mapN, float faceDirection ) {\n\t\tvec3 q0 = vec3( dFdx( eye_pos.x ), dFdx( eye_pos.y ), dFdx( eye_pos.z ) );\n\t\tvec3 q1 = vec3( dFdy( eye_pos.x ), dFdy( eye_pos.y ), dFdy( eye_pos.z ) );\n\t\tvec2 st0 = dFdx( vUv.st );\n\t\tvec2 st1 = dFdy( vUv.st );\n\t\tfloat scale = sign( st1.t * st0.s - st0.t * st1.s );\n\t\tvec3 S = normalize( ( q0 * st1.t - q1 * st0.t ) * scale );\n\t\tvec3 T = normalize( ( - q0 * st1.s + q1 * st0.s ) * scale );\n\t\tvec3 N = normalize( surf_norm );\n\t\tmat3 tsn = mat3( S, T, N );\n\t\tmapN.xy *= faceDirection;\n\t\treturn normalize( tsn * mapN );\n\t}\n#endif";
 
 var clearcoat_normal_fragment_begin = "#ifdef CLEARCOAT\n\tvec3 clearcoatNormal = geometryNormal;\n#endif";
 
-var clearcoat_normal_fragment_maps = "#ifdef USE_CLEARCOAT_NORMALMAP\n\tvec3 clearcoatMapN = texture2D( clearcoatNormalMap, vUv ).xyz * 2.0 - 1.0;\n\tclearcoatMapN.xy *= clearcoatNormalScale;\n\t#ifdef USE_TANGENT\n\t\tclearcoatNormal = normalize( vTBN * clearcoatMapN );\n\t#else\n\t\tclearcoatNormal = perturbNormal2Arb( - vViewPosition, clearcoatNormal, clearcoatMapN );\n\t#endif\n#endif";
+var clearcoat_normal_fragment_maps = "#ifdef USE_CLEARCOAT_NORMALMAP\n\tvec3 clearcoatMapN = texture2D( clearcoatNormalMap, vUv ).xyz * 2.0 - 1.0;\n\tclearcoatMapN.xy *= clearcoatNormalScale;\n\t#ifdef USE_TANGENT\n\t\tclearcoatNormal = normalize( vTBN * clearcoatMapN );\n\t#else\n\t\tclearcoatNormal = perturbNormal2Arb( - vViewPosition, clearcoatNormal, clearcoatMapN, faceDirection );\n\t#endif\n#endif";
 
 var clearcoat_pars_fragment = "#ifdef USE_CLEARCOATMAP\n\tuniform sampler2D clearcoatMap;\n#endif\n#ifdef USE_CLEARCOAT_ROUGHNESSMAP\n\tuniform sampler2D clearcoatRoughnessMap;\n#endif\n#ifdef USE_CLEARCOAT_NORMALMAP\n\tuniform sampler2D clearcoatNormalMap;\n\tuniform vec2 clearcoatNormalScale;\n#endif";
 
@@ -14356,9 +14372,9 @@ function WebGLCapabilities( gl, extensions, parameters ) {
 
 		if ( maxAnisotropy !== undefined ) return maxAnisotropy;
 
-		const extension = extensions.get( 'EXT_texture_filter_anisotropic' );
+		if ( extensions.has( 'EXT_texture_filter_anisotropic' ) === true ) {
 
-		if ( extension !== null ) {
+			const extension = extensions.get( 'EXT_texture_filter_anisotropic' );
 
 			maxAnisotropy = gl.getParameter( extension.MAX_TEXTURE_MAX_ANISOTROPY_EXT );
 
@@ -14430,7 +14446,7 @@ function WebGLCapabilities( gl, extensions, parameters ) {
 	const maxFragmentUniforms = gl.getParameter( 36349 );
 
 	const vertexTextures = maxVertexTextures > 0;
-	const floatFragmentTextures = isWebGL2 || !! extensions.get( 'OES_texture_float' );
+	const floatFragmentTextures = isWebGL2 || extensions.has( 'OES_texture_float' );
 	const floatVertexTextures = vertexTextures && floatFragmentTextures;
 
 	const maxSamples = isWebGL2 ? gl.getParameter( 36183 ) : 0;
@@ -17377,7 +17393,7 @@ function WebGLPrograms( renderer, cubemaps, extensions, capabilities, bindingSta
 			useFog: material.fog,
 			fogExp2: ( fog && fog.isFogExp2 ),
 
-			flatShading: material.flatShading,
+			flatShading: !! material.flatShading,
 
 			sizeAttenuation: material.sizeAttenuation,
 			logarithmicDepthBuffer: logarithmicDepthBuffer,
@@ -20245,8 +20261,10 @@ function WebGLTextures( _gl, extensions, state, properties, capabilities, utils,
 
 	function deallocateRenderTarget( renderTarget ) {
 
+		const texture = renderTarget.texture;
+
 		const renderTargetProperties = properties.get( renderTarget );
-		const textureProperties = properties.get( renderTarget.texture );
+		const textureProperties = properties.get( texture );
 
 		if ( ! renderTarget ) return;
 
@@ -20281,7 +20299,7 @@ function WebGLTextures( _gl, extensions, state, properties, capabilities, utils,
 
 		}
 
-		properties.remove( renderTarget.texture );
+		properties.remove( texture );
 		properties.remove( renderTarget );
 
 	}
@@ -20454,12 +20472,12 @@ function WebGLTextures( _gl, extensions, state, properties, capabilities, utils,
 
 		}
 
-		const extension = extensions.get( 'EXT_texture_filter_anisotropic' );
+		if ( extensions.has( 'EXT_texture_filter_anisotropic' ) === true ) {
 
-		if ( extension ) {
+			const extension = extensions.get( 'EXT_texture_filter_anisotropic' );
 
-			if ( texture.type === FloatType && extensions.get( 'OES_texture_float_linear' ) === null ) return;
-			if ( texture.type === HalfFloatType && ( isWebGL2 || extensions.get( 'OES_texture_half_float_linear' ) ) === null ) return;
+			if ( texture.type === FloatType && extensions.has( 'OES_texture_float_linear' ) === false ) return; // verify extension for WebGL 1 and WebGL 2
+			if ( isWebGL2 === false && ( texture.type === HalfFloatType && extensions.has( 'OES_texture_half_float_linear' ) === false ) ) return; // verify extension for WebGL 1 only
 
 			if ( texture.anisotropy > 1 || properties.get( texture ).__currentAnisotropy ) {
 
@@ -20833,12 +20851,24 @@ function WebGLTextures( _gl, extensions, state, properties, capabilities, utils,
 	// Setup storage for target texture and bind it to correct framebuffer
 	function setupFrameBufferTexture( framebuffer, renderTarget, attachment, textureTarget ) {
 
-		const glFormat = utils.convert( renderTarget.texture.format );
-		const glType = utils.convert( renderTarget.texture.type );
-		const glInternalFormat = getInternalFormat( renderTarget.texture.internalFormat, glFormat, glType );
-		state.texImage2D( textureTarget, 0, glInternalFormat, renderTarget.width, renderTarget.height, 0, glFormat, glType, null );
+		const texture = renderTarget.texture;
+
+		const glFormat = utils.convert( texture.format );
+		const glType = utils.convert( texture.type );
+		const glInternalFormat = getInternalFormat( texture.internalFormat, glFormat, glType );
+
+		if ( textureTarget === 32879 || textureTarget === 35866 ) {
+
+			state.texImage3D( textureTarget, 0, glInternalFormat, renderTarget.width, renderTarget.height, renderTarget.depth, 0, glFormat, glType, null );
+
+		} else {
+
+			state.texImage2D( textureTarget, 0, glInternalFormat, renderTarget.width, renderTarget.height, 0, glFormat, glType, null );
+
+		}
+
 		_gl.bindFramebuffer( 36160, framebuffer );
-		_gl.framebufferTexture2D( 36160, attachment, textureTarget, properties.get( renderTarget.texture ).__webglTexture, 0 );
+		_gl.framebufferTexture2D( 36160, attachment, textureTarget, properties.get( texture ).__webglTexture, 0 );
 		_gl.bindFramebuffer( 36160, null );
 
 	}
@@ -20901,9 +20931,11 @@ function WebGLTextures( _gl, extensions, state, properties, capabilities, utils,
 
 		} else {
 
-			const glFormat = utils.convert( renderTarget.texture.format );
-			const glType = utils.convert( renderTarget.texture.type );
-			const glInternalFormat = getInternalFormat( renderTarget.texture.internalFormat, glFormat, glType );
+			const texture = renderTarget.texture;
+
+			const glFormat = utils.convert( texture.format );
+			const glType = utils.convert( texture.type );
+			const glInternalFormat = getInternalFormat( texture.internalFormat, glFormat, glType );
 
 			if ( isMultisample ) {
 
@@ -21012,8 +21044,10 @@ function WebGLTextures( _gl, extensions, state, properties, capabilities, utils,
 	// Set up GL resources for the render target
 	function setupRenderTarget( renderTarget ) {
 
+		const texture = renderTarget.texture;
+
 		const renderTargetProperties = properties.get( renderTarget );
-		const textureProperties = properties.get( renderTarget.texture );
+		const textureProperties = properties.get( texture );
 
 		renderTarget.addEventListener( 'dispose', onRenderTargetDispose );
 
@@ -21023,13 +21057,14 @@ function WebGLTextures( _gl, extensions, state, properties, capabilities, utils,
 
 		const isCube = ( renderTarget.isWebGLCubeRenderTarget === true );
 		const isMultisample = ( renderTarget.isWebGLMultisampleRenderTarget === true );
+		const isRenderTarget3D = texture.isDataTexture3D || texture.isDataTexture2DArray;
 		const supportsMips = isPowerOfTwo( renderTarget ) || isWebGL2;
 
 		// Handles WebGL2 RGBFormat fallback - #18858
 
-		if ( isWebGL2 && renderTarget.texture.format === RGBFormat && ( renderTarget.texture.type === FloatType || renderTarget.texture.type === HalfFloatType ) ) {
+		if ( isWebGL2 && texture.format === RGBFormat && ( texture.type === FloatType || texture.type === HalfFloatType ) ) {
 
-			renderTarget.texture.format = RGBAFormat;
+			texture.format = RGBAFormat;
 
 			console.warn( 'THREE.WebGLRenderer: Rendering to textures with RGB format is not supported. Using RGBA format instead.' );
 
@@ -21060,9 +21095,9 @@ function WebGLTextures( _gl, extensions, state, properties, capabilities, utils,
 
 					_gl.bindRenderbuffer( 36161, renderTargetProperties.__webglColorRenderbuffer );
 
-					const glFormat = utils.convert( renderTarget.texture.format );
-					const glType = utils.convert( renderTarget.texture.type );
-					const glInternalFormat = getInternalFormat( renderTarget.texture.internalFormat, glFormat, glType );
+					const glFormat = utils.convert( texture.format );
+					const glType = utils.convert( texture.type );
+					const glInternalFormat = getInternalFormat( texture.internalFormat, glFormat, glType );
 					const samples = getRenderTargetSamples( renderTarget );
 					_gl.renderbufferStorageMultisample( 36161, samples, glInternalFormat, renderTarget.width, renderTarget.height );
 
@@ -21095,7 +21130,7 @@ function WebGLTextures( _gl, extensions, state, properties, capabilities, utils,
 		if ( isCube ) {
 
 			state.bindTexture( 34067, textureProperties.__webglTexture );
-			setTextureParameters( 34067, renderTarget.texture, supportsMips );
+			setTextureParameters( 34067, texture, supportsMips );
 
 			for ( let i = 0; i < 6; i ++ ) {
 
@@ -21103,9 +21138,9 @@ function WebGLTextures( _gl, extensions, state, properties, capabilities, utils,
 
 			}
 
-			if ( textureNeedsGenerateMipmaps( renderTarget.texture, supportsMips ) ) {
+			if ( textureNeedsGenerateMipmaps( texture, supportsMips ) ) {
 
-				generateMipmap( 34067, renderTarget.texture, renderTarget.width, renderTarget.height );
+				generateMipmap( 34067, texture, renderTarget.width, renderTarget.height );
 
 			}
 
@@ -21113,13 +21148,32 @@ function WebGLTextures( _gl, extensions, state, properties, capabilities, utils,
 
 		} else {
 
-			state.bindTexture( 3553, textureProperties.__webglTexture );
-			setTextureParameters( 3553, renderTarget.texture, supportsMips );
-			setupFrameBufferTexture( renderTargetProperties.__webglFramebuffer, renderTarget, 36064, 3553 );
+			let glTextureType = 3553;
 
-			if ( textureNeedsGenerateMipmaps( renderTarget.texture, supportsMips ) ) {
+			if ( isRenderTarget3D ) {
 
-				generateMipmap( 3553, renderTarget.texture, renderTarget.width, renderTarget.height );
+				// Render targets containing layers, i.e: Texture 3D and 2d arrays
+
+				if ( isWebGL2 ) {
+
+					const isTexture3D = texture.isDataTexture3D;
+					glTextureType = isTexture3D ? 32879 : 35866;
+
+				} else {
+
+					console.warn( 'THREE.DataTexture3D and THREE.DataTexture2DArray only supported with WebGL2.' );
+
+				}
+
+			}
+
+			state.bindTexture( glTextureType, textureProperties.__webglTexture );
+			setTextureParameters( glTextureType, texture, supportsMips );
+			setupFrameBufferTexture( renderTargetProperties.__webglFramebuffer, renderTarget, 36064, glTextureType );
+
+			if ( textureNeedsGenerateMipmaps( texture, supportsMips ) ) {
+
+				generateMipmap( 3553, texture, renderTarget.width, renderTarget.height );
 
 			}
 
@@ -21140,6 +21194,7 @@ function WebGLTextures( _gl, extensions, state, properties, capabilities, utils,
 	function updateRenderTargetMipmap( renderTarget ) {
 
 		const texture = renderTarget.texture;
+
 		const supportsMips = isPowerOfTwo( renderTarget ) || isWebGL2;
 
 		if ( textureNeedsGenerateMipmaps( texture, supportsMips ) ) {
@@ -24650,8 +24705,17 @@ function WebGLRenderer( parameters ) {
 
 		let framebuffer = _framebuffer;
 		let isCube = false;
+		let isRenderTarget3D = false;
 
 		if ( renderTarget ) {
+
+			const texture = renderTarget.texture;
+
+			if ( texture.isDataTexture3D || texture.isDataTexture2DArray ) {
+
+				isRenderTarget3D = true;
+
+			}
 
 			const __webglFramebuffer = properties.get( renderTarget ).__webglFramebuffer;
 
@@ -24697,6 +24761,12 @@ function WebGLRenderer( parameters ) {
 
 			const textureProperties = properties.get( renderTarget.texture );
 			_gl.framebufferTexture2D( 36160, 36064, 34069 + activeCubeFace, textureProperties.__webglTexture, activeMipmapLevel );
+
+		} else if ( isRenderTarget3D ) {
+
+			const textureProperties = properties.get( renderTarget.texture );
+			const layer = activeCubeFace || 0;
+			_gl.framebufferTextureLayer( 36160, 36064, textureProperties.__webglTexture, activeMipmapLevel || 0, layer );
 
 		}
 
@@ -31042,7 +31112,9 @@ RawShaderMaterial.prototype.isRawShaderMaterial = true;
  *
  *  skinning: <bool>,
  *  morphTargets: <bool>,
- *  morphNormals: <bool>
+ *  morphNormals: <bool>,
+ *
+ *  flatShading: <bool>
  * }
  */
 
@@ -31100,6 +31172,8 @@ function MeshStandardMaterial( parameters ) {
 	this.skinning = false;
 	this.morphTargets = false;
 	this.morphNormals = false;
+
+	this.flatShading = false;
 
 	this.vertexTangents = false;
 
@@ -31164,6 +31238,8 @@ MeshStandardMaterial.prototype.copy = function ( source ) {
 	this.skinning = source.skinning;
 	this.morphTargets = source.morphTargets;
 	this.morphNormals = source.morphNormals;
+
+	this.flatShading = source.flatShading;
 
 	this.vertexTangents = source.vertexTangents;
 
@@ -31320,7 +31396,9 @@ MeshPhysicalMaterial.prototype.copy = function ( source ) {
  *
  *  skinning: <bool>,
  *  morphTargets: <bool>,
- *  morphNormals: <bool>
+ *  morphNormals: <bool>,
+ *
+ *  flatShading: <bool>
  * }
  */
 
@@ -31374,6 +31452,8 @@ function MeshPhongMaterial( parameters ) {
 	this.skinning = false;
 	this.morphTargets = false;
 	this.morphNormals = false;
+
+	this.flatShading = false;
 
 	this.setValues( parameters );
 
@@ -31432,6 +31512,8 @@ MeshPhongMaterial.prototype.copy = function ( source ) {
 	this.skinning = source.skinning;
 	this.morphTargets = source.morphTargets;
 	this.morphNormals = source.morphNormals;
+
+	this.flatShading = source.flatShading;
 
 	return this;
 
@@ -31595,7 +31677,9 @@ MeshToonMaterial.prototype.copy = function ( source ) {
  *
  *  skinning: <bool>,
  *  morphTargets: <bool>,
- *  morphNormals: <bool>
+ *  morphNormals: <bool>,
+ *
+ *  flatShading: <bool>
  * }
  */
 
@@ -31624,6 +31708,8 @@ function MeshNormalMaterial( parameters ) {
 	this.skinning = false;
 	this.morphTargets = false;
 	this.morphNormals = false;
+
+	this.flatShading = false;
 
 	this.setValues( parameters );
 
@@ -31655,6 +31741,8 @@ MeshNormalMaterial.prototype.copy = function ( source ) {
 	this.skinning = source.skinning;
 	this.morphTargets = source.morphTargets;
 	this.morphNormals = source.morphNormals;
+
+	this.flatShading = source.flatShading;
 
 	return this;
 
@@ -31807,6 +31895,8 @@ MeshLambertMaterial.prototype.copy = function ( source ) {
  *  skinning: <bool>,
  *  morphTargets: <bool>,
  *  morphNormals: <bool>
+ *
+ *  flatShading: <bool>
  * }
  */
 
@@ -31840,6 +31930,8 @@ function MeshMatcapMaterial( parameters ) {
 	this.skinning = false;
 	this.morphTargets = false;
 	this.morphNormals = false;
+
+	this.flatShading = false;
 
 	this.setValues( parameters );
 
@@ -31878,6 +31970,8 @@ MeshMatcapMaterial.prototype.copy = function ( source ) {
 	this.skinning = source.skinning;
 	this.morphTargets = source.morphTargets;
 	this.morphNormals = source.morphNormals;
+
+	this.flatShading = source.flatShading;
 
 	return this;
 
@@ -34415,24 +34509,22 @@ FileLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 
 } );
 
-function AnimationLoader( manager ) {
+class AnimationLoader extends Loader {
 
-	Loader.call( this, manager );
+	constructor( manager ) {
 
-}
+		super( manager );
 
-AnimationLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
+	}
 
-	constructor: AnimationLoader,
-
-	load: function ( url, onLoad, onProgress, onError ) {
+	load( url, onLoad, onProgress, onError ) {
 
 		const scope = this;
 
-		const loader = new FileLoader( scope.manager );
-		loader.setPath( scope.path );
-		loader.setRequestHeader( scope.requestHeader );
-		loader.setWithCredentials( scope.withCredentials );
+		const loader = new FileLoader( this.manager );
+		loader.setPath( this.path );
+		loader.setRequestHeader( this.requestHeader );
+		loader.setWithCredentials( this.withCredentials );
 		loader.load( url, function ( text ) {
 
 			try {
@@ -34457,9 +34549,9 @@ AnimationLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 
 		}, onProgress, onError );
 
-	},
+	}
 
-	parse: function ( json ) {
+	parse( json ) {
 
 		const animations = [];
 
@@ -34475,7 +34567,7 @@ AnimationLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 
 	}
 
-} );
+}
 
 /**
  * Abstract Base class to block based textures loader (dds, pvr, ...)
@@ -34606,17 +34698,15 @@ CompressedTextureLoader.prototype = Object.assign( Object.create( Loader.prototy
 
 } );
 
-function ImageLoader( manager ) {
+class ImageLoader extends Loader {
 
-	Loader.call( this, manager );
+	constructor( manager ) {
 
-}
+		super( manager );
 
-ImageLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
+	}
 
-	constructor: ImageLoader,
-
-	load: function ( url, onLoad, onProgress, onError ) {
+	load( url, onLoad, onProgress, onError ) {
 
 		if ( this.path !== undefined ) url = this.path + url;
 
@@ -34686,19 +34776,17 @@ ImageLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 
 	}
 
-} );
-
-function CubeTextureLoader( manager ) {
-
-	Loader.call( this, manager );
-
 }
 
-CubeTextureLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
+class CubeTextureLoader extends Loader {
 
-	constructor: CubeTextureLoader,
+	constructor( manager ) {
 
-	load: function ( urls, onLoad, onProgress, onError ) {
+		super( manager );
+
+	}
+
+	load( urls, onLoad, onProgress, onError ) {
 
 		const texture = new CubeTexture();
 
@@ -34738,7 +34826,7 @@ CubeTextureLoader.prototype = Object.assign( Object.create( Loader.prototype ), 
 
 	}
 
-} );
+}
 
 /**
  * Abstract Base class to load generic binary textures formats (rgbe, hdr, ...)
@@ -35297,170 +35385,165 @@ Object.assign( Curve.prototype, {
 
 } );
 
-function EllipseCurve( aX, aY, xRadius, yRadius, aStartAngle, aEndAngle, aClockwise, aRotation ) {
+class EllipseCurve extends Curve {
 
-	Curve.call( this );
+	constructor( aX, aY, xRadius, yRadius, aStartAngle, aEndAngle, aClockwise, aRotation ) {
 
-	this.type = 'EllipseCurve';
+		super();
 
-	this.aX = aX || 0;
-	this.aY = aY || 0;
+		this.type = 'EllipseCurve';
+		Object.defineProperty( this, 'isEllipseCurve', { value: true } );
 
-	this.xRadius = xRadius || 1;
-	this.yRadius = yRadius || 1;
+		this.aX = aX || 0;
+		this.aY = aY || 0;
 
-	this.aStartAngle = aStartAngle || 0;
-	this.aEndAngle = aEndAngle || 2 * Math.PI;
+		this.xRadius = xRadius || 1;
+		this.yRadius = yRadius || 1;
 
-	this.aClockwise = aClockwise || false;
+		this.aStartAngle = aStartAngle || 0;
+		this.aEndAngle = aEndAngle || 2 * Math.PI;
 
-	this.aRotation = aRotation || 0;
+		this.aClockwise = aClockwise || false;
 
-}
+		this.aRotation = aRotation || 0;
 
-EllipseCurve.prototype = Object.create( Curve.prototype );
-EllipseCurve.prototype.constructor = EllipseCurve;
+	}
+	getPoint( t, optionalTarget ) {
 
-EllipseCurve.prototype.isEllipseCurve = true;
+		const point = optionalTarget || new Vector2();
 
-EllipseCurve.prototype.getPoint = function ( t, optionalTarget ) {
+		const twoPi = Math.PI * 2;
+		let deltaAngle = this.aEndAngle - this.aStartAngle;
+		const samePoints = Math.abs( deltaAngle ) < Number.EPSILON;
 
-	const point = optionalTarget || new Vector2();
+		// ensures that deltaAngle is 0 .. 2 PI
+		while ( deltaAngle < 0 ) deltaAngle += twoPi;
+		while ( deltaAngle > twoPi ) deltaAngle -= twoPi;
 
-	const twoPi = Math.PI * 2;
-	let deltaAngle = this.aEndAngle - this.aStartAngle;
-	const samePoints = Math.abs( deltaAngle ) < Number.EPSILON;
+		if ( deltaAngle < Number.EPSILON ) {
 
-	// ensures that deltaAngle is 0 .. 2 PI
-	while ( deltaAngle < 0 ) deltaAngle += twoPi;
-	while ( deltaAngle > twoPi ) deltaAngle -= twoPi;
+			if ( samePoints ) {
 
-	if ( deltaAngle < Number.EPSILON ) {
+				deltaAngle = 0;
 
-		if ( samePoints ) {
+			} else {
 
-			deltaAngle = 0;
+				deltaAngle = twoPi;
 
-		} else {
-
-			deltaAngle = twoPi;
+			}
 
 		}
 
-	}
+		if ( this.aClockwise === true && ! samePoints ) {
 
-	if ( this.aClockwise === true && ! samePoints ) {
+			if ( deltaAngle === twoPi ) {
 
-		if ( deltaAngle === twoPi ) {
+				deltaAngle = - twoPi;
 
-			deltaAngle = - twoPi;
+			} else {
 
-		} else {
+				deltaAngle = deltaAngle - twoPi;
 
-			deltaAngle = deltaAngle - twoPi;
+			}
 
 		}
 
+		const angle = this.aStartAngle + t * deltaAngle;
+		let x = this.aX + this.xRadius * Math.cos( angle );
+		let y = this.aY + this.yRadius * Math.sin( angle );
+
+		if ( this.aRotation !== 0 ) {
+
+			const cos = Math.cos( this.aRotation );
+			const sin = Math.sin( this.aRotation );
+
+			const tx = x - this.aX;
+			const ty = y - this.aY;
+
+			// Rotate the point about the center of the ellipse.
+			x = tx * cos - ty * sin + this.aX;
+			y = tx * sin + ty * cos + this.aY;
+
+		}
+
+		return point.set( x, y );
+
 	}
+	copy( source ) {
 
-	const angle = this.aStartAngle + t * deltaAngle;
-	let x = this.aX + this.xRadius * Math.cos( angle );
-	let y = this.aY + this.yRadius * Math.sin( angle );
+		super.copy( source );
 
-	if ( this.aRotation !== 0 ) {
+		this.aX = source.aX;
+		this.aY = source.aY;
 
-		const cos = Math.cos( this.aRotation );
-		const sin = Math.sin( this.aRotation );
+		this.xRadius = source.xRadius;
+		this.yRadius = source.yRadius;
 
-		const tx = x - this.aX;
-		const ty = y - this.aY;
+		this.aStartAngle = source.aStartAngle;
+		this.aEndAngle = source.aEndAngle;
 
-		// Rotate the point about the center of the ellipse.
-		x = tx * cos - ty * sin + this.aX;
-		y = tx * sin + ty * cos + this.aY;
+		this.aClockwise = source.aClockwise;
+
+		this.aRotation = source.aRotation;
+
+		return this;
 
 	}
+	toJSON() {
 
-	return point.set( x, y );
+		const data = super.toJSON();
 
-};
+		data.aX = this.aX;
+		data.aY = this.aY;
 
-EllipseCurve.prototype.copy = function ( source ) {
+		data.xRadius = this.xRadius;
+		data.yRadius = this.yRadius;
 
-	Curve.prototype.copy.call( this, source );
+		data.aStartAngle = this.aStartAngle;
+		data.aEndAngle = this.aEndAngle;
 
-	this.aX = source.aX;
-	this.aY = source.aY;
+		data.aClockwise = this.aClockwise;
 
-	this.xRadius = source.xRadius;
-	this.yRadius = source.yRadius;
+		data.aRotation = this.aRotation;
 
-	this.aStartAngle = source.aStartAngle;
-	this.aEndAngle = source.aEndAngle;
+		return data;
 
-	this.aClockwise = source.aClockwise;
+	}
+	fromJSON( json ) {
 
-	this.aRotation = source.aRotation;
+		super.fromJSON( json );
 
-	return this;
+		this.aX = json.aX;
+		this.aY = json.aY;
 
-};
+		this.xRadius = json.xRadius;
+		this.yRadius = json.yRadius;
 
+		this.aStartAngle = json.aStartAngle;
+		this.aEndAngle = json.aEndAngle;
 
-EllipseCurve.prototype.toJSON = function () {
+		this.aClockwise = json.aClockwise;
 
-	const data = Curve.prototype.toJSON.call( this );
+		this.aRotation = json.aRotation;
 
-	data.aX = this.aX;
-	data.aY = this.aY;
+		return this;
 
-	data.xRadius = this.xRadius;
-	data.yRadius = this.yRadius;
-
-	data.aStartAngle = this.aStartAngle;
-	data.aEndAngle = this.aEndAngle;
-
-	data.aClockwise = this.aClockwise;
-
-	data.aRotation = this.aRotation;
-
-	return data;
-
-};
-
-EllipseCurve.prototype.fromJSON = function ( json ) {
-
-	Curve.prototype.fromJSON.call( this, json );
-
-	this.aX = json.aX;
-	this.aY = json.aY;
-
-	this.xRadius = json.xRadius;
-	this.yRadius = json.yRadius;
-
-	this.aStartAngle = json.aStartAngle;
-	this.aEndAngle = json.aEndAngle;
-
-	this.aClockwise = json.aClockwise;
-
-	this.aRotation = json.aRotation;
-
-	return this;
-
-};
-
-function ArcCurve( aX, aY, aRadius, aStartAngle, aEndAngle, aClockwise ) {
-
-	EllipseCurve.call( this, aX, aY, aRadius, aRadius, aStartAngle, aEndAngle, aClockwise );
-
-	this.type = 'ArcCurve';
+	}
 
 }
 
-ArcCurve.prototype = Object.create( EllipseCurve.prototype );
-ArcCurve.prototype.constructor = ArcCurve;
+class ArcCurve extends EllipseCurve {
 
-ArcCurve.prototype.isArcCurve = true;
+	constructor( aX, aY, aRadius, aStartAngle, aEndAngle, aClockwise ) {
+
+		super( aX, aY, aRadius, aRadius, aStartAngle, aEndAngle, aClockwise );
+
+		this.type = 'ArcCurve';
+		Object.defineProperty( this, 'isArcCurve', { value: true } );
+
+	}
+
+}
 
 /**
  * Centripetal CatmullRom Curve - which is useful for avoiding
@@ -35542,173 +35625,169 @@ function CubicPoly() {
 const tmp = new Vector3();
 const px = new CubicPoly(), py = new CubicPoly(), pz = new CubicPoly();
 
-function CatmullRomCurve3( points = [], closed = false, curveType = 'centripetal', tension = 0.5 ) {
+class CatmullRomCurve3 extends Curve {
 
-	Curve.call( this );
+	constructor( points = [], closed = false, curveType = 'centripetal', tension = 0.5 ) {
 
-	this.type = 'CatmullRomCurve3';
+		super();
 
-	this.points = points;
-	this.closed = closed;
-	this.curveType = curveType;
-	this.tension = tension;
+		this.type = 'CatmullRomCurve3';
+		Object.defineProperty( this, 'isCatmullRomCurve3', { value: true } );
+		this.points = points;
+		this.closed = closed;
+		this.curveType = curveType;
+		this.tension = tension;
+
+	}
+
+	getPoint( t, optionalTarget = new Vector3() ) {
+
+		const point = optionalTarget;
+
+		const points = this.points;
+		const l = points.length;
+
+		const p = ( l - ( this.closed ? 0 : 1 ) ) * t;
+		let intPoint = Math.floor( p );
+		let weight = p - intPoint;
+
+		if ( this.closed ) {
+
+			intPoint += intPoint > 0 ? 0 : ( Math.floor( Math.abs( intPoint ) / l ) + 1 ) * l;
+
+		} else if ( weight === 0 && intPoint === l - 1 ) {
+
+			intPoint = l - 2;
+			weight = 1;
+
+		}
+
+		let p0, p3; // 4 points (p1 & p2 defined below)
+
+		if ( this.closed || intPoint > 0 ) {
+
+			p0 = points[ ( intPoint - 1 ) % l ];
+
+		} else {
+
+			// extrapolate first point
+			tmp.subVectors( points[ 0 ], points[ 1 ] ).add( points[ 0 ] );
+			p0 = tmp;
+
+		}
+
+		const p1 = points[ intPoint % l ];
+		const p2 = points[ ( intPoint + 1 ) % l ];
+
+		if ( this.closed || intPoint + 2 < l ) {
+
+			p3 = points[ ( intPoint + 2 ) % l ];
+
+		} else {
+
+			// extrapolate last point
+			tmp.subVectors( points[ l - 1 ], points[ l - 2 ] ).add( points[ l - 1 ] );
+			p3 = tmp;
+
+		}
+
+		if ( this.curveType === 'centripetal' || this.curveType === 'chordal' ) {
+
+			// init Centripetal / Chordal Catmull-Rom
+			const pow = this.curveType === 'chordal' ? 0.5 : 0.25;
+			let dt0 = Math.pow( p0.distanceToSquared( p1 ), pow );
+			let dt1 = Math.pow( p1.distanceToSquared( p2 ), pow );
+			let dt2 = Math.pow( p2.distanceToSquared( p3 ), pow );
+
+			// safety check for repeated points
+			if ( dt1 < 1e-4 ) dt1 = 1.0;
+			if ( dt0 < 1e-4 ) dt0 = dt1;
+			if ( dt2 < 1e-4 ) dt2 = dt1;
+
+			px.initNonuniformCatmullRom( p0.x, p1.x, p2.x, p3.x, dt0, dt1, dt2 );
+			py.initNonuniformCatmullRom( p0.y, p1.y, p2.y, p3.y, dt0, dt1, dt2 );
+			pz.initNonuniformCatmullRom( p0.z, p1.z, p2.z, p3.z, dt0, dt1, dt2 );
+
+		} else if ( this.curveType === 'catmullrom' ) {
+
+			px.initCatmullRom( p0.x, p1.x, p2.x, p3.x, this.tension );
+			py.initCatmullRom( p0.y, p1.y, p2.y, p3.y, this.tension );
+			pz.initCatmullRom( p0.z, p1.z, p2.z, p3.z, this.tension );
+
+		}
+
+		point.set(
+			px.calc( weight ),
+			py.calc( weight ),
+			pz.calc( weight )
+		);
+
+		return point;
+
+	}
+	copy( source ) {
+
+		super.copy( source );
+
+		this.points = [];
+
+		for ( let i = 0, l = source.points.length; i < l; i ++ ) {
+
+			const point = source.points[ i ];
+
+			this.points.push( point.clone() );
+
+		}
+
+		this.closed = source.closed;
+		this.curveType = source.curveType;
+		this.tension = source.tension;
+
+		return this;
+
+	}
+	toJSON() {
+
+		const data = super.toJSON();
+
+		data.points = [];
+
+		for ( let i = 0, l = this.points.length; i < l; i ++ ) {
+
+			const point = this.points[ i ];
+			data.points.push( point.toArray() );
+
+		}
+
+		data.closed = this.closed;
+		data.curveType = this.curveType;
+		data.tension = this.tension;
+
+		return data;
+
+	}
+	fromJSON( json ) {
+
+		super.fromJSON( json );
+
+		this.points = [];
+
+		for ( let i = 0, l = json.points.length; i < l; i ++ ) {
+
+			const point = json.points[ i ];
+			this.points.push( new Vector3().fromArray( point ) );
+
+		}
+
+		this.closed = json.closed;
+		this.curveType = json.curveType;
+		this.tension = json.tension;
+
+		return this;
+
+	}
 
 }
-
-CatmullRomCurve3.prototype = Object.create( Curve.prototype );
-CatmullRomCurve3.prototype.constructor = CatmullRomCurve3;
-
-CatmullRomCurve3.prototype.isCatmullRomCurve3 = true;
-
-CatmullRomCurve3.prototype.getPoint = function ( t, optionalTarget = new Vector3() ) {
-
-	const point = optionalTarget;
-
-	const points = this.points;
-	const l = points.length;
-
-	const p = ( l - ( this.closed ? 0 : 1 ) ) * t;
-	let intPoint = Math.floor( p );
-	let weight = p - intPoint;
-
-	if ( this.closed ) {
-
-		intPoint += intPoint > 0 ? 0 : ( Math.floor( Math.abs( intPoint ) / l ) + 1 ) * l;
-
-	} else if ( weight === 0 && intPoint === l - 1 ) {
-
-		intPoint = l - 2;
-		weight = 1;
-
-	}
-
-	let p0, p3; // 4 points (p1 & p2 defined below)
-
-	if ( this.closed || intPoint > 0 ) {
-
-		p0 = points[ ( intPoint - 1 ) % l ];
-
-	} else {
-
-		// extrapolate first point
-		tmp.subVectors( points[ 0 ], points[ 1 ] ).add( points[ 0 ] );
-		p0 = tmp;
-
-	}
-
-	const p1 = points[ intPoint % l ];
-	const p2 = points[ ( intPoint + 1 ) % l ];
-
-	if ( this.closed || intPoint + 2 < l ) {
-
-		p3 = points[ ( intPoint + 2 ) % l ];
-
-	} else {
-
-		// extrapolate last point
-		tmp.subVectors( points[ l - 1 ], points[ l - 2 ] ).add( points[ l - 1 ] );
-		p3 = tmp;
-
-	}
-
-	if ( this.curveType === 'centripetal' || this.curveType === 'chordal' ) {
-
-		// init Centripetal / Chordal Catmull-Rom
-		const pow = this.curveType === 'chordal' ? 0.5 : 0.25;
-		let dt0 = Math.pow( p0.distanceToSquared( p1 ), pow );
-		let dt1 = Math.pow( p1.distanceToSquared( p2 ), pow );
-		let dt2 = Math.pow( p2.distanceToSquared( p3 ), pow );
-
-		// safety check for repeated points
-		if ( dt1 < 1e-4 ) dt1 = 1.0;
-		if ( dt0 < 1e-4 ) dt0 = dt1;
-		if ( dt2 < 1e-4 ) dt2 = dt1;
-
-		px.initNonuniformCatmullRom( p0.x, p1.x, p2.x, p3.x, dt0, dt1, dt2 );
-		py.initNonuniformCatmullRom( p0.y, p1.y, p2.y, p3.y, dt0, dt1, dt2 );
-		pz.initNonuniformCatmullRom( p0.z, p1.z, p2.z, p3.z, dt0, dt1, dt2 );
-
-	} else if ( this.curveType === 'catmullrom' ) {
-
-		px.initCatmullRom( p0.x, p1.x, p2.x, p3.x, this.tension );
-		py.initCatmullRom( p0.y, p1.y, p2.y, p3.y, this.tension );
-		pz.initCatmullRom( p0.z, p1.z, p2.z, p3.z, this.tension );
-
-	}
-
-	point.set(
-		px.calc( weight ),
-		py.calc( weight ),
-		pz.calc( weight )
-	);
-
-	return point;
-
-};
-
-CatmullRomCurve3.prototype.copy = function ( source ) {
-
-	Curve.prototype.copy.call( this, source );
-
-	this.points = [];
-
-	for ( let i = 0, l = source.points.length; i < l; i ++ ) {
-
-		const point = source.points[ i ];
-
-		this.points.push( point.clone() );
-
-	}
-
-	this.closed = source.closed;
-	this.curveType = source.curveType;
-	this.tension = source.tension;
-
-	return this;
-
-};
-
-CatmullRomCurve3.prototype.toJSON = function () {
-
-	const data = Curve.prototype.toJSON.call( this );
-
-	data.points = [];
-
-	for ( let i = 0, l = this.points.length; i < l; i ++ ) {
-
-		const point = this.points[ i ];
-		data.points.push( point.toArray() );
-
-	}
-
-	data.closed = this.closed;
-	data.curveType = this.curveType;
-	data.tension = this.tension;
-
-	return data;
-
-};
-
-CatmullRomCurve3.prototype.fromJSON = function ( json ) {
-
-	Curve.prototype.fromJSON.call( this, json );
-
-	this.points = [];
-
-	for ( let i = 0, l = json.points.length; i < l; i ++ ) {
-
-		const point = json.points[ i ];
-		this.points.push( new Vector3().fromArray( point ) );
-
-	}
-
-	this.closed = json.closed;
-	this.curveType = json.curveType;
-	this.tension = json.tension;
-
-	return this;
-
-};
 
 /**
  * Bezier Curves formulas obtained from
@@ -35788,540 +35867,508 @@ function CubicBezier( t, p0, p1, p2, p3 ) {
 
 }
 
-function CubicBezierCurve( v0 = new Vector2(), v1 = new Vector2(), v2 = new Vector2(), v3 = new Vector2() ) {
+class CubicBezierCurve extends Curve {
 
-	Curve.call( this );
+	constructor( v0 = new Vector2(), v1 = new Vector2(), v2 = new Vector2(), v3 = new Vector2() ) {
 
-	this.type = 'CubicBezierCurve';
+		super();
 
-	this.v0 = v0;
-	this.v1 = v1;
-	this.v2 = v2;
-	this.v3 = v3;
+		this.type = 'CubicBezierCurve';
+		Object.defineProperty( this, 'isCubicBezierCurve', { value: true } );
 
-}
-
-CubicBezierCurve.prototype = Object.create( Curve.prototype );
-CubicBezierCurve.prototype.constructor = CubicBezierCurve;
-
-CubicBezierCurve.prototype.isCubicBezierCurve = true;
-
-CubicBezierCurve.prototype.getPoint = function ( t, optionalTarget = new Vector2() ) {
-
-	const point = optionalTarget;
-
-	const v0 = this.v0, v1 = this.v1, v2 = this.v2, v3 = this.v3;
-
-	point.set(
-		CubicBezier( t, v0.x, v1.x, v2.x, v3.x ),
-		CubicBezier( t, v0.y, v1.y, v2.y, v3.y )
-	);
-
-	return point;
-
-};
-
-CubicBezierCurve.prototype.copy = function ( source ) {
-
-	Curve.prototype.copy.call( this, source );
-
-	this.v0.copy( source.v0 );
-	this.v1.copy( source.v1 );
-	this.v2.copy( source.v2 );
-	this.v3.copy( source.v3 );
-
-	return this;
-
-};
-
-CubicBezierCurve.prototype.toJSON = function () {
-
-	const data = Curve.prototype.toJSON.call( this );
-
-	data.v0 = this.v0.toArray();
-	data.v1 = this.v1.toArray();
-	data.v2 = this.v2.toArray();
-	data.v3 = this.v3.toArray();
-
-	return data;
-
-};
-
-CubicBezierCurve.prototype.fromJSON = function ( json ) {
-
-	Curve.prototype.fromJSON.call( this, json );
-
-	this.v0.fromArray( json.v0 );
-	this.v1.fromArray( json.v1 );
-	this.v2.fromArray( json.v2 );
-	this.v3.fromArray( json.v3 );
-
-	return this;
-
-};
-
-function CubicBezierCurve3( v0 = new Vector3(), v1 = new Vector3(), v2 = new Vector3(), v3 = new Vector3() ) {
-
-	Curve.call( this );
-
-	this.type = 'CubicBezierCurve3';
-
-	this.v0 = v0;
-	this.v1 = v1;
-	this.v2 = v2;
-	this.v3 = v3;
-
-}
-
-CubicBezierCurve3.prototype = Object.create( Curve.prototype );
-CubicBezierCurve3.prototype.constructor = CubicBezierCurve3;
-
-CubicBezierCurve3.prototype.isCubicBezierCurve3 = true;
-
-CubicBezierCurve3.prototype.getPoint = function ( t, optionalTarget = new Vector3() ) {
-
-	const point = optionalTarget;
-
-	const v0 = this.v0, v1 = this.v1, v2 = this.v2, v3 = this.v3;
-
-	point.set(
-		CubicBezier( t, v0.x, v1.x, v2.x, v3.x ),
-		CubicBezier( t, v0.y, v1.y, v2.y, v3.y ),
-		CubicBezier( t, v0.z, v1.z, v2.z, v3.z )
-	);
-
-	return point;
-
-};
-
-CubicBezierCurve3.prototype.copy = function ( source ) {
-
-	Curve.prototype.copy.call( this, source );
-
-	this.v0.copy( source.v0 );
-	this.v1.copy( source.v1 );
-	this.v2.copy( source.v2 );
-	this.v3.copy( source.v3 );
-
-	return this;
-
-};
-
-CubicBezierCurve3.prototype.toJSON = function () {
-
-	const data = Curve.prototype.toJSON.call( this );
-
-	data.v0 = this.v0.toArray();
-	data.v1 = this.v1.toArray();
-	data.v2 = this.v2.toArray();
-	data.v3 = this.v3.toArray();
-
-	return data;
-
-};
-
-CubicBezierCurve3.prototype.fromJSON = function ( json ) {
-
-	Curve.prototype.fromJSON.call( this, json );
-
-	this.v0.fromArray( json.v0 );
-	this.v1.fromArray( json.v1 );
-	this.v2.fromArray( json.v2 );
-	this.v3.fromArray( json.v3 );
-
-	return this;
-
-};
-
-function LineCurve( v1 = new Vector2(), v2 = new Vector2() ) {
-
-	Curve.call( this );
-
-	this.type = 'LineCurve';
-
-	this.v1 = v1;
-	this.v2 = v2;
-
-}
-
-LineCurve.prototype = Object.create( Curve.prototype );
-LineCurve.prototype.constructor = LineCurve;
-
-LineCurve.prototype.isLineCurve = true;
-
-LineCurve.prototype.getPoint = function ( t, optionalTarget = new Vector2() ) {
-
-	const point = optionalTarget;
-
-	if ( t === 1 ) {
-
-		point.copy( this.v2 );
-
-	} else {
-
-		point.copy( this.v2 ).sub( this.v1 );
-		point.multiplyScalar( t ).add( this.v1 );
+		this.v0 = v0;
+		this.v1 = v1;
+		this.v2 = v2;
+		this.v3 = v3;
 
 	}
 
-	return point;
+	getPoint( t, optionalTarget = new Vector2() ) {
 
-};
+		const point = optionalTarget;
 
-// Line curve is linear, so we can overwrite default getPointAt
+		const v0 = this.v0, v1 = this.v1, v2 = this.v2, v3 = this.v3;
 
-LineCurve.prototype.getPointAt = function ( u, optionalTarget ) {
+		point.set(
+			CubicBezier( t, v0.x, v1.x, v2.x, v3.x ),
+			CubicBezier( t, v0.y, v1.y, v2.y, v3.y )
+		);
 
-	return this.getPoint( u, optionalTarget );
+		return point;
 
-};
+	}
+	copy( source ) {
 
-LineCurve.prototype.getTangent = function ( t, optionalTarget ) {
+		super.copy( source );
 
-	const tangent = optionalTarget || new Vector2();
+		this.v0.copy( source.v0 );
+		this.v1.copy( source.v1 );
+		this.v2.copy( source.v2 );
+		this.v3.copy( source.v3 );
 
-	tangent.copy( this.v2 ).sub( this.v1 ).normalize();
+		return this;
 
-	return tangent;
+	}
+	toJSON() {
 
-};
+		const data = super.toJSON();
 
-LineCurve.prototype.copy = function ( source ) {
+		data.v0 = this.v0.toArray();
+		data.v1 = this.v1.toArray();
+		data.v2 = this.v2.toArray();
+		data.v3 = this.v3.toArray();
 
-	Curve.prototype.copy.call( this, source );
+		return data;
 
-	this.v1.copy( source.v1 );
-	this.v2.copy( source.v2 );
+	}
+	fromJSON( json ) {
 
-	return this;
+		super.fromJSON( json );
 
-};
+		this.v0.fromArray( json.v0 );
+		this.v1.fromArray( json.v1 );
+		this.v2.fromArray( json.v2 );
+		this.v3.fromArray( json.v3 );
 
-LineCurve.prototype.toJSON = function () {
-
-	const data = Curve.prototype.toJSON.call( this );
-
-	data.v1 = this.v1.toArray();
-	data.v2 = this.v2.toArray();
-
-	return data;
-
-};
-
-LineCurve.prototype.fromJSON = function ( json ) {
-
-	Curve.prototype.fromJSON.call( this, json );
-
-	this.v1.fromArray( json.v1 );
-	this.v2.fromArray( json.v2 );
-
-	return this;
-
-};
-
-function LineCurve3( v1 = new Vector3(), v2 = new Vector3() ) {
-
-	Curve.call( this );
-
-	this.type = 'LineCurve3';
-
-	this.v1 = v1;
-	this.v2 = v2;
-
-}
-
-LineCurve3.prototype = Object.create( Curve.prototype );
-LineCurve3.prototype.constructor = LineCurve3;
-
-LineCurve3.prototype.isLineCurve3 = true;
-
-LineCurve3.prototype.getPoint = function ( t, optionalTarget = new Vector3() ) {
-
-	const point = optionalTarget;
-
-	if ( t === 1 ) {
-
-		point.copy( this.v2 );
-
-	} else {
-
-		point.copy( this.v2 ).sub( this.v1 );
-		point.multiplyScalar( t ).add( this.v1 );
+		return this;
 
 	}
 
-	return point;
-
-};
-
-// Line curve is linear, so we can overwrite default getPointAt
-
-LineCurve3.prototype.getPointAt = function ( u, optionalTarget ) {
-
-	return this.getPoint( u, optionalTarget );
-
-};
-
-LineCurve3.prototype.copy = function ( source ) {
-
-	Curve.prototype.copy.call( this, source );
-
-	this.v1.copy( source.v1 );
-	this.v2.copy( source.v2 );
-
-	return this;
-
-};
-
-LineCurve3.prototype.toJSON = function () {
-
-	const data = Curve.prototype.toJSON.call( this );
-
-	data.v1 = this.v1.toArray();
-	data.v2 = this.v2.toArray();
-
-	return data;
-
-};
-
-LineCurve3.prototype.fromJSON = function ( json ) {
-
-	Curve.prototype.fromJSON.call( this, json );
-
-	this.v1.fromArray( json.v1 );
-	this.v2.fromArray( json.v2 );
-
-	return this;
-
-};
-
-function QuadraticBezierCurve( v0 = new Vector2(), v1 = new Vector2(), v2 = new Vector2() ) {
-
-	Curve.call( this );
-
-	this.type = 'QuadraticBezierCurve';
-
-	this.v0 = v0;
-	this.v1 = v1;
-	this.v2 = v2;
-
 }
 
-QuadraticBezierCurve.prototype = Object.create( Curve.prototype );
-QuadraticBezierCurve.prototype.constructor = QuadraticBezierCurve;
+class CubicBezierCurve3 extends Curve {
 
-QuadraticBezierCurve.prototype.isQuadraticBezierCurve = true;
+	constructor( v0 = new Vector3(), v1 = new Vector3(), v2 = new Vector3(), v3 = new Vector3() ) {
 
-QuadraticBezierCurve.prototype.getPoint = function ( t, optionalTarget = new Vector2() ) {
+		super();
 
-	const point = optionalTarget;
+		this.type = 'CubicBezierCurve3';
+		Object.defineProperty( this, 'isCubicBezierCurve3', { value: true } );
 
-	const v0 = this.v0, v1 = this.v1, v2 = this.v2;
+		this.v0 = v0;
+		this.v1 = v1;
+		this.v2 = v2;
+		this.v3 = v3;
 
-	point.set(
-		QuadraticBezier( t, v0.x, v1.x, v2.x ),
-		QuadraticBezier( t, v0.y, v1.y, v2.y )
-	);
+	}
+	getPoint( t, optionalTarget = new Vector3() ) {
 
-	return point;
+		const point = optionalTarget;
 
-};
+		const v0 = this.v0, v1 = this.v1, v2 = this.v2, v3 = this.v3;
 
-QuadraticBezierCurve.prototype.copy = function ( source ) {
+		point.set(
+			CubicBezier( t, v0.x, v1.x, v2.x, v3.x ),
+			CubicBezier( t, v0.y, v1.y, v2.y, v3.y ),
+			CubicBezier( t, v0.z, v1.z, v2.z, v3.z )
+		);
 
-	Curve.prototype.copy.call( this, source );
+		return point;
 
-	this.v0.copy( source.v0 );
-	this.v1.copy( source.v1 );
-	this.v2.copy( source.v2 );
+	}
+	copy( source ) {
 
-	return this;
+		super.copy( source );
 
-};
+		this.v0.copy( source.v0 );
+		this.v1.copy( source.v1 );
+		this.v2.copy( source.v2 );
+		this.v3.copy( source.v3 );
 
-QuadraticBezierCurve.prototype.toJSON = function () {
+		return this;
 
-	const data = Curve.prototype.toJSON.call( this );
+	}
+	toJSON() {
 
-	data.v0 = this.v0.toArray();
-	data.v1 = this.v1.toArray();
-	data.v2 = this.v2.toArray();
+		const data = super.toJSON();
 
-	return data;
+		data.v0 = this.v0.toArray();
+		data.v1 = this.v1.toArray();
+		data.v2 = this.v2.toArray();
+		data.v3 = this.v3.toArray();
 
-};
+		return data;
 
-QuadraticBezierCurve.prototype.fromJSON = function ( json ) {
+	}
+	fromJSON( json ) {
 
-	Curve.prototype.fromJSON.call( this, json );
+		super.fromJSON( json );
 
-	this.v0.fromArray( json.v0 );
-	this.v1.fromArray( json.v1 );
-	this.v2.fromArray( json.v2 );
+		this.v0.fromArray( json.v0 );
+		this.v1.fromArray( json.v1 );
+		this.v2.fromArray( json.v2 );
+		this.v3.fromArray( json.v3 );
 
-	return this;
-
-};
-
-function QuadraticBezierCurve3( v0 = new Vector3(), v1 = new Vector3(), v2 = new Vector3() ) {
-
-	Curve.call( this );
-
-	this.type = 'QuadraticBezierCurve3';
-
-	this.v0 = v0;
-	this.v1 = v1;
-	this.v2 = v2;
-
-}
-
-QuadraticBezierCurve3.prototype = Object.create( Curve.prototype );
-QuadraticBezierCurve3.prototype.constructor = QuadraticBezierCurve3;
-
-QuadraticBezierCurve3.prototype.isQuadraticBezierCurve3 = true;
-
-QuadraticBezierCurve3.prototype.getPoint = function ( t, optionalTarget = new Vector3() ) {
-
-	const point = optionalTarget;
-
-	const v0 = this.v0, v1 = this.v1, v2 = this.v2;
-
-	point.set(
-		QuadraticBezier( t, v0.x, v1.x, v2.x ),
-		QuadraticBezier( t, v0.y, v1.y, v2.y ),
-		QuadraticBezier( t, v0.z, v1.z, v2.z )
-	);
-
-	return point;
-
-};
-
-QuadraticBezierCurve3.prototype.copy = function ( source ) {
-
-	Curve.prototype.copy.call( this, source );
-
-	this.v0.copy( source.v0 );
-	this.v1.copy( source.v1 );
-	this.v2.copy( source.v2 );
-
-	return this;
-
-};
-
-QuadraticBezierCurve3.prototype.toJSON = function () {
-
-	const data = Curve.prototype.toJSON.call( this );
-
-	data.v0 = this.v0.toArray();
-	data.v1 = this.v1.toArray();
-	data.v2 = this.v2.toArray();
-
-	return data;
-
-};
-
-QuadraticBezierCurve3.prototype.fromJSON = function ( json ) {
-
-	Curve.prototype.fromJSON.call( this, json );
-
-	this.v0.fromArray( json.v0 );
-	this.v1.fromArray( json.v1 );
-	this.v2.fromArray( json.v2 );
-
-	return this;
-
-};
-
-function SplineCurve( points = [] ) {
-
-	Curve.call( this );
-
-	this.type = 'SplineCurve';
-
-	this.points = points;
-
-}
-
-SplineCurve.prototype = Object.create( Curve.prototype );
-SplineCurve.prototype.constructor = SplineCurve;
-
-SplineCurve.prototype.isSplineCurve = true;
-
-SplineCurve.prototype.getPoint = function ( t, optionalTarget = new Vector2() ) {
-
-	const point = optionalTarget;
-
-	const points = this.points;
-	const p = ( points.length - 1 ) * t;
-
-	const intPoint = Math.floor( p );
-	const weight = p - intPoint;
-
-	const p0 = points[ intPoint === 0 ? intPoint : intPoint - 1 ];
-	const p1 = points[ intPoint ];
-	const p2 = points[ intPoint > points.length - 2 ? points.length - 1 : intPoint + 1 ];
-	const p3 = points[ intPoint > points.length - 3 ? points.length - 1 : intPoint + 2 ];
-
-	point.set(
-		CatmullRom( weight, p0.x, p1.x, p2.x, p3.x ),
-		CatmullRom( weight, p0.y, p1.y, p2.y, p3.y )
-	);
-
-	return point;
-
-};
-
-SplineCurve.prototype.copy = function ( source ) {
-
-	Curve.prototype.copy.call( this, source );
-
-	this.points = [];
-
-	for ( let i = 0, l = source.points.length; i < l; i ++ ) {
-
-		const point = source.points[ i ];
-
-		this.points.push( point.clone() );
+		return this;
 
 	}
 
-	return this;
+}
 
-};
+class LineCurve extends Curve {
 
-SplineCurve.prototype.toJSON = function () {
+	constructor( v1 = new Vector2(), v2 = new Vector2() ) {
 
-	const data = Curve.prototype.toJSON.call( this );
+		super();
 
-	data.points = [];
+		this.type = 'LineCurve';
+		Object.defineProperty( this, 'isLineCurve', { value: true } );
 
-	for ( let i = 0, l = this.points.length; i < l; i ++ ) {
+		this.v1 = v1;
+		this.v2 = v2;
 
-		const point = this.points[ i ];
-		data.points.push( point.toArray() );
+	}
+	getPoint( t, optionalTarget = new Vector2() ) {
+
+		const point = optionalTarget;
+
+		if ( t === 1 ) {
+
+			point.copy( this.v2 );
+
+		} else {
+
+			point.copy( this.v2 ).sub( this.v1 );
+			point.multiplyScalar( t ).add( this.v1 );
+
+		}
+
+		return point;
+
+	}
+	// Line curve is linear, so we can overwrite default getPointAt
+	getPointAt( u, optionalTarget ) {
+
+		return this.getPoint( u, optionalTarget );
+
+	}
+	getTangent( t, optionalTarget ) {
+
+		const tangent = optionalTarget || new Vector2();
+
+		tangent.copy( this.v2 ).sub( this.v1 ).normalize();
+
+		return tangent;
+
+	}
+	copy( source ) {
+
+		super.copy( source );
+
+		this.v1.copy( source.v1 );
+		this.v2.copy( source.v2 );
+
+		return this;
+
+	}
+	toJSON() {
+
+		const data = super.toJSON();
+
+		data.v1 = this.v1.toArray();
+		data.v2 = this.v2.toArray();
+
+		return data;
+
+	}
+	fromJSON( json ) {
+
+		super.fromJSON( json );
+
+		this.v1.fromArray( json.v1 );
+		this.v2.fromArray( json.v2 );
+
+		return this;
 
 	}
 
-	return data;
+}
 
-};
+class LineCurve3 extends Curve {
 
-SplineCurve.prototype.fromJSON = function ( json ) {
+	constructor( v1 = new Vector3(), v2 = new Vector3() ) {
 
-	Curve.prototype.fromJSON.call( this, json );
+		super();
 
-	this.points = [];
+		this.type = 'LineCurve3';
+		Object.defineProperty( this, 'isLineCurve3', { value: true } );
 
-	for ( let i = 0, l = json.points.length; i < l; i ++ ) {
+		this.v1 = v1;
+		this.v2 = v2;
 
-		const point = json.points[ i ];
-		this.points.push( new Vector2().fromArray( point ) );
+	}
+	getPoint( t, optionalTarget = new Vector3() ) {
+
+		const point = optionalTarget;
+
+		if ( t === 1 ) {
+
+			point.copy( this.v2 );
+
+		} else {
+
+			point.copy( this.v2 ).sub( this.v1 );
+			point.multiplyScalar( t ).add( this.v1 );
+
+		}
+
+		return point;
+
+	}
+	// Line curve is linear, so we can overwrite default getPointAt
+	getPointAt( u, optionalTarget ) {
+
+		return this.getPoint( u, optionalTarget );
+
+	}
+	copy( source ) {
+
+		super.copy( source );
+
+		this.v1.copy( source.v1 );
+		this.v2.copy( source.v2 );
+
+		return this;
+
+	}
+	toJSON() {
+
+		const data = super.toJSON();
+
+		data.v1 = this.v1.toArray();
+		data.v2 = this.v2.toArray();
+
+		return data;
+
+	}
+	fromJSON( json ) {
+
+		super.fromJSON( json );
+
+		this.v1.fromArray( json.v1 );
+		this.v2.fromArray( json.v2 );
+
+		return this;
 
 	}
 
-	return this;
+}
 
-};
+class QuadraticBezierCurve extends Curve {
+
+	constructor( v0 = new Vector2(), v1 = new Vector2(), v2 = new Vector2() ) {
+
+		super();
+
+		this.type = 'QuadraticBezierCurve';
+		Object.defineProperty( this, 'isQuadraticBezierCurve', { value: true } );
+
+		this.v0 = v0;
+		this.v1 = v1;
+		this.v2 = v2;
+
+	}
+	getPoint( t, optionalTarget = new Vector2() ) {
+
+		const point = optionalTarget;
+
+		const v0 = this.v0, v1 = this.v1, v2 = this.v2;
+
+		point.set(
+			QuadraticBezier( t, v0.x, v1.x, v2.x ),
+			QuadraticBezier( t, v0.y, v1.y, v2.y )
+		);
+
+		return point;
+
+	}
+	copy( source ) {
+
+		super.copy( source );
+
+		this.v0.copy( source.v0 );
+		this.v1.copy( source.v1 );
+		this.v2.copy( source.v2 );
+
+		return this;
+
+	}
+	toJSON() {
+
+		const data = super.toJSON();
+
+		data.v0 = this.v0.toArray();
+		data.v1 = this.v1.toArray();
+		data.v2 = this.v2.toArray();
+
+		return data;
+
+	}
+	fromJSON( json ) {
+
+		super.fromJSON( json );
+
+		this.v0.fromArray( json.v0 );
+		this.v1.fromArray( json.v1 );
+		this.v2.fromArray( json.v2 );
+
+		return this;
+
+	}
+
+}
+
+class QuadraticBezierCurve3 extends Curve {
+
+	constructor( v0 = new Vector3(), v1 = new Vector3(), v2 = new Vector3() ) {
+
+		super();
+
+		this.type = 'QuadraticBezierCurve3';
+		Object.defineProperty( this, 'isQuadraticBezierCurve3', { value: true } );
+
+		this.v0 = v0;
+		this.v1 = v1;
+		this.v2 = v2;
+
+	}
+	getPoint( t, optionalTarget = new Vector3() ) {
+
+		const point = optionalTarget;
+
+		const v0 = this.v0, v1 = this.v1, v2 = this.v2;
+
+		point.set(
+			QuadraticBezier( t, v0.x, v1.x, v2.x ),
+			QuadraticBezier( t, v0.y, v1.y, v2.y ),
+			QuadraticBezier( t, v0.z, v1.z, v2.z )
+		);
+
+		return point;
+
+	}
+	copy( source ) {
+
+		super.copy( source );
+
+		this.v0.copy( source.v0 );
+		this.v1.copy( source.v1 );
+		this.v2.copy( source.v2 );
+
+		return this;
+
+	}
+	toJSON() {
+
+		const data = super.toJSON();
+
+		data.v0 = this.v0.toArray();
+		data.v1 = this.v1.toArray();
+		data.v2 = this.v2.toArray();
+
+		return data;
+
+	}
+	fromJSON( json ) {
+
+		super.fromJSON( json );
+
+		this.v0.fromArray( json.v0 );
+		this.v1.fromArray( json.v1 );
+		this.v2.fromArray( json.v2 );
+
+		return this;
+
+	}
+
+}
+
+class SplineCurve extends Curve {
+
+	constructor( points = [] ) {
+
+		super();
+
+		this.type = 'SplineCurve';
+		Object.defineProperty( this, 'isSplineCurve', { value: true } );
+
+		this.points = points;
+
+	}
+	getPoint( t, optionalTarget = new Vector2() ) {
+
+		const point = optionalTarget;
+
+		const points = this.points;
+		const p = ( points.length - 1 ) * t;
+
+		const intPoint = Math.floor( p );
+		const weight = p - intPoint;
+
+		const p0 = points[ intPoint === 0 ? intPoint : intPoint - 1 ];
+		const p1 = points[ intPoint ];
+		const p2 = points[ intPoint > points.length - 2 ? points.length - 1 : intPoint + 1 ];
+		const p3 = points[ intPoint > points.length - 3 ? points.length - 1 : intPoint + 2 ];
+
+		point.set(
+			CatmullRom( weight, p0.x, p1.x, p2.x, p3.x ),
+			CatmullRom( weight, p0.y, p1.y, p2.y, p3.y )
+		);
+
+		return point;
+
+	}
+	copy( source ) {
+
+		Curve.prototype.copy.call( this, source );
+
+		this.points = [];
+
+		for ( let i = 0, l = source.points.length; i < l; i ++ ) {
+
+			const point = source.points[ i ];
+
+			this.points.push( point.clone() );
+
+		}
+
+		return this;
+
+	}
+	toJSON() {
+
+		const data = Curve.prototype.toJSON.call( this );
+
+		data.points = [];
+
+		for ( let i = 0, l = this.points.length; i < l; i ++ ) {
+
+			const point = this.points[ i ];
+			data.points.push( point.toArray() );
+
+		}
+
+		return data;
+
+	}
+	fromJSON( json ) {
+
+		Curve.prototype.fromJSON.call( this, json );
+
+		this.points = [];
+
+		for ( let i = 0, l = json.points.length; i < l; i ++ ) {
+
+			const point = json.points[ i ];
+			this.points.push( new Vector2().fromArray( point ) );
+
+		}
+
+		return this;
+
+	}
+
+}
 
 var Curves = /*#__PURE__*/Object.freeze({
 	__proto__: null,
@@ -36342,28 +36389,26 @@ var Curves = /*#__PURE__*/Object.freeze({
  *  curves, but retains the api of a curve
  **************************************************************/
 
-function CurvePath() {
+class CurvePath extends Curve {
 
-	Curve.call( this );
+	constructor() {
 
-	this.type = 'CurvePath';
+		super();
 
-	this.curves = [];
-	this.autoClose = false; // Automatically closes the path
+		this.type = 'CurvePath';
 
-}
+		this.curves = [];
+		this.autoClose = false; // Automatically closes the path
 
-CurvePath.prototype = Object.assign( Object.create( Curve.prototype ), {
+	}
 
-	constructor: CurvePath,
-
-	add: function ( curve ) {
+	add( curve ) {
 
 		this.curves.push( curve );
 
-	},
+	}
 
-	closePath: function () {
+	closePath() {
 
 		// Add a line curve if start and end of lines are not connected
 		const startPoint = this.curves[ 0 ].getPoint( 0 );
@@ -36375,7 +36420,7 @@ CurvePath.prototype = Object.assign( Object.create( Curve.prototype ), {
 
 		}
 
-	},
+	}
 
 	// To get accurate point with reference to
 	// entire path distance at time t,
@@ -36386,7 +36431,7 @@ CurvePath.prototype = Object.assign( Object.create( Curve.prototype ), {
 	// 3. Get t for the curve
 	// 4. Return curve.getPointAt(t')
 
-	getPoint: function ( t ) {
+	getPoint( t ) {
 
 		const d = t * this.getLength();
 		const curveLengths = this.getCurveLengths();
@@ -36416,32 +36461,32 @@ CurvePath.prototype = Object.assign( Object.create( Curve.prototype ), {
 
 		// loop where sum != 0, sum > d , sum+1 <d
 
-	},
+	}
 
 	// We cannot use the default THREE.Curve getPoint() with getLength() because in
 	// THREE.Curve, getLength() depends on getPoint() but in THREE.CurvePath
 	// getPoint() depends on getLength
 
-	getLength: function () {
+	getLength() {
 
 		const lens = this.getCurveLengths();
 		return lens[ lens.length - 1 ];
 
-	},
+	}
 
 	// cacheLengths must be recalculated.
-	updateArcLengths: function () {
+	updateArcLengths() {
 
 		this.needsUpdate = true;
 		this.cacheLengths = null;
 		this.getCurveLengths();
 
-	},
+	}
 
 	// Compute lengths and cache them
 	// We cannot overwrite getLengths() because UtoT mapping uses it.
 
-	getCurveLengths: function () {
+	getCurveLengths() {
 
 		// We use cache values if curves and cache array are same length
 
@@ -36468,9 +36513,9 @@ CurvePath.prototype = Object.assign( Object.create( Curve.prototype ), {
 
 		return lengths;
 
-	},
+	}
 
-	getSpacedPoints: function ( divisions = 40 ) {
+	getSpacedPoints( divisions = 40 ) {
 
 		const points = [];
 
@@ -36488,9 +36533,9 @@ CurvePath.prototype = Object.assign( Object.create( Curve.prototype ), {
 
 		return points;
 
-	},
+	}
 
-	getPoints: function ( divisions = 12 ) {
+	getPoints( divisions = 12 ) {
 
 		const points = [];
 		let last;
@@ -36526,11 +36571,11 @@ CurvePath.prototype = Object.assign( Object.create( Curve.prototype ), {
 
 		return points;
 
-	},
+	}
 
-	copy: function ( source ) {
+	copy( source ) {
 
-		Curve.prototype.copy.call( this, source );
+		super.copy( source );
 
 		this.curves = [];
 
@@ -36546,11 +36591,11 @@ CurvePath.prototype = Object.assign( Object.create( Curve.prototype ), {
 
 		return this;
 
-	},
+	}
 
-	toJSON: function () {
+	toJSON() {
 
-		const data = Curve.prototype.toJSON.call( this );
+		const data = super.toJSON();
 
 		data.autoClose = this.autoClose;
 		data.curves = [];
@@ -36564,11 +36609,11 @@ CurvePath.prototype = Object.assign( Object.create( Curve.prototype ), {
 
 		return data;
 
-	},
+	}
 
-	fromJSON: function ( json ) {
+	fromJSON( json ) {
 
-		Curve.prototype.fromJSON.call( this, json );
+		super.fromJSON( json );
 
 		this.autoClose = json.autoClose;
 		this.curves = [];
@@ -36584,29 +36629,26 @@ CurvePath.prototype = Object.assign( Object.create( Curve.prototype ), {
 
 	}
 
-} );
+}
 
-function Path( points ) {
+class Path extends CurvePath {
 
-	CurvePath.call( this );
+	constructor( points ) {
 
-	this.type = 'Path';
+		super();
+		this.type = 'Path';
 
-	this.currentPoint = new Vector2();
+		this.currentPoint = new Vector2();
 
-	if ( points ) {
+		if ( points ) {
 
-		this.setFromPoints( points );
+			this.setFromPoints( points );
+
+		}
 
 	}
 
-}
-
-Path.prototype = Object.assign( Object.create( CurvePath.prototype ), {
-
-	constructor: Path,
-
-	setFromPoints: function ( points ) {
+	setFromPoints( points ) {
 
 		this.moveTo( points[ 0 ].x, points[ 0 ].y );
 
@@ -36618,17 +36660,17 @@ Path.prototype = Object.assign( Object.create( CurvePath.prototype ), {
 
 		return this;
 
-	},
+	}
 
-	moveTo: function ( x, y ) {
+	moveTo( x, y ) {
 
 		this.currentPoint.set( x, y ); // TODO consider referencing vectors instead of copying?
 
 		return this;
 
-	},
+	}
 
-	lineTo: function ( x, y ) {
+	lineTo( x, y ) {
 
 		const curve = new LineCurve( this.currentPoint.clone(), new Vector2( x, y ) );
 		this.curves.push( curve );
@@ -36637,9 +36679,9 @@ Path.prototype = Object.assign( Object.create( CurvePath.prototype ), {
 
 		return this;
 
-	},
+	}
 
-	quadraticCurveTo: function ( aCPx, aCPy, aX, aY ) {
+	quadraticCurveTo( aCPx, aCPy, aX, aY ) {
 
 		const curve = new QuadraticBezierCurve(
 			this.currentPoint.clone(),
@@ -36653,9 +36695,9 @@ Path.prototype = Object.assign( Object.create( CurvePath.prototype ), {
 
 		return this;
 
-	},
+	}
 
-	bezierCurveTo: function ( aCP1x, aCP1y, aCP2x, aCP2y, aX, aY ) {
+	bezierCurveTo( aCP1x, aCP1y, aCP2x, aCP2y, aX, aY ) {
 
 		const curve = new CubicBezierCurve(
 			this.currentPoint.clone(),
@@ -36670,9 +36712,9 @@ Path.prototype = Object.assign( Object.create( CurvePath.prototype ), {
 
 		return this;
 
-	},
+	}
 
-	splineThru: function ( pts /*Array of Vector*/ ) {
+	splineThru( pts /*Array of Vector*/ ) {
 
 		const npts = [ this.currentPoint.clone() ].concat( pts );
 
@@ -36683,9 +36725,9 @@ Path.prototype = Object.assign( Object.create( CurvePath.prototype ), {
 
 		return this;
 
-	},
+	}
 
-	arc: function ( aX, aY, aRadius, aStartAngle, aEndAngle, aClockwise ) {
+	arc( aX, aY, aRadius, aStartAngle, aEndAngle, aClockwise ) {
 
 		const x0 = this.currentPoint.x;
 		const y0 = this.currentPoint.y;
@@ -36695,17 +36737,17 @@ Path.prototype = Object.assign( Object.create( CurvePath.prototype ), {
 
 		return this;
 
-	},
+	}
 
-	absarc: function ( aX, aY, aRadius, aStartAngle, aEndAngle, aClockwise ) {
+	absarc( aX, aY, aRadius, aStartAngle, aEndAngle, aClockwise ) {
 
 		this.absellipse( aX, aY, aRadius, aRadius, aStartAngle, aEndAngle, aClockwise );
 
 		return this;
 
-	},
+	}
 
-	ellipse: function ( aX, aY, xRadius, yRadius, aStartAngle, aEndAngle, aClockwise, aRotation ) {
+	ellipse( aX, aY, xRadius, yRadius, aStartAngle, aEndAngle, aClockwise, aRotation ) {
 
 		const x0 = this.currentPoint.x;
 		const y0 = this.currentPoint.y;
@@ -36714,9 +36756,9 @@ Path.prototype = Object.assign( Object.create( CurvePath.prototype ), {
 
 		return this;
 
-	},
+	}
 
-	absellipse: function ( aX, aY, xRadius, yRadius, aStartAngle, aEndAngle, aClockwise, aRotation ) {
+	absellipse( aX, aY, xRadius, yRadius, aStartAngle, aEndAngle, aClockwise, aRotation ) {
 
 		const curve = new EllipseCurve( aX, aY, xRadius, yRadius, aStartAngle, aEndAngle, aClockwise, aRotation );
 
@@ -36740,31 +36782,31 @@ Path.prototype = Object.assign( Object.create( CurvePath.prototype ), {
 
 		return this;
 
-	},
+	}
 
-	copy: function ( source ) {
+	copy( source ) {
 
-		CurvePath.prototype.copy.call( this, source );
+		super.copy( source );
 
 		this.currentPoint.copy( source.currentPoint );
 
 		return this;
 
-	},
+	}
 
-	toJSON: function () {
+	toJSON() {
 
-		const data = CurvePath.prototype.toJSON.call( this );
+		const data = super.toJSON();
 
 		data.currentPoint = this.currentPoint.toArray();
 
 		return data;
 
-	},
+	}
 
-	fromJSON: function ( json ) {
+	fromJSON( json ) {
 
-		CurvePath.prototype.fromJSON.call( this, json );
+		super.fromJSON( json );
 
 		this.currentPoint.fromArray( json.currentPoint );
 
@@ -36772,25 +36814,23 @@ Path.prototype = Object.assign( Object.create( CurvePath.prototype ), {
 
 	}
 
-} );
-
-function Shape( points ) {
-
-	Path.call( this, points );
-
-	this.uuid = MathUtils.generateUUID();
-
-	this.type = 'Shape';
-
-	this.holes = [];
-
 }
 
-Shape.prototype = Object.assign( Object.create( Path.prototype ), {
+class Shape extends Path {
 
-	constructor: Shape,
+	constructor( points ) {
 
-	getPointsHoles: function ( divisions ) {
+		super( points );
+
+		this.uuid = MathUtils.generateUUID();
+
+		this.type = 'Shape';
+
+		this.holes = [];
+
+	}
+
+	getPointsHoles( divisions ) {
 
 		const holesPts = [];
 
@@ -36802,11 +36842,11 @@ Shape.prototype = Object.assign( Object.create( Path.prototype ), {
 
 		return holesPts;
 
-	},
+	}
 
 	// get points of shape and holes (keypoints based on segments parameter)
 
-	extractPoints: function ( divisions ) {
+	extractPoints( divisions ) {
 
 		return {
 
@@ -36815,11 +36855,11 @@ Shape.prototype = Object.assign( Object.create( Path.prototype ), {
 
 		};
 
-	},
+	}
 
-	copy: function ( source ) {
+	copy( source ) {
 
-		Path.prototype.copy.call( this, source );
+		super.copy( source );
 
 		this.holes = [];
 
@@ -36833,11 +36873,11 @@ Shape.prototype = Object.assign( Object.create( Path.prototype ), {
 
 		return this;
 
-	},
+	}
 
-	toJSON: function () {
+	toJSON() {
 
-		const data = Path.prototype.toJSON.call( this );
+		const data = super.toJSON();
 
 		data.uuid = this.uuid;
 		data.holes = [];
@@ -36851,11 +36891,11 @@ Shape.prototype = Object.assign( Object.create( Path.prototype ), {
 
 		return data;
 
-	},
+	}
 
-	fromJSON: function ( json ) {
+	fromJSON( json ) {
 
-		Path.prototype.fromJSON.call( this, json );
+		super.fromJSON( json );
 
 		this.uuid = json.uuid;
 		this.holes = [];
@@ -36871,39 +36911,37 @@ Shape.prototype = Object.assign( Object.create( Path.prototype ), {
 
 	}
 
-} );
-
-function Light( color, intensity = 1 ) {
-
-	Object3D.call( this );
-
-	this.type = 'Light';
-
-	this.color = new Color( color );
-	this.intensity = intensity;
-
 }
 
-Light.prototype = Object.assign( Object.create( Object3D.prototype ), {
+class Light extends Object3D {
 
-	constructor: Light,
+	constructor( color, intensity = 1 ) {
 
-	isLight: true,
+		super();
 
-	copy: function ( source ) {
+		Object.defineProperty( this, 'isLight', { value: true } );
 
-		Object3D.prototype.copy.call( this, source );
+		this.type = 'Light';
+
+		this.color = new Color( color );
+		this.intensity = intensity;
+
+	}
+
+	copy( source ) {
+
+		super.copy( source );
 
 		this.color.copy( source.color );
 		this.intensity = source.intensity;
 
 		return this;
 
-	},
+	}
 
-	toJSON: function ( meta ) {
+	toJSON( meta ) {
 
-		const data = Object3D.prototype.toJSON.call( this, meta );
+		const data = super.toJSON( meta );
 
 		data.object.color = this.color.getHex();
 		data.object.intensity = this.intensity;
@@ -36921,28 +36959,26 @@ Light.prototype = Object.assign( Object.create( Object3D.prototype ), {
 
 	}
 
-} );
-
-function HemisphereLight( skyColor, groundColor, intensity ) {
-
-	Light.call( this, skyColor, intensity );
-
-	this.type = 'HemisphereLight';
-
-	this.position.copy( Object3D.DefaultUp );
-	this.updateMatrix();
-
-	this.groundColor = new Color( groundColor );
-
 }
 
-HemisphereLight.prototype = Object.assign( Object.create( Light.prototype ), {
+class HemisphereLight extends Light {
 
-	constructor: HemisphereLight,
+	constructor( skyColor, groundColor, intensity ) {
 
-	isHemisphereLight: true,
+		super( skyColor, intensity );
 
-	copy: function ( source ) {
+		Object.defineProperty( this, 'isHemisphereLight', { value: true } );
+
+		this.type = 'HemisphereLight';
+
+		this.position.copy( Object3D.DefaultUp );
+		this.updateMatrix();
+
+		this.groundColor = new Color( groundColor );
+
+	}
+
+	copy( source ) {
 
 		Light.prototype.copy.call( this, source );
 
@@ -36952,75 +36988,70 @@ HemisphereLight.prototype = Object.assign( Object.create( Light.prototype ), {
 
 	}
 
-} );
-
-function LightShadow( camera ) {
-
-	this.camera = camera;
-
-	this.bias = 0;
-	this.normalBias = 0;
-	this.radius = 1;
-
-	this.mapSize = new Vector2( 512, 512 );
-
-	this.map = null;
-	this.mapPass = null;
-	this.matrix = new Matrix4();
-
-	this.autoUpdate = true;
-	this.needsUpdate = false;
-
-	this._frustum = new Frustum();
-	this._frameExtents = new Vector2( 1, 1 );
-
-	this._viewportCount = 1;
-
-	this._viewports = [
-
-		new Vector4( 0, 0, 1, 1 )
-
-	];
-
 }
 
-Object.assign( LightShadow.prototype, {
+const _projScreenMatrix = /*@__PURE__*/ new Matrix4();
+const _lightPositionWorld = /*@__PURE__*/ new Vector3();
+const _lookTarget = /*@__PURE__*/ new Vector3();
 
-	_projScreenMatrix: new Matrix4(),
+class LightShadow {
 
-	_lightPositionWorld: new Vector3(),
+	constructor( camera ) {
 
-	_lookTarget: new Vector3(),
+		this.camera = camera;
 
-	getViewportCount: function () {
+		this.bias = 0;
+		this.normalBias = 0;
+		this.radius = 1;
+
+		this.mapSize = new Vector2( 512, 512 );
+
+		this.map = null;
+		this.mapPass = null;
+		this.matrix = new Matrix4();
+
+		this.autoUpdate = true;
+		this.needsUpdate = false;
+
+		this._frustum = new Frustum();
+		this._frameExtents = new Vector2( 1, 1 );
+
+		this._viewportCount = 1;
+
+		this._viewports = [
+
+			new Vector4( 0, 0, 1, 1 )
+
+		];
+
+	}
+
+	getViewportCount() {
 
 		return this._viewportCount;
 
-	},
+	}
 
-	getFrustum: function () {
+	getFrustum() {
 
 		return this._frustum;
 
-	},
+	}
 
-	updateMatrices: function ( light ) {
+	updateMatrices( light ) {
 
-		const shadowCamera = this.camera,
-			shadowMatrix = this.matrix,
-			projScreenMatrix = this._projScreenMatrix,
-			lookTarget = this._lookTarget,
-			lightPositionWorld = this._lightPositionWorld;
+		const shadowCamera = this.camera;
+		const shadowMatrix = this.matrix;
 
-		lightPositionWorld.setFromMatrixPosition( light.matrixWorld );
-		shadowCamera.position.copy( lightPositionWorld );
+		_lightPositionWorld.setFromMatrixPosition( light.matrixWorld );
+		shadowCamera.position.copy( _lightPositionWorld );
 
-		lookTarget.setFromMatrixPosition( light.target.matrixWorld );
-		shadowCamera.lookAt( lookTarget );
+		_lookTarget.setFromMatrixPosition( light.target.matrixWorld );
+		shadowCamera.lookAt( _lookTarget );
 		shadowCamera.updateMatrixWorld();
 
-		projScreenMatrix.multiplyMatrices( shadowCamera.projectionMatrix, shadowCamera.matrixWorldInverse );
-		this._frustum.setFromProjectionMatrix( projScreenMatrix );
+		_projScreenMatrix.multiplyMatrices( shadowCamera.projectionMatrix, shadowCamera.matrixWorldInverse );
+		this._frustum.setFromProjectionMatrix( _projScreenMatrix );
 
 		shadowMatrix.set(
 			0.5, 0.0, 0.0, 0.5,
@@ -37032,21 +37063,21 @@ Object.assign( LightShadow.prototype, {
 		shadowMatrix.multiply( shadowCamera.projectionMatrix );
 		shadowMatrix.multiply( shadowCamera.matrixWorldInverse );
 
-	},
+	}
 
-	getViewport: function ( viewportIndex ) {
+	getViewport( viewportIndex ) {
 
 		return this._viewports[ viewportIndex ];
 
-	},
+	}
 
-	getFrameExtents: function () {
+	getFrameExtents() {
 
 		return this._frameExtents;
 
-	},
+	}
 
-	copy: function ( source ) {
+	copy( source ) {
 
 		this.camera = source.camera.clone();
 
@@ -37057,15 +37088,15 @@ Object.assign( LightShadow.prototype, {
 
 		return this;
 
-	},
+	}
 
-	clone: function () {
+	clone() {
 
 		return new this.constructor().copy( this );
 
-	},
+	}
 
-	toJSON: function () {
+	toJSON() {
 
 		const object = {};
 
@@ -37081,23 +37112,21 @@ Object.assign( LightShadow.prototype, {
 
 	}
 
-} );
-
-function SpotLightShadow() {
-
-	LightShadow.call( this, new PerspectiveCamera( 50, 1, 0.5, 500 ) );
-
-	this.focus = 1;
-
 }
 
-SpotLightShadow.prototype = Object.assign( Object.create( LightShadow.prototype ), {
+class SpotLightShadow extends LightShadow {
 
-	constructor: SpotLightShadow,
+	constructor() {
 
-	isSpotLightShadow: true,
+		super( new PerspectiveCamera( 50, 1, 0.5, 500 ) );
 
-	updateMatrices: function ( light ) {
+		Object.defineProperty( this, 'isSpotLightShadow', { value: true } );
+
+		this.focus = 1;
+
+	}
+
+	updateMatrices( light ) {
 
 		const camera = this.camera;
 
@@ -37114,58 +37143,55 @@ SpotLightShadow.prototype = Object.assign( Object.create( LightShadow.prototype 
 
 		}
 
-		LightShadow.prototype.updateMatrices.call( this, light );
+		super.updateMatrices( light );
 
 	}
 
-} );
-
-function SpotLight( color, intensity, distance, angle, penumbra, decay ) {
-
-	Light.call( this, color, intensity );
-
-	this.type = 'SpotLight';
-
-	this.position.copy( Object3D.DefaultUp );
-	this.updateMatrix();
-
-	this.target = new Object3D();
-
-	Object.defineProperty( this, 'power', {
-		get: function () {
-
-			// intensity = power per solid angle.
-			// ref: equation (17) from https://seblagarde.files.wordpress.com/2015/07/course_notes_moving_frostbite_to_pbr_v32.pdf
-			return this.intensity * Math.PI;
-
-		},
-		set: function ( power ) {
-
-			// intensity = power per solid angle.
-			// ref: equation (17) from https://seblagarde.files.wordpress.com/2015/07/course_notes_moving_frostbite_to_pbr_v32.pdf
-			this.intensity = power / Math.PI;
-
-		}
-	} );
-
-	this.distance = ( distance !== undefined ) ? distance : 0;
-	this.angle = ( angle !== undefined ) ? angle : Math.PI / 3;
-	this.penumbra = ( penumbra !== undefined ) ? penumbra : 0;
-	this.decay = ( decay !== undefined ) ? decay : 1;	// for physically correct lights, should be 2.
-
-	this.shadow = new SpotLightShadow();
-
 }
 
-SpotLight.prototype = Object.assign( Object.create( Light.prototype ), {
+class SpotLight extends Light {
 
-	constructor: SpotLight,
+	constructor( color, intensity, distance = 0, angle = Math.PI / 3, penumbra = 0, decay = 1 ) {
 
-	isSpotLight: true,
+		super( color, intensity );
 
-	copy: function ( source ) {
+		Object.defineProperty( this, 'isSpotLight', { value: true } );
 
-		Light.prototype.copy.call( this, source );
+		this.type = 'SpotLight';
+
+		this.position.copy( Object3D.DefaultUp );
+		this.updateMatrix();
+
+		this.target = new Object3D();
+
+		this.distance = distance;
+		this.angle = angle;
+		this.penumbra = penumbra;
+		this.decay = decay; // for physically correct lights, should be 2.
+
+		this.shadow = new SpotLightShadow();
+
+	}
+
+	get power() {
+
+		// intensity = power per solid angle.
+		// ref: equation (17) from https://seblagarde.files.wordpress.com/2015/07/course_notes_moving_frostbite_to_pbr_v32.pdf
+		return this.intensity * Math.PI;
+
+	}
+
+	set power( power ) {
+
+		// intensity = power per solid angle.
+		// ref: equation (17) from https://seblagarde.files.wordpress.com/2015/07/course_notes_moving_frostbite_to_pbr_v32.pdf
+		this.intensity = power / Math.PI;
+
+	}
+
+	copy( source ) {
+
+		super.copy( source );
 
 		this.distance = source.distance;
 		this.angle = source.angle;
@@ -37180,127 +37206,123 @@ SpotLight.prototype = Object.assign( Object.create( Light.prototype ), {
 
 	}
 
-} );
-
-function PointLightShadow() {
-
-	LightShadow.call( this, new PerspectiveCamera( 90, 1, 0.5, 500 ) );
-
-	this._frameExtents = new Vector2( 4, 2 );
-
-	this._viewportCount = 6;
-
-	this._viewports = [
-		// These viewports map a cube-map onto a 2D texture with the
-		// following orientation:
-		//
-		//  xzXZ
-		//   y Y
-		//
-		// X - Positive x direction
-		// x - Negative x direction
-		// Y - Positive y direction
-		// y - Negative y direction
-		// Z - Positive z direction
-		// z - Negative z direction
-
-		// positive X
-		new Vector4( 2, 1, 1, 1 ),
-		// negative X
-		new Vector4( 0, 1, 1, 1 ),
-		// positive Z
-		new Vector4( 3, 1, 1, 1 ),
-		// negative Z
-		new Vector4( 1, 1, 1, 1 ),
-		// positive Y
-		new Vector4( 3, 0, 1, 1 ),
-		// negative Y
-		new Vector4( 1, 0, 1, 1 )
-	];
-
-	this._cubeDirections = [
-		new Vector3( 1, 0, 0 ), new Vector3( - 1, 0, 0 ), new Vector3( 0, 0, 1 ),
-		new Vector3( 0, 0, - 1 ), new Vector3( 0, 1, 0 ), new Vector3( 0, - 1, 0 )
-	];
-
-	this._cubeUps = [
-		new Vector3( 0, 1, 0 ), new Vector3( 0, 1, 0 ), new Vector3( 0, 1, 0 ),
-		new Vector3( 0, 1, 0 ), new Vector3( 0, 0, 1 ),	new Vector3( 0, 0, - 1 )
-	];
-
 }
 
-PointLightShadow.prototype = Object.assign( Object.create( LightShadow.prototype ), {
+const _projScreenMatrix$1 = /*@__PURE__*/ new Matrix4();
+const _lightPositionWorld$1 = /*@__PURE__*/ new Vector3();
+const _lookTarget$1 = /*@__PURE__*/ new Vector3();
 
-	constructor: PointLightShadow,
+class PointLightShadow extends LightShadow {
 
-	isPointLightShadow: true,
+	constructor() {
 
-	updateMatrices: function ( light, viewportIndex = 0 ) {
+		super( new PerspectiveCamera( 90, 1, 0.5, 500 ) );
 
-		const camera = this.camera,
-			shadowMatrix = this.matrix,
-			lightPositionWorld = this._lightPositionWorld,
-			lookTarget = this._lookTarget,
-			projScreenMatrix = this._projScreenMatrix;
+		Object.defineProperty( this, 'isPointLightShadow', { value: true } );
 
-		lightPositionWorld.setFromMatrixPosition( light.matrixWorld );
-		camera.position.copy( lightPositionWorld );
+		this._frameExtents = new Vector2( 4, 2 );
 
-		lookTarget.copy( camera.position );
-		lookTarget.add( this._cubeDirections[ viewportIndex ] );
-		camera.up.copy( this._cubeUps[ viewportIndex ] );
-		camera.lookAt( lookTarget );
-		camera.updateMatrixWorld();
+		this._viewportCount = 6;
 
-		shadowMatrix.makeTranslation( - lightPositionWorld.x, - lightPositionWorld.y, - lightPositionWorld.z );
+		this._viewports = [
+			// These viewports map a cube-map onto a 2D texture with the
+			// following orientation:
+			//
+			//  xzXZ
+			//   y Y
+			//
+			// X - Positive x direction
+			// x - Negative x direction
+			// Y - Positive y direction
+			// y - Negative y direction
+			// Z - Positive z direction
+			// z - Negative z direction
 
-		projScreenMatrix.multiplyMatrices( camera.projectionMatrix, camera.matrixWorldInverse );
-		this._frustum.setFromProjectionMatrix( projScreenMatrix );
+			// positive X
+			new Vector4( 2, 1, 1, 1 ),
+			// negative X
+			new Vector4( 0, 1, 1, 1 ),
+			// positive Z
+			new Vector4( 3, 1, 1, 1 ),
+			// negative Z
+			new Vector4( 1, 1, 1, 1 ),
+			// positive Y
+			new Vector4( 3, 0, 1, 1 ),
+			// negative Y
+			new Vector4( 1, 0, 1, 1 )
+		];
+
+		this._cubeDirections = [
+			new Vector3( 1, 0, 0 ), new Vector3( - 1, 0, 0 ), new Vector3( 0, 0, 1 ),
+			new Vector3( 0, 0, - 1 ), new Vector3( 0, 1, 0 ), new Vector3( 0, - 1, 0 )
+		];
+
+		this._cubeUps = [
+			new Vector3( 0, 1, 0 ), new Vector3( 0, 1, 0 ), new Vector3( 0, 1, 0 ),
+			new Vector3( 0, 1, 0 ), new Vector3( 0, 0, 1 ),	new Vector3( 0, 0, - 1 )
+		];
 
 	}
 
-} );
+	updateMatrices( light, viewportIndex = 0 ) {
 
-function PointLight( color, intensity, distance, decay ) {
+		const camera = this.camera;
+		const shadowMatrix = this.matrix;
 
-	Light.call( this, color, intensity );
+		_lightPositionWorld$1.setFromMatrixPosition( light.matrixWorld );
+		camera.position.copy( _lightPositionWorld$1 );
 
-	this.type = 'PointLight';
+		_lookTarget$1.copy( camera.position );
+		_lookTarget$1.add( this._cubeDirections[ viewportIndex ] );
+		camera.up.copy( this._cubeUps[ viewportIndex ] );
+		camera.lookAt( _lookTarget$1 );
+		camera.updateMatrixWorld();
 
-	Object.defineProperty( this, 'power', {
-		get: function () {
+		shadowMatrix.makeTranslation( - _lightPositionWorld$1.x, - _lightPositionWorld$1.y, - _lightPositionWorld$1.z );
 
-			// intensity = power per solid angle.
-			// ref: equation (15) from https://seblagarde.files.wordpress.com/2015/07/course_notes_moving_frostbite_to_pbr_v32.pdf
-			return this.intensity * 4 * Math.PI;
+		_projScreenMatrix$1.multiplyMatrices( camera.projectionMatrix, camera.matrixWorldInverse );
+		this._frustum.setFromProjectionMatrix( _projScreenMatrix$1 );
 
-		},
-		set: function ( power ) {
-
-			// intensity = power per solid angle.
-			// ref: equation (15) from https://seblagarde.files.wordpress.com/2015/07/course_notes_moving_frostbite_to_pbr_v32.pdf
-			this.intensity = power / ( 4 * Math.PI );
-
-		}
-	} );
-
-	this.distance = ( distance !== undefined ) ? distance : 0;
-	this.decay = ( decay !== undefined ) ? decay : 1;	// for physically correct lights, should be 2.
-
-	this.shadow = new PointLightShadow();
+	}
 
 }
 
-PointLight.prototype = Object.assign( Object.create( Light.prototype ), {
+class PointLight extends Light {
 
-	constructor: PointLight,
+	constructor( color, intensity, distance = 0, decay = 1 ) {
 
-	isPointLight: true,
+		super( color, intensity );
 
-	copy: function ( source ) {
+		Object.defineProperty( this, 'isPointLight', { value: true } );
 
-		Light.prototype.copy.call( this, source );
+		this.type = 'PointLight';
+
+		this.distance = distance;
+		this.decay = decay; // for physically correct lights, should be 2.
+
+		this.shadow = new PointLightShadow();
+
+	}
+
+	get power() {
+
+		// intensity = power per solid angle.
+		// ref: equation (15) from https://seblagarde.files.wordpress.com/2015/07/course_notes_moving_frostbite_to_pbr_v32.pdf
+		return this.intensity * 4 * Math.PI;
+
+	}
+
+	set power( power ) {
+
+		// intensity = power per solid angle.
+		// ref: equation (15) from https://seblagarde.files.wordpress.com/2015/07/course_notes_moving_frostbite_to_pbr_v32.pdf
+		this.intensity = power / ( 4 * Math.PI );
+
+	}
+
+	copy( source ) {
+
+		super.copy( source );
 
 		this.distance = source.distance;
 		this.decay = source.decay;
@@ -37311,7 +37333,7 @@ PointLight.prototype = Object.assign( Object.create( Light.prototype ), {
 
 	}
 
-} );
+}
 
 function OrthographicCamera( left = - 1, right = 1, top = 1, bottom = - 1, near = 0.1, far = 2000 ) {
 
@@ -37448,108 +37470,92 @@ OrthographicCamera.prototype = Object.assign( Object.create( Camera.prototype ),
 
 } );
 
-function DirectionalLightShadow() {
+class DirectionalLightShadow extends LightShadow {
 
-	LightShadow.call( this, new OrthographicCamera( - 5, 5, 5, - 5, 0.5, 500 ) );
+	constructor() {
 
-}
+		super( new OrthographicCamera( - 5, 5, 5, - 5, 0.5, 500 ) );
 
-DirectionalLightShadow.prototype = Object.assign( Object.create( LightShadow.prototype ), {
-
-	constructor: DirectionalLightShadow,
-
-	isDirectionalLightShadow: true,
-
-	updateMatrices: function ( light ) {
-
-		LightShadow.prototype.updateMatrices.call( this, light );
+		Object.defineProperty( this, 'isDirectionalLightShadow', { value: true } );
 
 	}
 
-} );
-
-function DirectionalLight( color, intensity ) {
-
-	Light.call( this, color, intensity );
-
-	this.type = 'DirectionalLight';
-
-	this.position.copy( Object3D.DefaultUp );
-	this.updateMatrix();
-
-	this.target = new Object3D();
-
-	this.shadow = new DirectionalLightShadow();
-
 }
 
-DirectionalLight.prototype = Object.assign( Object.create( Light.prototype ), {
+class DirectionalLight extends Light {
 
-	constructor: DirectionalLight,
+	constructor( color, intensity ) {
 
-	isDirectionalLight: true,
+		super( color, intensity );
 
-	copy: function ( source ) {
+		Object.defineProperty( this, 'isDirectionalLight', { value: true } );
 
-		Light.prototype.copy.call( this, source );
+		this.type = 'DirectionalLight';
+
+		this.position.copy( Object3D.DefaultUp );
+		this.updateMatrix();
+
+		this.target = new Object3D();
+
+		this.shadow = new DirectionalLightShadow();
+
+	}
+
+	copy( source ) {
+
+		super.copy( source );
 
 		this.target = source.target.clone();
-
 		this.shadow = source.shadow.clone();
 
 		return this;
 
 	}
 
-} );
+}
 
-function AmbientLight( color, intensity ) {
+class AmbientLight extends Light {
 
-	Light.call( this, color, intensity );
+	constructor( color, intensity ) {
 
-	this.type = 'AmbientLight';
+		super( color, intensity );
+
+		this.type = 'AmbientLight';
+		Object.defineProperty( this, 'isAmbientLight', { value: true } );
+
+	}
 
 }
 
-AmbientLight.prototype = Object.assign( Object.create( Light.prototype ), {
+class RectAreaLight extends Light {
 
-	constructor: AmbientLight,
+	constructor( color, intensity, width = 10, height = 10 ) {
 
-	isAmbientLight: true
+		super( color, intensity );
 
-} );
+		Object.defineProperty( this, 'isRectAreaLight', { value: true } );
 
-function RectAreaLight( color, intensity, width, height ) {
+		this.type = 'RectAreaLight';
 
-	Light.call( this, color, intensity );
+		this.width = width;
+		this.height = height;
 
-	this.type = 'RectAreaLight';
+	}
 
-	this.width = ( width !== undefined ) ? width : 10;
-	this.height = ( height !== undefined ) ? height : 10;
+	copy( source ) {
 
-}
-
-RectAreaLight.prototype = Object.assign( Object.create( Light.prototype ), {
-
-	constructor: RectAreaLight,
-
-	isRectAreaLight: true,
-
-	copy: function ( source ) {
-
-		Light.prototype.copy.call( this, source );
+		super.copy( source );
 
 		this.width = source.width;
 		this.height = source.height;
 
 		return this;
 
-	},
+	}
 
-	toJSON: function ( meta ) {
+	toJSON( meta ) {
 
-		const data = Light.prototype.toJSON.call( this, meta );
+		const data = super.toJSON( meta );
 
 		data.object.width = this.width;
 		data.object.height = this.height;
@@ -37558,7 +37564,7 @@ RectAreaLight.prototype = Object.assign( Object.create( Light.prototype ), {
 
 	}
 
-} );
+}
 
 /**
  * Primary reference:
@@ -37800,44 +37806,40 @@ class SphericalHarmonics3 {
 
 }
 
-function LightProbe( sh, intensity ) {
+class LightProbe extends Light {
 
-	Light.call( this, undefined, intensity );
+	constructor( sh = new SphericalHarmonics3(), intensity = 1 ) {
 
-	this.type = 'LightProbe';
+		super( undefined, intensity );
 
-	this.sh = ( sh !== undefined ) ? sh : new SphericalHarmonics3();
+		Object.defineProperty( this, 'isLightProbe', { value: true } );
 
-}
+		this.sh = sh;
 
-LightProbe.prototype = Object.assign( Object.create( Light.prototype ), {
+	}
 
-	constructor: LightProbe,
+	copy( source ) {
 
-	isLightProbe: true,
-
-	copy: function ( source ) {
-
-		Light.prototype.copy.call( this, source );
+		super.copy( source );
 
 		this.sh.copy( source.sh );
 
 		return this;
 
-	},
+	}
 
-	fromJSON: function ( json ) {
+	fromJSON( json ) {
 
 		this.intensity = json.intensity; // TODO: Move this bit to Light.fromJSON();
 		this.sh.fromArray( json.sh );
 
 		return this;
 
-	},
+	}
 
-	toJSON: function ( meta ) {
+	toJSON( meta ) {
 
-		const data = Light.prototype.toJSON.call( this, meta );
+		const data = super.toJSON( meta );
 
 		data.object.sh = this.sh.toArray();
 
@@ -37845,21 +37847,18 @@ LightProbe.prototype = Object.assign( Object.create( Light.prototype ), {
 
 	}
 
-} );
-
-function MaterialLoader( manager ) {
-
-	Loader.call( this, manager );
-
-	this.textures = {};
-
 }
 
-MaterialLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
+class MaterialLoader extends Loader {
 
-	constructor: MaterialLoader,
+	constructor( manager ) {
 
-	load: function ( url, onLoad, onProgress, onError ) {
+		super( manager );
+		this.textures = {};
+
+	}
+
+	load( url, onLoad, onProgress, onError ) {
 
 		const scope = this;
 
@@ -37891,9 +37890,9 @@ MaterialLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 
 		}, onProgress, onError );
 
-	},
+	}
 
-	parse: function ( json ) {
+	parse( json ) {
 
 		const textures = this.textures;
 
@@ -38122,16 +38121,16 @@ MaterialLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 
 		return material;
 
-	},
+	}
 
-	setTextures: function ( value ) {
+	setTextures( value ) {
 
 		this.textures = value;
 		return this;
 
 	}
 
-} );
+}
 
 const LoaderUtils = {
 
@@ -38274,17 +38273,15 @@ InstancedBufferAttribute.prototype = Object.assign( Object.create( BufferAttribu
 
 } );
 
-function BufferGeometryLoader( manager ) {
+class BufferGeometryLoader extends Loader {
 
-	Loader.call( this, manager );
+	constructor( manager ) {
 
-}
+		super( manager );
 
-BufferGeometryLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
+	}
 
-	constructor: BufferGeometryLoader,
-
-	load: function ( url, onLoad, onProgress, onError ) {
+	load( url, onLoad, onProgress, onError ) {
 
 		const scope = this;
 
@@ -38316,9 +38313,9 @@ BufferGeometryLoader.prototype = Object.assign( Object.create( Loader.prototype 
 
 		}, onProgress, onError );
 
-	},
+	}
 
-	parse: function ( json ) {
+	parse( json ) {
 
 		const interleavedBufferMap = {};
 		const arrayBufferMap = {};
@@ -38476,7 +38473,7 @@ BufferGeometryLoader.prototype = Object.assign( Object.create( Loader.prototype 
 
 	}
 
-} );
+}
 
 class ObjectLoader extends Loader {
 
@@ -39687,20 +39684,20 @@ ImageBitmapLoader.prototype = Object.assign( Object.create( Loader.prototype ), 
 
 } );
 
-function ShapePath() {
+class ShapePath {
 
-	this.type = 'ShapePath';
+	constructor() {
 
-	this.color = new Color();
+		this.type = 'ShapePath';
 
-	this.subPaths = [];
-	this.currentPath = null;
+		this.color = new Color();
 
-}
+		this.subPaths = [];
+		this.currentPath = null;
 
-Object.assign( ShapePath.prototype, {
+	}
 
-	moveTo: function ( x, y ) {
+	moveTo( x, y ) {
 
 		this.currentPath = new Path();
 		this.subPaths.push( this.currentPath );
@@ -39708,41 +39705,41 @@ Object.assign( ShapePath.prototype, {
 
 		return this;
 
-	},
+	}
 
-	lineTo: function ( x, y ) {
+	lineTo( x, y ) {
 
 		this.currentPath.lineTo( x, y );
 
 		return this;
 
-	},
+	}
 
-	quadraticCurveTo: function ( aCPx, aCPy, aX, aY ) {
+	quadraticCurveTo( aCPx, aCPy, aX, aY ) {
 
 		this.currentPath.quadraticCurveTo( aCPx, aCPy, aX, aY );
 
 		return this;
 
-	},
+	}
 
-	bezierCurveTo: function ( aCP1x, aCP1y, aCP2x, aCP2y, aX, aY ) {
+	bezierCurveTo( aCP1x, aCP1y, aCP2x, aCP2y, aX, aY ) {
 
 		this.currentPath.bezierCurveTo( aCP1x, aCP1y, aCP2x, aCP2y, aX, aY );
 
 		return this;
 
-	},
+	}
 
-	splineThru: function ( pts ) {
+	splineThru( pts ) {
 
 		this.currentPath.splineThru( pts );
 
 		return this;
 
-	},
+	}
 
-	toShapes: function ( isCCW, noHoles ) {
+	toShapes( isCCW, noHoles ) {
 
 		function toShapesNoHoles( inSubpaths ) {
 
@@ -39973,7 +39970,7 @@ Object.assign( ShapePath.prototype, {
 
 	}
 
-} );
+}
 
 class Font {
 
@@ -40115,17 +40112,15 @@ function createPath( char, scale, offsetX, offsetY, data ) {
 
 }
 
-function FontLoader( manager ) {
+class FontLoader extends Loader {
 
-	Loader.call( this, manager );
+	constructor( manager ) {
 
-}
+		super( manager );
 
-FontLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
+	}
 
-	constructor: FontLoader,
-
-	load: function ( url, onLoad, onProgress, onError ) {
+	load( url, onLoad, onProgress, onError ) {
 
 		const scope = this;
 
@@ -40154,15 +40149,15 @@ FontLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 
 		}, onProgress, onError );
 
-	},
+	}
 
-	parse: function ( json ) {
+	parse( json ) {
 
 		return new Font( json );
 
 	}
 
-} );
+}
 
 let _context;
 
@@ -40188,25 +40183,23 @@ const AudioContext = {
 
 };
 
-function AudioLoader( manager ) {
+class AudioLoader extends Loader {
 
-	Loader.call( this, manager );
+	constructor( manager ) {
 
-}
+		super( manager );
 
-AudioLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
+	}
 
-	constructor: AudioLoader,
-
-	load: function ( url, onLoad, onProgress, onError ) {
+	load( url, onLoad, onProgress, onError ) {
 
 		const scope = this;
 
-		const loader = new FileLoader( scope.manager );
+		const loader = new FileLoader( this.manager );
 		loader.setResponseType( 'arraybuffer' );
-		loader.setPath( scope.path );
-		loader.setRequestHeader( scope.requestHeader );
-		loader.setWithCredentials( scope.withCredentials );
+		loader.setPath( this.path );
+		loader.setRequestHeader( this.requestHeader );
+		loader.setWithCredentials( this.withCredentials );
 		loader.load( url, function ( buffer ) {
 
 			try {
@@ -40242,89 +40235,49 @@ AudioLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 
 	}
 
-} );
-
-function HemisphereLightProbe( skyColor, groundColor, intensity ) {
-
-	LightProbe.call( this, undefined, intensity );
-
-	const color1 = new Color().set( skyColor );
-	const color2 = new Color().set( groundColor );
-
-	const sky = new Vector3( color1.r, color1.g, color1.b );
-	const ground = new Vector3( color2.r, color2.g, color2.b );
-
-	// without extra factor of PI in the shader, should = 1 / Math.sqrt( Math.PI );
-	const c0 = Math.sqrt( Math.PI );
-	const c1 = c0 * Math.sqrt( 0.75 );
-
-	this.sh.coefficients[ 0 ].copy( sky ).add( ground ).multiplyScalar( c0 );
-	this.sh.coefficients[ 1 ].copy( sky ).sub( ground ).multiplyScalar( c1 );
-
 }
 
-HemisphereLightProbe.prototype = Object.assign( Object.create( LightProbe.prototype ), {
+class HemisphereLightProbe extends LightProbe {
 
-	constructor: HemisphereLightProbe,
+	constructor( skyColor, groundColor, intensity = 1 ) {
 
-	isHemisphereLightProbe: true,
+		super( undefined, intensity );
 
-	copy: function ( source ) { // modifying colors not currently supported
+		Object.defineProperty( this, 'isHemisphereLightProbe', { value: true } );
 
-		LightProbe.prototype.copy.call( this, source );
+		const color1 = new Color().set( skyColor );
+		const color2 = new Color().set( groundColor );
 
-		return this;
+		const sky = new Vector3( color1.r, color1.g, color1.b );
+		const ground = new Vector3( color2.r, color2.g, color2.b );
 
-	},
+		// without extra factor of PI in the shader, should = 1 / Math.sqrt( Math.PI );
+		const c0 = Math.sqrt( Math.PI );
+		const c1 = c0 * Math.sqrt( 0.75 );
 
-	toJSON: function ( meta ) {
-
-		const data = LightProbe.prototype.toJSON.call( this, meta );
-
-		// data.sh = this.sh.toArray(); // todo
-
-		return data;
+		this.sh.coefficients[ 0 ].copy( sky ).add( ground ).multiplyScalar( c0 );
+		this.sh.coefficients[ 1 ].copy( sky ).sub( ground ).multiplyScalar( c1 );
 
 	}
 
-} );
-
-function AmbientLightProbe( color, intensity ) {
-
-	LightProbe.call( this, undefined, intensity );
-
-	const color1 = new Color().set( color );
-
-	// without extra factor of PI in the shader, would be 2 / Math.sqrt( Math.PI );
-	this.sh.coefficients[ 0 ].set( color1.r, color1.g, color1.b ).multiplyScalar( 2 * Math.sqrt( Math.PI ) );
-
 }
 
-AmbientLightProbe.prototype = Object.assign( Object.create( LightProbe.prototype ), {
+class AmbientLightProbe extends LightProbe {
 
-	constructor: AmbientLightProbe,
+	constructor( color, intensity = 1 ) {
 
-	isAmbientLightProbe: true,
+		super( undefined, intensity );
 
-	copy: function ( source ) { // modifying color not currently supported
+		Object.defineProperty( this, 'isAmbientLightProbe', { value: true } );
 
-		LightProbe.prototype.copy.call( this, source );
+		const color1 = new Color().set( color );
 
-		return this;
-
-	},
-
-	toJSON: function ( meta ) {
-
-		const data = LightProbe.prototype.toJSON.call( this, meta );
-
-		// data.sh = this.sh.toArray(); // todo
-
-		return data;
+		// without extra factor of PI in the shader, would be 2 / Math.sqrt( Math.PI );
+		this.sh.coefficients[ 0 ].set( color1.r, color1.g, color1.b ).multiplyScalar( 2 * Math.sqrt( Math.PI ) );
 
 	}
 
-} );
+}
 
 const _eyeRight = new Matrix4();
 const _eyeLeft = new Matrix4();
@@ -47072,66 +47025,6 @@ Object.assign( Path.prototype, {
 
 //
 
-function ClosedSplineCurve3( points ) {
-
-	console.warn( 'THREE.ClosedSplineCurve3 has been deprecated. Use THREE.CatmullRomCurve3 instead.' );
-
-	CatmullRomCurve3.call( this, points );
-	this.type = 'catmullrom';
-	this.closed = true;
-
-}
-
-ClosedSplineCurve3.prototype = Object.create( CatmullRomCurve3.prototype );
-
-//
-
-function SplineCurve3( points ) {
-
-	console.warn( 'THREE.SplineCurve3 has been deprecated. Use THREE.CatmullRomCurve3 instead.' );
-
-	CatmullRomCurve3.call( this, points );
-	this.type = 'catmullrom';
-
-}
-
-SplineCurve3.prototype = Object.create( CatmullRomCurve3.prototype );
-
-//
-
-function Spline( points ) {
-
-	console.warn( 'THREE.Spline has been removed. Use THREE.CatmullRomCurve3 instead.' );
-
-	CatmullRomCurve3.call( this, points );
-	this.type = 'catmullrom';
-
-}
-
-Spline.prototype = Object.create( CatmullRomCurve3.prototype );
-
-Object.assign( Spline.prototype, {
-
-	initFromArray: function ( /* a */ ) {
-
-		console.error( 'THREE.Spline: .initFromArray() has been removed.' );
-
-	},
-	getControlPointsArray: function ( /* optionalTarget */ ) {
-
-		console.error( 'THREE.Spline: .getControlPointsArray() has been removed.' );
-
-	},
-	reparametrizeByArcLength: function ( /* samplingCoef */ ) {
-
-		console.error( 'THREE.Spline: .reparametrizeByArcLength() has been removed.' );
-
-	}
-
-} );
-
-//
-
 function AxisHelper( size ) {
 
 	console.warn( 'THREE.AxisHelper has been renamed to THREE.AxesHelper.' );
@@ -48973,4 +48866,5 @@ if ( typeof window !== 'undefined' ) {
 
 }
 
-export { ACESFilmicToneMapping, AddEquation, AddOperation, AdditiveAnimationBlendMode, AdditiveBlending, AlphaFormat, AlwaysDepth, AlwaysStencilFunc, AmbientLight, AmbientLightProbe, AnimationClip, AnimationLoader, AnimationMixer, AnimationObjectGroup, AnimationUtils, ArcCurve, ArrayCamera, ArrowHelper, Audio, AudioAnalyser, AudioContext, AudioListener, AudioLoader, AxesHelper, AxisHelper, BackSide, BasicDepthPacking, BasicShadowMap, BinaryTextureLoader, Bone, BooleanKeyframeTrack, BoundingBoxHelper, Box2, Box3, Box3Helper, BoxGeometry as BoxBufferGeometry, BoxGeometry, BoxHelper, BufferAttribute, BufferGeometry, BufferGeometryLoader, ByteType, Cache, Camera, CameraHelper, CanvasRenderer, CanvasTexture, CatmullRomCurve3, CineonToneMapping, CircleGeometry as CircleBufferGeometry, CircleGeometry, ClampToEdgeWrapping, Clock, ClosedSplineCurve3, Color, ColorKeyframeTrack, CompressedTexture, CompressedTextureLoader, ConeGeometry as ConeBufferGeometry, ConeGeometry, CubeCamera, CubeReflectionMapping, CubeRefractionMapping, CubeTexture, CubeTextureLoader, CubeUVReflectionMapping, CubeUVRefractionMapping, CubicBezierCurve, CubicBezierCurve3, CubicInterpolant, CullFaceBack, CullFaceFront, CullFaceFrontBack, CullFaceNone, Curve, CurvePath, CustomBlending, CustomToneMapping, CylinderGeometry as CylinderBufferGeometry, CylinderGeometry, Cylindrical, DataTexture, DataTexture2DArray, DataTexture3D, DataTextureLoader, DataUtils, DecrementStencilOp, DecrementWrapStencilOp, DefaultLoadingManager, DepthFormat, DepthStencilFormat, DepthTexture, DirectionalLight, DirectionalLightHelper, DiscreteInterpolant, DodecahedronGeometry as DodecahedronBufferGeometry, DodecahedronGeometry, DoubleSide, DstAlphaFactor, DstColorFactor, DynamicBufferAttribute, DynamicCopyUsage, DynamicDrawUsage, DynamicReadUsage, EdgesGeometry, EdgesHelper, EllipseCurve, EqualDepth, EqualStencilFunc, EquirectangularReflectionMapping, EquirectangularRefractionMapping, Euler, EventDispatcher, ExtrudeGeometry as ExtrudeBufferGeometry, ExtrudeGeometry, FaceColors, FileLoader, FlatShading, Float16BufferAttribute, Float32Attribute, Float32BufferAttribute, Float64Attribute, Float64BufferAttribute, FloatType, Fog, FogExp2, Font, FontLoader, FrontSide, Frustum, GLBufferAttribute, GLSL1, GLSL3, GammaEncoding, GreaterDepth, GreaterEqualDepth, GreaterEqualStencilFunc, GreaterStencilFunc, GridHelper, Group, HalfFloatType, HemisphereLight, HemisphereLightHelper, HemisphereLightProbe, IcosahedronGeometry as IcosahedronBufferGeometry, IcosahedronGeometry, ImageBitmapLoader, ImageLoader, ImageUtils, ImmediateRenderObject, IncrementStencilOp, IncrementWrapStencilOp, InstancedBufferAttribute, InstancedBufferGeometry, InstancedInterleavedBuffer, InstancedMesh, Int16Attribute, Int16BufferAttribute, Int32Attribute, Int32BufferAttribute, Int8Attribute, Int8BufferAttribute, IntType, InterleavedBuffer, InterleavedBufferAttribute, Interpolant, InterpolateDiscrete, InterpolateLinear, InterpolateSmooth, InvertStencilOp, JSONLoader, KeepStencilOp, KeyframeTrack, LOD, LatheGeometry as LatheBufferGeometry, LatheGeometry, Layers, LensFlare, LessDepth, LessEqualDepth, LessEqualStencilFunc, LessStencilFunc, Light, LightProbe, Line, Line3, LineBasicMaterial, LineCurve, LineCurve3, LineDashedMaterial, LineLoop, LinePieces, LineSegments, LineStrip, LinearEncoding, LinearFilter, LinearInterpolant, LinearMipMapLinearFilter, LinearMipMapNearestFilter, LinearMipmapLinearFilter, LinearMipmapNearestFilter, LinearToneMapping, Loader, LoaderUtils, LoadingManager, LogLuvEncoding, LoopOnce, LoopPingPong, LoopRepeat, LuminanceAlphaFormat, LuminanceFormat, MOUSE, Material, MaterialLoader, MathUtils as Math, MathUtils, Matrix3, Matrix4, MaxEquation, Mesh, MeshBasicMaterial, MeshDepthMaterial, MeshDistanceMaterial, MeshFaceMaterial, MeshLambertMaterial, MeshMatcapMaterial, MeshNormalMaterial, MeshPhongMaterial, MeshPhysicalMaterial, MeshStandardMaterial, MeshToonMaterial, MinEquation, MirroredRepeatWrapping, MixOperation, MultiMaterial, MultiplyBlending, MultiplyOperation, NearestFilter, NearestMipMapLinearFilter, NearestMipMapNearestFilter, NearestMipmapLinearFilter, NearestMipmapNearestFilter, NeverDepth, NeverStencilFunc, NoBlending, NoColors, NoToneMapping, NormalAnimationBlendMode, NormalBlending, NotEqualDepth, NotEqualStencilFunc, NumberKeyframeTrack, Object3D, ObjectLoader, ObjectSpaceNormalMap, OctahedronGeometry as OctahedronBufferGeometry, OctahedronGeometry, OneFactor, OneMinusDstAlphaFactor, OneMinusDstColorFactor, OneMinusSrcAlphaFactor, OneMinusSrcColorFactor, OrthographicCamera, PCFShadowMap, PCFSoftShadowMap, PMREMGenerator, ParametricGeometry as ParametricBufferGeometry, ParametricGeometry, Particle, ParticleBasicMaterial, ParticleSystem, ParticleSystemMaterial, Path, PerspectiveCamera, Plane, PlaneGeometry as PlaneBufferGeometry, PlaneGeometry, PlaneHelper, PointCloud, PointCloudMaterial, PointLight, PointLightHelper, Points, PointsMaterial, PolarGridHelper, PolyhedronGeometry as PolyhedronBufferGeometry, PolyhedronGeometry, PositionalAudio, PropertyBinding, PropertyMixer, QuadraticBezierCurve, QuadraticBezierCurve3, Quaternion, QuaternionKeyframeTrack, QuaternionLinearInterpolant, REVISION, RGBADepthPacking, RGBAFormat, RGBAIntegerFormat, RGBA_ASTC_10x10_Format, RGBA_ASTC_10x5_Format, RGBA_ASTC_10x6_Format, RGBA_ASTC_10x8_Format, RGBA_ASTC_12x10_Format, RGBA_ASTC_12x12_Format, RGBA_ASTC_4x4_Format, RGBA_ASTC_5x4_Format, RGBA_ASTC_5x5_Format, RGBA_ASTC_6x5_Format, RGBA_ASTC_6x6_Format, RGBA_ASTC_8x5_Format, RGBA_ASTC_8x6_Format, RGBA_ASTC_8x8_Format, RGBA_BPTC_Format, RGBA_ETC2_EAC_Format, RGBA_PVRTC_2BPPV1_Format, RGBA_PVRTC_4BPPV1_Format, RGBA_S3TC_DXT1_Format, RGBA_S3TC_DXT3_Format, RGBA_S3TC_DXT5_Format, RGBDEncoding, RGBEEncoding, RGBEFormat, RGBFormat, RGBIntegerFormat, RGBM16Encoding, RGBM7Encoding, RGB_ETC1_Format, RGB_ETC2_Format, RGB_PVRTC_2BPPV1_Format, RGB_PVRTC_4BPPV1_Format, RGB_S3TC_DXT1_Format, RGFormat, RGIntegerFormat, RawShaderMaterial, Ray, Raycaster, RectAreaLight, RedFormat, RedIntegerFormat, ReinhardToneMapping, RepeatWrapping, ReplaceStencilOp, ReverseSubtractEquation, RingGeometry as RingBufferGeometry, RingGeometry, SRGB8_ALPHA8_ASTC_10x10_Format, SRGB8_ALPHA8_ASTC_10x5_Format, SRGB8_ALPHA8_ASTC_10x6_Format, SRGB8_ALPHA8_ASTC_10x8_Format, SRGB8_ALPHA8_ASTC_12x10_Format, SRGB8_ALPHA8_ASTC_12x12_Format, SRGB8_ALPHA8_ASTC_4x4_Format, SRGB8_ALPHA8_ASTC_5x4_Format, SRGB8_ALPHA8_ASTC_5x5_Format, SRGB8_ALPHA8_ASTC_6x5_Format, SRGB8_ALPHA8_ASTC_6x6_Format, SRGB8_ALPHA8_ASTC_8x5_Format, SRGB8_ALPHA8_ASTC_8x6_Format, SRGB8_ALPHA8_ASTC_8x8_Format, Scene, SceneUtils, ShaderChunk, ShaderLib, ShaderMaterial, ShadowMaterial, Shape, ShapeGeometry as ShapeBufferGeometry, ShapeGeometry, ShapePath, ShapeUtils, ShortType, Skeleton, SkeletonHelper, SkinnedMesh, SmoothShading, Sphere, SphereGeometry as SphereBufferGeometry, SphereGeometry, Spherical, SphericalHarmonics3, Spline, SplineCurve, SplineCurve3, SpotLight, SpotLightHelper, Sprite, SpriteMaterial, SrcAlphaFactor, SrcAlphaSaturateFactor, SrcColorFactor, StaticCopyUsage, StaticDrawUsage, StaticReadUsage, StereoCamera, StreamCopyUsage, StreamDrawUsage, StreamReadUsage, StringKeyframeTrack, SubtractEquation, SubtractiveBlending, TOUCH, TangentSpaceNormalMap, TetrahedronGeometry as TetrahedronBufferGeometry, TetrahedronGeometry, TextGeometry as TextBufferGeometry, TextGeometry, Texture, TextureLoader, TorusGeometry as TorusBufferGeometry, TorusGeometry, TorusKnotGeometry as TorusKnotBufferGeometry, TorusKnotGeometry, Triangle, TriangleFanDrawMode, TriangleStripDrawMode, TrianglesDrawMode, TubeGeometry as TubeBufferGeometry, TubeGeometry, UVMapping, Uint16Attribute, Uint16BufferAttribute, Uint32Attribute, Uint32BufferAttribute, Uint8Attribute, Uint8BufferAttribute, Uint8ClampedAttribute, Uint8ClampedBufferAttribute, Uniform, UniformsLib, UniformsUtils, UnsignedByteType, UnsignedInt248Type, UnsignedIntType, UnsignedShort4444Type, UnsignedShort5551Type, UnsignedShort565Type, UnsignedShortType, VSMShadowMap, Vector2, Vector3, Vector4, VectorKeyframeTrack, Vertex, VertexColors, VideoTexture, WebGL1Renderer, WebGLCubeRenderTarget, WebGLMultisampleRenderTarget, WebGLRenderTarget, WebGLRenderTargetCube, WebGLRenderer, WebGLUtils, WireframeGeometry, WireframeHelper, WrapAroundEnding, XHRLoader, ZeroCurvatureEnding, ZeroFactor, ZeroSlopeEnding, ZeroStencilOp, sRGBEncoding };
+export { ACESFilmicToneMapping, AddEquation, AddOperation, AdditiveAnimationBlendMode, AdditiveBlending, AlphaFormat, AlwaysDepth, AlwaysStencilFunc, AmbientLight, AmbientLightProbe, AnimationClip, AnimationLoader, AnimationMixer, AnimationObjectGroup, AnimationUtils, ArcCurve, ArrayCamera, ArrowHelper, Audio, AudioAnalyser, AudioContext, AudioListener, AudioLoader, AxesHelper, AxisHelper, BackSide, BasicDepthPacking, BasicShadowMap, BinaryTextureLoader, Bone, BooleanKeyframeTrack, BoundingBoxHelper, Box2, Box3, Box3Helper, BoxGeometry as BoxBufferGeometry, BoxGeometry, BoxHelper, BufferAttribute, BufferGeometry, BufferGeometryLoader, ByteType, Cache, Camera, CameraHelper, CanvasRenderer, CanvasTexture, CatmullRomCurve3, CineonToneMapping, CircleGeometry as CircleBufferGeometry, CircleGeometry, ClampToEdgeWrapping, Clock, Color, ColorKeyframeTrack, CompressedTexture, CompressedTextureLoader, ConeGeometry as ConeBufferGeometry, ConeGeometry, CubeCamera, CubeReflectionMapping, CubeRefractionMapping, CubeTexture, CubeTextureLoader, CubeUVReflectionMapping, CubeUVRefractionMapping, CubicBezierCurve, CubicBezierCurve3, CubicInterpolant, CullFaceBack, CullFaceFront, CullFaceFrontBack, CullFaceNone, Curve, CurvePath, CustomBlending, CustomToneMapping, CylinderGeometry as CylinderBufferGeometry, CylinderGeometry, Cylindrical, DataTexture, DataTexture2DArray, DataTexture3D, DataTextureLoader, DataUtils, DecrementStencilOp, DecrementWrapStencilOp, DefaultLoadingManager, DepthFormat, DepthStencilFormat, DepthTexture, DirectionalLight, DirectionalLightHelper, DiscreteInterpolant, DodecahedronGeometry as DodecahedronBufferGeometry, DodecahedronGeometry, DoubleSide, DstAlphaFactor, DstColorFactor, DynamicBufferAttribute, DynamicCopyUsage, DynamicDrawUsage, DynamicReadUsage, EdgesGeometry, EdgesHelper, EllipseCurve, EqualDepth, EqualStencilFunc, EquirectangularReflectionMapping, EquirectangularRefractionMapping, Euler, EventDispatcher, ExtrudeGeometry as ExtrudeBufferGeometry, ExtrudeGeometry, FaceColors, FileLoader, FlatShading, Float16BufferAttribute, Float32Attribute, Float32BufferAttribute, Float64Attribute, Float64BufferAttribute, FloatType, Fog, FogExp2, Font, FontLoader, FrontSide, Frustum, GLBufferAttribute, GLSL1, GLSL3, GammaEncoding, GreaterDepth, GreaterEqualDepth, GreaterEqualStencilFunc, GreaterStencilFunc, GridHelper, Group, HalfFloatType, HemisphereLight, HemisphereLightHelper, HemisphereLightProbe, IcosahedronGeometry as IcosahedronBufferGeometry, IcosahedronGeometry, ImageBitmapLoader, ImageLoader, ImageUtils, ImmediateRenderObject, IncrementStencilOp, IncrementWrapStencilOp, InstancedBufferAttribute, InstancedBufferGeometry, InstancedInterleavedBuffer, InstancedMesh, Int16Attribute, Int16BufferAttribute, Int32Attribute, Int32BufferAttribute, Int8Attribute, Int8BufferAttribute, IntType, InterleavedBuffer, InterleavedBufferAttribute, Interpolant, InterpolateDiscrete, InterpolateLinear, InterpolateSmooth, InvertStencilOp, JSONLoader, KeepStencilOp, KeyframeTrack, LOD, LatheGeometry as LatheBufferGeometry, LatheGeometry, Layers, LensFlare, LessDepth, LessEqualDepth, LessEqualStencilFunc, LessStencilFunc, Light, LightProbe, Line, Line3, LineBasicMaterial, LineCurve, LineCurve3, LineDashedMaterial, LineLoop, LinePieces, LineSegments, LineStrip, LinearEncoding, LinearFilter, LinearInterpolant, LinearMipMapLinearFilter, LinearMipMapNearestFilter, LinearMipmapLinearFilter, LinearMipmapNearestFilter, LinearToneMapping, Loader, LoaderUtils, LoadingManager, LogLuvEncoding, LoopOnce, LoopPingPong, LoopRepeat, LuminanceAlphaFormat, LuminanceFormat, MOUSE, Material, MaterialLoader, MathUtils as Math, MathUtils, Matrix3, Matrix4, MaxEquation, Mesh, MeshBasicMaterial, MeshDepthMaterial, MeshDistanceMaterial, MeshFaceMaterial, MeshLambertMaterial, MeshMatcapMaterial, MeshNormalMaterial, MeshPhongMaterial, MeshPhysicalMaterial, MeshStandardMaterial, MeshToonMaterial, MinEquation, MirroredRepeatWrapping, MixOperation, MultiMaterial, MultiplyBlending, MultiplyOperation, NearestFilter, NearestMipMapLinearFilter, NearestMipMapNearestFilter, NearestMipmapLinearFilter, NearestMipmapNearestFilter, NeverDepth, NeverStencilFunc, NoBlending, NoColors, NoToneMapping, NormalAnimationBlendMode, NormalBlending, NotEqualDepth, NotEqualStencilFunc, NumberKeyframeTrack, Object3D, ObjectLoader, ObjectSpaceNormalMap, OctahedronGeometry as OctahedronBufferGeometry, OctahedronGeometry, OneFactor, OneMinusDstAlphaFactor, OneMinusDstColorFactor, OneMinusSrcAlphaFactor, OneMinusSrcColorFactor, OrthographicCamera, PCFShadowMap, PCFSoftShadowMap, PMREMGenerator, ParametricGeometry as ParametricBufferGeometry, ParametricGeometry, Particle, ParticleBasicMaterial, ParticleSystem, ParticleSystemMaterial, Path, PerspectiveCamera, Plane, PlaneGeometry as PlaneBufferGeometry, PlaneGeometry, PlaneHelper, PointCloud, PointCloudMaterial, PointLight, PointLightHelper, Points, PointsMaterial, PolarGridHelper, PolyhedronGeometry as PolyhedronBufferGeometry, PolyhedronGeometry, PositionalAudio, PropertyBinding, PropertyMixer, QuadraticBezierCurve, QuadraticBezierCurve3, Quaternion, QuaternionKeyframeTrack, QuaternionLinearInterpolant, REVISION, RGBADepthPacking, RGBAFormat, RGBAIntegerFormat, RGBA_ASTC_10x10_Format, RGBA_ASTC_10x5_Format, RGBA_ASTC_10x6_Format, RGBA_ASTC_10x8_Format, RGBA_ASTC_12x10_Format, RGBA_ASTC_12x12_Format, RGBA_ASTC_4x4_Format, RGBA_ASTC_5x4_Format, RGBA_ASTC_5x5_Format, RGBA_ASTC_6x5_Format, RGBA_ASTC_6x6_Format, RGBA_ASTC_8x5_Format, RGBA_ASTC_8x6_Format, RGBA_ASTC_8x8_Format, RGBA_BPTC_Format, RGBA_ETC2_EAC_Format, RGBA_PVRTC_2BPPV1_Format, RGBA_PVRTC_4BPPV1_Format, RGBA_S3TC_DXT1_Format, RGBA_S3TC_DXT3_Format, RGBA_S3TC_DXT5_Format, RGBDEncoding, RGBEEncoding, RGBEFormat, RGBFormat, RGBIntegerFormat, RGBM16Encoding, RGBM7Encoding, RGB_ETC1_Format, RGB_ETC2_Format, RGB_PVRTC_2BPPV1_Format, RGB_PVRTC_4BPPV1_Format, RGB_S3TC_DXT1_Format, RGFormat, RGIntegerFormat, RawShaderMaterial, Ray, Raycaster, RectAreaLight, RedFormat, RedIntegerFormat, ReinhardToneMapping, RepeatWrapping, ReplaceStencilOp, ReverseSubtractEquation, RingGeometry as RingBufferGeometry, RingGeometry, SRGB8_ALPHA8_ASTC_10x10_Format, SRGB8_ALPHA8_ASTC_10x5_Format, SRGB8_ALPHA8_ASTC_10x6_Format, SRGB8_ALPHA8_ASTC_10x8_Format, SRGB8_ALPHA8_ASTC_12x10_Format, SRGB8_ALPHA8_ASTC_12x12_Format, SRGB8_ALPHA8_ASTC_4x4_Format, SRGB8_ALPHA8_ASTC_5x4_Format, SRGB8_ALPHA8_ASTC_5x5_Format, SRGB8_ALPHA8_ASTC_6x5_Format, SRGB8_ALPHA8_ASTC_6x6_Format, SRGB8_ALPHA8_ASTC_8x5_Format, SRGB8_ALPHA8_ASTC_8x6_Format, SRGB8_ALPHA8_ASTC_8x8_Format, Scene, SceneUtils, ShaderChunk, ShaderLib, ShaderMaterial, ShadowMaterial, Shape, ShapeGeometry as ShapeBufferGeometry, ShapeGeometry, ShapePath, ShapeUtils, ShortType, Skeleton, SkeletonHelper, SkinnedMesh, SmoothShading, Sphere, SphereGeometry as SphereBufferGeometry, SphereGeometry, Spherical, SphericalHarmonics3, SplineCurve, SpotLight, SpotLightHelper, Sprite, SpriteMaterial, SrcAlphaFactor, SrcAlphaSaturateFactor, SrcColorFactor, StaticCopyUsage, StaticDrawUsage, StaticReadUsage, StereoCamera, StreamCopyUsage, StreamDrawUsage, StreamReadUsage, StringKeyframeTrack, SubtractEquation, SubtractiveBlending, TOUCH, TangentSpaceNormalMap, TetrahedronGeometry as TetrahedronBufferGeometry, TetrahedronGeometry, TextGeometry as TextBufferGeometry, TextGeometry, Texture, TextureLoader, TorusGeometry as TorusBufferGeometry, TorusGeometry, TorusKnotGeometry as TorusKnotBufferGeometry, TorusKnotGeometry, Triangle, TriangleFanDrawMode, TriangleStripDrawMode, TrianglesDrawMode, TubeGeometry as TubeBufferGeometry, TubeGeometry, UVMapping, Uint16Attribute, Uint16BufferAttribute, Uint32Attribute, Uint32BufferAttribute, Uint8Attribute, Uint8BufferAttribute, Uint8ClampedAttribute, Uint8ClampedBufferAttribute, Uniform, UniformsLib, UniformsUtils, UnsignedByteType, UnsignedInt248Type, UnsignedIntType, UnsignedShort4444Type, UnsignedShort5551Type, UnsignedShort565Type, UnsignedShortType, VSMShadowMap, Vector2, Vector3, Vector4, VectorKeyframeTrack, Vertex, VertexColors, VideoTexture, WebGL1Renderer, WebGLCubeRenderTarget, WebGLMultisampleRenderTarget, WebGLRenderTarget, WebGLRenderTargetCube, WebGLRenderer, WebGLUtils, WireframeGeometry, WireframeHelper, WrapAroundEnding, XHRLoader, ZeroCurvatureEnding, ZeroFactor, ZeroSlopeEnding, ZeroStencilOp, sRGBEncoding };
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoidGhyZWUubW9kdWxlLmpzIiwic291cmNlcyI6W10sInNvdXJjZXNDb250ZW50IjpbXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IiJ9
