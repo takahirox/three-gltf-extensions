@@ -74,37 +74,78 @@ export default class GLTFMaterialsVariantsExtension {
 
     gltf.userData.variants = variants;
     gltf.functions = gltf.functions || {};
-    gltf.functions.selectVariant = (scene, variantName) => {
-      const pending = [];
-      const variantIndex = variants.indexOf(variantName);
 
-      if (variantIndex === -1) {
-        // @TODO: return Promise.reject()?
-        return Promise.resolve();
+    const switchMaterial = async (object, variantIndex) => {
+      if (!object.isMesh || !object.userData.gltfExtensions ||
+        !object.userData.gltfExtensions[name]) {
+        return;
       }
+
+      if (!object.userData.originalMaterial) {
+        object.userData.originalMaterial = object.material;
+      }
+
+      object.userData.variantMaterials = object.userData.variantMaterials || {};
+
+      if (object.userData.variantMaterials[variantIndex]) {
+        object.material = object.userData.variantMaterials[variantIndex];
+        return;
+      }
+
+      const meshVariantDef = object.userData.gltfExtensions[name];
+      const mapping = meshVariantDef.mappings.find(mapping => mapping.variants.includes(variantIndex));
+
+      if (mapping) {
+        const materialIndex = mapping.material;
+        object.material = await parser.getDependency('material', mapping.material);
+        parser.assignFinalMaterial(object);
+        object.userData.variantMaterials[variantIndex] = object.material;
+      } else {
+        object.material = object.userData.originalMaterial;
+      }
+    };
+
+    gltf.functions.selectVariantByIndex = async (scene, variantIndex) => {
+      if (variantIndex >= variants.length || variantIndex < 0) {
+        return Promise.reject('Wrong variant index');
+      }
+
+      const pending = [];
+      scene.traverse(object => {
+        pending.push(switchMaterial(object, variantIndex));
+      });
+
+      return Promise.all(pending);
+    };
+
+    gltf.functions.selectVariantByName = async (scene, variantName) => {
+      return gltf.functions.selectVariantByIndex(scene, variants.indexOf(variantName));
+    };
+
+    gltf.functions.ensureLoadVariants = async scene => {
+      const currentMaterialMap = new Map();
 
       scene.traverse(object => {
         if (!object.isMesh || !object.userData.gltfExtensions ||
-         !object.userData.gltfExtensions[name]) {
+	      !object.userData.gltfExtensions[name]) {
           return;
         }
-
-        const meshVariantDef = object.userData.gltfExtensions[name];
-        const mapping = meshVariantDef.mappings.find(mapping => mapping.variants.includes(variantIndex));
-
-        if (mapping) {
-          if (!object.userData.originalMaterial) {
-            object.userData.originalMaterial = object.material;
-          }
-          pending.push(parser.getDependency('material', mapping.material).then(material => {
-            object.material = material;
-            parser.assignFinalMaterial(object);
-          }));
-        } else if (object.userData.originalMaterial) {
-          object.material = object.userData.originalMaterial;
-        }
+        currentMaterialMap.set(object, object.material);
       });
-      return Promise.all(pending);
-    }
+
+      const pending = [];
+      for (let i = 0; i < variants.length; i++) {
+        pending.push(gltf.functions.selectVariantByIndex(scene, i));
+      }
+      await Promise.all(pending);
+
+      scene.traverse(object => {
+        if (!object.isMesh || !object.userData.gltfExtensions ||
+	      !object.userData.gltfExtensions[name]) {
+          return;
+        }
+        object.material = currentMaterialMap.get(object);
+      });
+    };
   }
 }
