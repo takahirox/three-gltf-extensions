@@ -19,7 +19,7 @@ loader.load(path_to_gltf_asset, async gltf => {
 
 ## Compatible Three.js revision
 
-&gt;= r126dev with [#21207](https://github.com/mrdoob/three.js/pull/21207)
+&gt;= r126dev
 
 ## API
 
