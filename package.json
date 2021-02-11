@@ -1,0 +1,26 @@
+{
+  "name": "three-gltf-plugins",
+  "version": "0.0.1",
+  "description": "Three.js glTF loader/exporter unofficial plugins",
+  "directories": {
+    "example": "examples",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/takahirox/three-gltf-extensions.git"
+  },
+  "files": [
+    "loaders",
+    "exporters"
+  ],
+  "author": "Takahiro <hogehoge@gachapin.jp>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/takahirox/three-gltf-extensions/issues"
+  },
+  "homepage": "https://github.com/takahirox/three-gltf-extensions#readme"
+}
