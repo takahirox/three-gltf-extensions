@@ -63,6 +63,17 @@ exporter.parse(scene, result => {
 
 Refer to each plugin's README for more detail.
 
+
+## Locally test examples
+
+```sh
+$ git clone https://github.com/takahirox/three-gltf-plugins.git
+$ cd three-gltf-plugins
+$ npm install -g http-server
+$ http-server . -p 8080 -c-1
+# Access http://localhost:8080/examples/*.html
+```
+
 ## Customize the plugins in your side
 
 As written above, some extensions are not great fit to Three.js API or structure. So the plugins for them may have some limitations. If they don't cover your use case, please fork the repository and customize in your side.
