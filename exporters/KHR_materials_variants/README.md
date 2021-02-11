@@ -38,7 +38,7 @@ The plugin traverses a scene graph and find valid `mesh.userData.variantMaterial
 
 and embeds the variant names and materials as `KHR_materials_variants` extension into exported glTF content.
 
-And if `mesh.originalMaterial` is defined as Three.js Material, the plugin overrides `gltf.meshes[n].primitive.material` with it.
+And if `mesh.userData.originalMaterial` is defined as Three.js Material, the plugin overrides `gltf.meshes[n].primitive.material` with it.
 
 ## Limitations
 
