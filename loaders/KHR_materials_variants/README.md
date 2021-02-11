@@ -77,4 +77,4 @@ You can omit `.gltfMaterialIndex` property and `customVariantName` doesn't have 
 * `selectVariant()` doesn't have selective option. All the meshes under a scene switch their materials.
 * `selectVariant()` doesn't have effect to meshes which are already removed from a scene
 * This plugin may not work if a glTF node has camera, light, or other extension objects in addition to mesh. This limitation may be removed if [this suggestion](https://github.com/mrdoob/three.js/pull/19359#issuecomment-774487100) is accepted.
-
+* `mesh.userData.variantMaterials` are not serialized by Three.js `toJSON()` method correctly because it doesn't support the serialization of Three.js objects under `.userData`.
