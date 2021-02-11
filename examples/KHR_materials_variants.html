@@ -68,7 +68,7 @@
               gui = new GUI();
               const variantsCtrl = gui.add({variant: 'midnight'}, 'variant', gltf.userData.variants).name('Variant');
               variantsCtrl.onChange(async value => {
-                await gltf.functions.selectVariantByName(scene, value);
+                await gltf.functions.selectVariant(scene, value);
                 render();
               });
               render();
@@ -83,7 +83,7 @@
           saveButton.innerText = 'Save glb';
           saveButton.addEventListener('click', async () => {
             saveButton.disabled = true;
-            await gltf.functions.ensureLoadVariants(scene);
+            await gltf.functions.ensureLoadVariantMaterials(scene);
             exporter.parse(scene, async result => {
               saveArrayBuffer(result, 'scene.glb');
               saveButton.disabled = false;
@@ -94,7 +94,7 @@
           dumpButton.innerText = 'Dump to console';
           dumpButton.addEventListener('click', async () => {
             dumpButton.disabled = true;
-            await gltf.functions.ensureLoadVariants(scene);
+            await gltf.functions.ensureLoadVariantMaterials(scene);
             exporter.parse(scene, result => {
               console.log(result);
               dumpButton.disabled = false;
