@@ -10,6 +10,7 @@ import GLTFMaterialsVariantsExtension from 'path_to_three-gltf-plugins/loaders/K
 const loader = new GLTFLoader();
 loader.register(parser => new GLTFMaterialsVariantsExtension(parser));
 loader.load(path_to_gltf_asset, async gltf => {
+  scene.add(gltf.scene);
   const variants = gltf.userData.variants; // [variantName0, variantName1, ...]
   const variantName = variants[theIndexYouWantToUse];
   await gltf.functions.selectVariant(gltf.scene, variantName);
