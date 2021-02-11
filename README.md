@@ -16,7 +16,7 @@ This project provides you Three.js glTF loader/extension plugins even for such e
 
 ## Supported glTF extensions
 
-* [KHR_materials_variants](https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Khronos/KHR_materials_variants) (Currently loader only)
+* [KHR_materials_variants](https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Khronos/KHR_materials_variants)
 
 ## Compatible Three.js revision
 
@@ -26,17 +26,17 @@ This project provides you Three.js glTF loader/extension plugins even for such e
 
 **GLTFLoader plugins**
 
-```
+```javascript
 // Import Three.js
 import * as THREE from 'path_to_three.module.js';
-import { GLTFLoader } from 'path_to_GLTFLoader.js';
+import {GLTFLoader} from 'path_to_GLTFLoader.js';
 
 // Import three-gltf-plugins loader plugins
-import FooExtensionPlugin from 'path_to_three-gltf-plugins/loaders/FooExtension/plugin.js';
+import GLTFFooExtension from 'path_to_three-gltf-plugins/loaders/Foo_extension/Foo_extension.js';
 
 // Register the plugin to the loader and then load glTF
 const loader = new GLTFLoader();
-loader.register(parser => new FooExtensionPlugin(parser));
+loader.register(parser => new GLTFFooExtension(parser));
 loader.load(path_to_gltf_asset, gltf => {
   ...
 });
@@ -45,8 +45,20 @@ loader.load(path_to_gltf_asset, gltf => {
 
 **GLTFExporter plugins**
 
-```
-T.B.D
+```javascript
+// Import Three.js
+import * as THREE from 'path_to_three.module.js';
+import {GLTFExporter} from 'path_to_GLTFExporter.js';
+
+// Import three-gltf-plugins exporter plugins
+import GLTFExporterFooExtension from 'path_to_three-gltf-plugins/exporters/Foo_extension/Foo_extension_exporter.js';
+
+// Register the plugin to the exporter and then export Three.js objects
+const exporter = new GLTFExporter();
+exporter.register(writer => new GLTFExporterFooExtension(writer));
+exporter.parse(scene, result => {
+  ...
+});
 ```
 
 Refer to each plugin's README for more detail.
