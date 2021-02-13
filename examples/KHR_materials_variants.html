@@ -65,8 +65,9 @@
               initExporter(gltf);
 
               // GUI
+              const variants = gltf.userData.variants;
               gui = new GUI();
-              const variantsCtrl = gui.add({variant: 'midnight'}, 'variant', gltf.userData.variants).name('Variant');
+              const variantsCtrl = gui.add({variant: variants[0]}, 'variant', variants).name('Variant');
               variantsCtrl.onChange(async value => {
                 await gltf.functions.selectVariant(scene, value);
                 render();
