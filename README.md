@@ -69,15 +69,35 @@ exporter.parse(scene, result => {
 Refer to each plugin's README for more detail.
 
 
-## Locally test examples
+## Locally run examples
 
 ```sh
-$ git clone https://github.com/takahirox/three-gltf-plugins.git
-$ cd three-gltf-plugins
 $ npm install
 $ npm start
 # Access http://localhost:8080/examples/index.html
 ```
+
+## Unit Test
+
+### Unit Test on Web browser
+
+```sh
+$ npm install
+$ npm run test-install
+$ npm run test-build
+$ npm start
+# Access http://localhost:8080/test/index.html
+```
+
+### Unit Test on Node.js
+
+
+```sh
+$ npm run test-install
+$ npm run test
+```
+
+Note that the unit tests which rely on Web don't run. I recommend to run the unit tests on Web browser.
 
 ## Customize the plugins in your side
 

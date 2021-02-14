@@ -1,0 +1,13 @@
+{
+  "name": "test-deps-installer",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "rollup -c rollup.unit.config.js",
+    "run": "npm run build && qunit -f !-webonly build/unit.js "
+  },
+  "devDependencies": {
+    "qunit": "^2.14.0",
+    "rollup": "^2.39.0"
+  },
+  "license": "MIT"
+}
