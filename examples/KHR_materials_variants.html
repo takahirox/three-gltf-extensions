@@ -44,7 +44,7 @@
         new RGBELoader()
           .setDataType(THREE.UnsignedByteType)
           .setPath('./assets/textures/equirectangular/')
-          .load('quarry_01_1k.hdr', texture => {
+          .load('royal_esplanade_1k.hdr', texture => {
             const envMap = pmremGenerator.fromEquirectangular(texture).texture;
 
             scene.background = envMap;
