@@ -16,7 +16,7 @@ This project provides you Three.js glTF loader/extension plugins even for such e
 
 ## Online demo
 
-* [Online demo](https://rawcdn.githack.com/takahirox/three-gltf-plugins/2cfc36db258a0301de18e1b2e361d9f5ae48d23e/examples/index.html)
+* [Online demo](https://rawcdn.githack.com/takahirox/three-gltf-plugins/1f9092a4f14eb6a74790733570334b5b5f81bbd1/examples/index.html)
 
 ## Supported glTF extensions
 
