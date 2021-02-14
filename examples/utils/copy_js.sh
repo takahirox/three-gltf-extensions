@@ -1,8 +1,8 @@
 #!/usr/bin/bash
 
-# Run this script at three-gltf-plugins/examples
+# Run this script at three-gltf-extensions/examples
 
-# Path from three-gltf-plugins/examples to
+# Path from three-gltf-extensions/examples to
 # Three.js cloned repository directory
 three_dir="../../three.js"
 

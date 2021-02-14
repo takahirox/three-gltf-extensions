@@ -5,7 +5,7 @@
 ```javascript
 import * as THREE from 'path_to_three.module.js';
 import {GLTFLoader} from 'path_to_GLTFLoader.js';
-import GLTFMaterialsVariantsExtension from 'path_to_three-gltf-plugins/loaders/KHR_materials_variants/KHR_materials_variants.js';
+import GLTFMaterialsVariantsExtension from 'path_to_three-gltf-extensions/loaders/KHR_materials_variants/KHR_materials_variants.js';
 
 const loader = new GLTFLoader();
 loader.register(parser => new GLTFMaterialsVariantsExtension(parser));

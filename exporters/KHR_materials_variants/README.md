@@ -5,7 +5,7 @@
 ```javascript
 import * as THREE from 'path_to_three.module.js';
 import {GLTFExporter} from 'path_to_GLTFExporter.js';
-import GLTFExporterMaterialsVariantsExtension from 'path_to_three-gltf-plugins/exporters/KHR_materials_variants/KHR_materials_variants_exporter.js';
+import GLTFExporterMaterialsVariantsExtension from 'path_to_three-gltf-extensions/exporters/KHR_materials_variants/KHR_materials_variants_exporter.js';
 
 const exporter = new GLTFExporter();
 exporter.register(writer => new GLTFExporterMaterialsVariantsExtension(writer));
