@@ -8,7 +8,9 @@
   },
   "scripts": {
     "start": "http-server . -p 8080 -c-1",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "npm run run --prefix test",
+    "test-build": "npm run build --prefix test",
+    "test-install": "npm install --prefix test"
   },
   "repository": {
     "type": "git",
