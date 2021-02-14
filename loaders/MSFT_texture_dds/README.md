@@ -9,7 +9,7 @@ import {DDSLoader} from 'path_to_DDSLoader.js';
 import GLTFTextureDDSExtension from 'path_to_three-gltf-plugins/loaders/MSFT_texture_dds/MSFT_texture_dds.js';
 
 const loader = new GLTFLoader();
-loader.register(parser => new GLTFTextureDDS(parser, new DDSLoader()));
+loader.register(parser => new GLTFTextureDDSExtension(parser, new DDSLoader()));
 loader.load(path_to_gltf_asset, gltf => {
   scene.add(gltf.scene);
   render();
