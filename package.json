@@ -7,6 +7,7 @@
     "test": "test"
   },
   "scripts": {
+    "start": "http-server . -p 8080 -c-1",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -22,5 +23,8 @@
   "bugs": {
     "url": "https://github.com/takahirox/three-gltf-extensions/issues"
   },
-  "homepage": "https://github.com/takahirox/three-gltf-extensions#readme"
+  "homepage": "https://github.com/takahirox/three-gltf-extensions#readme",
+  "devDependencies": {
+    "http-server": "^0.12.3"
+  }
 }
