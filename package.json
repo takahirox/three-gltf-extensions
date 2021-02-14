@@ -1,6 +1,6 @@
 {
   "name": "three-gltf-plugins",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Three.js glTF loader/exporter unofficial plugins",
   "directories": {
     "example": "examples",
