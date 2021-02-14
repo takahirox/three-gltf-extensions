@@ -10,7 +10,7 @@ import GLTFTextureDDSExtension from 'path_to_three-gltf-plugins/loaders/MSFT_tex
 
 const loader = new GLTFLoader();
 loader.register(parser => new GLTFTextureDDS(parser, new DDSLoader()));
-loader.load(path_to_gltf_asset, async gltf => {
+loader.load(path_to_gltf_asset, gltf => {
   scene.add(gltf.scene);
   render();
 });
