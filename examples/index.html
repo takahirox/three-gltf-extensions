@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <title>three-gltf-plugins examples</title>
-    <meta name="viewport" content="width=device-width, user-scalable=no, minumum-scale=1.0, maximum-scale=1.0">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
     <link rel="stylesheet" type="text/css" href="./index.css">
   </head>
   <body>
@@ -12,11 +12,49 @@
         <h1><a href="https://github.com/takahirox/three-gltf-plugins" target="_blank">three-gltf-plugins</a></h1>
       </div>
       <div id="content">
-        <a href="./KHR_materials_variants.html" target="viewer">KHR_materials_variants</a><br />
-        <a href="./MSFT_texture_dds.html" target="viewer">MSFT_texture_dds</a><br />
       </div>
     </div>
 
     <iframe id="viewer" name="viewer" onmousewheel=""></iframe>
+
+    <script>
+      const pluginNames = [
+        'KHR_materials_variants',
+        'MSFT_texture_dds'
+      ];
+
+      const content = document.getElementById('content');
+      const viewer = document.getElementById('viewer');
+
+      const openExample = pluginName => {
+        viewer.src = pluginName + '.html';
+        window.location.hash = pluginName;
+        viewer.focus();
+      };
+
+      pluginNames.forEach(name => {
+        const a = document.createElement('a');
+        a.innerText = name;
+        a.href = name + '.html';
+        a.target = 'viewer';
+        a.addEventListener('click', event => {
+          if (event.button !== 0 || event.ctrlKey || event.altKey ||
+            event.shiftKey || event.metaKey) {
+            return;
+          }
+          event.preventDefault();
+          openExample(name);
+        });
+        content.appendChild(a);
+        content.appendChild(document.createElement('br'));
+      });
+
+      if (window.location.hash !== '') {
+        const hash = window.location.hash.substring(1);
+        if (pluginNames.includes(hash)) {
+          openExample(hash);
+        }
+      }
+    </script>
   </body>
 </html>
