@@ -14,6 +14,10 @@ This project provides you Three.js glTF loader/extension plugins even for such e
 * Allow early trial of glTF extensions the spec of which is not finalized yet
 * Send feedback to Three.js glTF loader/exporter plugin system APIs
 
+## Online demo
+
+* [Online demo](https://rawcdn.githack.com/takahirox/three-gltf-plugins/2cfc36db258a0301de18e1b2e361d9f5ae48d23e/examples/index.html)
+
 ## Supported glTF extensions
 
 * [KHR_materials_variants](https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Khronos/KHR_materials_variants)
