@@ -70,9 +70,9 @@ Refer to each plugin's README for more detail.
 ```sh
 $ git clone https://github.com/takahirox/three-gltf-plugins.git
 $ cd three-gltf-plugins
-$ npm install -g http-server
-$ http-server . -p 8080 -c-1
-# Access http://localhost:8080/examples/*.html
+$ npm install
+$ npm start
+# Access http://localhost:8080/examples/index.html
 ```
 
 ## Customize the plugins in your side
