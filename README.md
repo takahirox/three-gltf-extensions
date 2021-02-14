@@ -1,5 +1,7 @@
 # three-gltf-plugins
 
+[![npm version](https://badge.fury.io/js/three-gltf-plugins.svg)](https://badge.fury.io/js/three-gltf-plugins)
+
 [Three.js](https://threejs.org) glTF [loader](https://threejs.org/docs/#examples/en/loaders/GLTFLoader) and [exporter](https://threejs.org/docs/#examples/en/exporters/GLTFExporter) have plugin system to provide extensibility mechanism to users. glTF extensions can be handled with the plugin system.
 
 Some plugins for major and stable extensions are built-in in the loader and exporter. But other extensions are not supported as built-in by them (yet) because for example the specification is not great fit to Three.js API or structure, or the specification is not finalized.
