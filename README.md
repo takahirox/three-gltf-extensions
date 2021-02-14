@@ -1,6 +1,6 @@
-# three-gltf-plugins
+# three-gltf-extensions
 
-[![npm version](https://badge.fury.io/js/three-gltf-plugins.svg)](https://badge.fury.io/js/three-gltf-plugins)
+[![npm version](https://badge.fury.io/js/three-gltf-extensions.svg)](https://badge.fury.io/js/three-gltf-extensions)
 
 [Three.js](https://threejs.org) glTF [loader](https://threejs.org/docs/#examples/en/loaders/GLTFLoader) and [exporter](https://threejs.org/docs/#examples/en/exporters/GLTFExporter) have plugin system to provide extensibility mechanism to users. glTF extensions can be handled with the plugin system.
 
@@ -18,7 +18,7 @@ This project provides you Three.js glTF loader/extension plugins even for such e
 
 ## Online demo
 
-* [Online demo](https://rawcdn.githack.com/takahirox/three-gltf-plugins/1f9092a4f14eb6a74790733570334b5b5f81bbd1/examples/index.html)
+* [Online demo](https://rawcdn.githack.com/takahirox/three-gltf-extensions/1f9092a4f14eb6a74790733570334b5b5f81bbd1/examples/index.html)
 
 ## Supported glTF extensions
 
@@ -38,8 +38,8 @@ This project provides you Three.js glTF loader/extension plugins even for such e
 import * as THREE from 'path_to_three.module.js';
 import {GLTFLoader} from 'path_to_GLTFLoader.js';
 
-// Import three-gltf-plugins loader plugins
-import GLTFFooExtension from 'path_to_three-gltf-plugins/loaders/Foo_extension/Foo_extension.js';
+// Import three-gltf-extensions loader plugins
+import GLTFFooExtension from 'path_to_three-gltf-extensions/loaders/Foo_extension/Foo_extension.js';
 
 // Register the plugin to the loader and then load glTF
 const loader = new GLTFLoader();
@@ -57,8 +57,8 @@ loader.load(path_to_gltf_asset, gltf => {
 import * as THREE from 'path_to_three.module.js';
 import {GLTFExporter} from 'path_to_GLTFExporter.js';
 
-// Import three-gltf-plugins exporter plugins
-import GLTFExporterFooExtension from 'path_to_three-gltf-plugins/exporters/Foo_extension/Foo_extension_exporter.js';
+// Import three-gltf-extensions exporter plugins
+import GLTFExporterFooExtension from 'path_to_three-gltf-extensions/exporters/Foo_extension/Foo_extension_exporter.js';
 
 // Register the plugin to the exporter and then export Three.js objects
 const exporter = new GLTFExporter();

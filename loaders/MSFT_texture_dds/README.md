@@ -6,7 +6,7 @@
 import * as THREE from 'path_to_three.module.js';
 import {GLTFLoader} from 'path_to_GLTFLoader.js';
 import {DDSLoader} from 'path_to_DDSLoader.js';
-import GLTFTextureDDSExtension from 'path_to_three-gltf-plugins/loaders/MSFT_texture_dds/MSFT_texture_dds.js';
+import GLTFTextureDDSExtension from 'path_to_three-gltf-exensions/loaders/MSFT_texture_dds/MSFT_texture_dds.js';
 
 const loader = new GLTFLoader();
 loader.register(parser => new GLTFTextureDDSExtension(parser, new DDSLoader()));
