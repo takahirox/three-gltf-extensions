@@ -18,10 +18,10 @@ export default QUnit.module('KHR_materials_variants', () => {
         .parse('{"asset": {"version": "2.0"}}', null, result => {
           assert.ok(true, 'can register');
           done();
-		}, error => {
+        }, error => {
           assert.ok(false, 'can register');
           done();
-		});
+        });
     });
   });
 
@@ -75,11 +75,11 @@ export default QUnit.module('KHR_materials_variants', () => {
           assert.ok(validGltfMaterialIndex, 'variant.gltfMaterialIndex is number');
 
           done();
-		}, undefined, error => {
+        }, undefined, error => {
           assert.ok(false, 'can load');
           done();
-		});
-	});
+        });
+    });
 
     QUnit.test('selectVariant', assert => {
       const done = assert.async();
@@ -133,10 +133,10 @@ export default QUnit.module('KHR_materials_variants', () => {
             'doTraverse option works');
 
           done();
-		}, undefined, error => {
+        }, undefined, error => {
           assert.ok(false, 'can load');
           done();
-		});
+        });
     });
 
     QUnit.todo('ensureLoadVariants', assert => {
