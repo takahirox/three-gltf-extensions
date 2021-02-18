@@ -46,15 +46,22 @@ If glTF file includes `KHR_materials_variants` extension, the result returned by
 }
 ```
 
-`variantMaterials` is an object whose key is variant name and whose value has an index to glTF material index and variant material instance cache. Variant material cache is saved in `selectVariant()` or `ensureLoadVariants()`. The cache is also used when exporting variant materials.
+`variantMaterials` is an object whose key is variant name and whose value has an index to glTF material index and variant material instance cache.
+Variant material cache is saved in `selectVariant()` or `ensureLoadVariants()`.
+The cache is also used when exporting variant materials.
 
-**gltf.functions.selectVariant(object: THREE.Object3D, variantName: string, doTraverse = true: boolean): Promise**
+**gltf.functions.selectVariant(object: THREE.Object3D, variantName: string | null, doTraverse = true: boolean): Promise**
 
-`selectVariant()` is a function to switch materials to the ones associated with `variantName`. Unless `doTraverse` is set to `false` the function traverses the children and applys the change to all the child objects, too. The returned Promise will be resolved when all the selected materials are ready. 
+`selectVariant()` is a function to switch materials to the ones associated with `variantName`.
+Unless `doTraverse` is set to `false` the function traverses the children and applys the change to all the child objects, too.
+If a variant material associated with a passed variant name is undefined for a mesh or variant name is null, the function selects an original material.
+The returned Promise will be resolved when all the selected materials are ready.
 
 **gltf.functions.ensureLoadVariants(object: THREE.Object3D, doTraverse = true: boolean): Promise**
 
-`ensureLoadVariants()` is a function to ensure all the variant materials are loaded and saved under `mesh.userData.variantMaterials` (See [Side effects](#Side-effects) below). Unless `doTraverse` is set to `false`, the function traverses the children and applys it to all the child objects, too. You are recommended to call this function before exporting objects with [GLTFExporter KHR_materials_variants plugin](../../exporters/KHR_materials_variants/#README.md)
+`ensureLoadVariants()` is a function to ensure all the variant materials are loaded and saved under `mesh.userData.variantMaterials` (See [Side effects](#Side-effects) below).
+Unless `doTraverse` is set to `false`, the function traverses the children and applys it to all the child objects, too.
+You are recommended to call this function before exporting objects with [GLTFExporter KHR_materials_variants plugin](../../exporters/KHR_materials_variants/#README.md)
 
 ## Side effects
 
@@ -74,7 +81,6 @@ You can omit `.gltfMaterialIndex` property and `customVariantName` doesn't have 
 
 ## Limitations
 
-* `selectVariant()` doesn't have selective option. All the meshes under a scene switch their materials.
 * `selectVariant()` doesn't have effect to meshes which are already removed from a scene
 * This plugin may not work if a glTF node has camera, light, or other extension objects in addition to mesh. This limitation may be removed if [this suggestion](https://github.com/mrdoob/three.js/pull/19359#issuecomment-774487100) is accepted.
 * `mesh.userData.variantMaterials` are not serialized by Three.js `toJSON()` method correctly because it doesn't support the serialization of Three.js objects under `.userData`.

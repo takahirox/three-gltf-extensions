@@ -132,7 +132,7 @@ export default class GLTFMaterialsVariantsExtension {
 
     /**
      * @param object {THREE.Object3D}
-     * @param variantName {string}
+     * @param variantName {string|null}
      * @return {Promise}
      */
     const switchMaterial = async (object, variantName) => {
@@ -140,7 +140,7 @@ export default class GLTFMaterialsVariantsExtension {
         object.userData.originalMaterial = object.material;
       }
 
-      if (!object.userData.variantMaterials[variantName]) {
+      if (variantName === null || !object.userData.variantMaterials[variantName]) {
         object.material = object.userData.originalMaterial; 
         return;
       }
