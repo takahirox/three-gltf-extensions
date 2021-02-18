@@ -183,7 +183,7 @@ export default class GLTFMaterialsVariantsExtension {
 
     /**
      * @param object {THREE.Object3D}
-     * @param variantName {string}
+     * @param variantName {string|null}
      * @param doTraverse {boolean} Default is true
      * @return {Promise}
      */
