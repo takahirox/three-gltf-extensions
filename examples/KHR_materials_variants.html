@@ -84,7 +84,7 @@
           saveButton.innerText = 'Save glb';
           saveButton.addEventListener('click', async () => {
             saveButton.disabled = true;
-            await gltf.functions.ensureLoadVariantMaterials(scene);
+            await gltf.functions.ensureLoadVariants(scene);
             exporter.parse(scene, async result => {
               saveArrayBuffer(result, 'scene.glb');
               saveButton.disabled = false;
@@ -95,7 +95,7 @@
           dumpButton.innerText = 'Dump to console';
           dumpButton.addEventListener('click', async () => {
             dumpButton.disabled = true;
-            await gltf.functions.ensureLoadVariantMaterials(scene);
+            await gltf.functions.ensureLoadVariants(scene);
             exporter.parse(scene, result => {
               console.log(result);
               dumpButton.disabled = false;

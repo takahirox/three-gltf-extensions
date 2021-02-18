@@ -160,7 +160,7 @@ export default class GLTFMaterialsVariantsExtension {
      * @param object {THREE.Object3D}
      * @return {Promise}
      */
-    const ensureLoadVariantMaterials = object => {
+    const ensureLoadVariants = object => {
       const currentMaterial = object.material;
       const variantMaterials = object.userData.variantMaterials;
       const pending = [];
@@ -202,12 +202,12 @@ export default class GLTFMaterialsVariantsExtension {
      * @param doTraverse {boolean} Default is true
      * @return {Promise}
      */
-    gltf.functions.ensureLoadVariantMaterials = (object, doTraverse = true) => {
+    gltf.functions.ensureLoadVariants = (object, doTraverse = true) => {
       const pending = [];
       if (doTraverse) {
-        object.traverse(o => compatibleObject(o) && pending.push(ensureLoadVariantMaterials(o)));
+        object.traverse(o => compatibleObject(o) && pending.push(ensureLoadVariants(o)));
       } else {
-        compatibleObject(object) && pending.push(ensureLoadVariantMaterials(object));
+        compatibleObject(object) && pending.push(ensureLoadVariants(object));
       }
       return Promise.all(pending);
     };

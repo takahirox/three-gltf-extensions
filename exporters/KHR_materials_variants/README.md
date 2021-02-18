@@ -10,7 +10,7 @@ import GLTFExporterMaterialsVariantsExtension from 'path_to_three-gltf-extension
 const exporter = new GLTFExporter();
 exporter.register(writer => new GLTFExporterMaterialsVariantsExtension(writer));
 
-gltf.functions.ensureLoadVariantMaterials(scene); // Refer to "ensureLoadVariants()" in the KHR_materials_variants GLTFLoader plugin README
+gltf.functions.ensureLoadVariants(scene); // Refer to "ensureLoadVariants()" in the KHR_materials_variants GLTFLoader plugin README
 exporter.parse(scene, result => {
   ...
 });
@@ -44,4 +44,4 @@ And if `mesh.userData.originalMaterial` is defined as Three.js Material, the plu
 
 * Three.js multi material is not supported (yet)
 * The plugin doesn't verify `.userData` format. it's a user side responsibility.
-* If you want to export the models including variants materials loaded by the `GLTFLoader` KHR_materials_variants plugin, be careful that unloaded materials are not exported. If you want to ensure that all the variant materials will be exported, use `ensureLoadVariantMaterials()` of the loader plugin.
+* If you want to export the models including variants materials loaded by the `GLTFLoader` KHR_materials_variants plugin, be careful that unloaded materials are not exported. If you want to ensure that all the variant materials will be exported, use `ensureLoadVariants()` of the loader plugin.

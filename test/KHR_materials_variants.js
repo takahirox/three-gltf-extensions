@@ -139,7 +139,7 @@ export default QUnit.module('KHR_materials_variants', () => {
         });
     });
 
-    QUnit.test('ensureLoadVariantMaterials', assert => {
+    QUnit.test('ensureLoadVariants', assert => {
       const done = assert.async();
       new GLTFLoader()
         .register(parser => new GLTFMaterialsVariantsExtension(parser))
@@ -147,7 +147,7 @@ export default QUnit.module('KHR_materials_variants', () => {
           const variants = gltf.userData.variants;
           const scene = gltf.scene;
 
-          await gltf.functions.ensureLoadVariantMaterials(scene);
+          await gltf.functions.ensureLoadVariants(scene);
 
           let loaded = true;
 
