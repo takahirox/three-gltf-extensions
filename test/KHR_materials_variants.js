@@ -2,6 +2,10 @@
 
 import {GLTFLoader} from '../examples/three/loaders/GLTFLoader.js';
 import GLTFMaterialsVariantsExtension from '../loaders/KHR_materials_variants/KHR_materials_variants.js';
+import {
+  Mesh,
+  MeshStandardMaterial
+} from '../examples/three/three.module.js';
 
 const assetPath = '../examples/assets/gltf/MaterialsVariantsShoe/glTF/MaterialsVariantsShoe.gltf';
 
@@ -14,10 +18,10 @@ export default QUnit.module('KHR_materials_variants', () => {
         .parse('{"asset": {"version": "2.0"}}', null, result => {
           assert.ok(true, 'can register');
           done();
-		}, error => {
+        }, error => {
           assert.ok(false, 'can register');
           done();
-		});
+        });
     });
   });
 
@@ -71,18 +75,101 @@ export default QUnit.module('KHR_materials_variants', () => {
           assert.ok(validGltfMaterialIndex, 'variant.gltfMaterialIndex is number');
 
           done();
-		}, undefined, error => {
+        }, undefined, error => {
           assert.ok(false, 'can load');
           done();
-		});
-	});
-
-    QUnit.todo('selectVariant', assert => {
-      assert.ok(false);
+        });
     });
 
-    QUnit.todo('ensureLoadVariants', assert => {
-      assert.ok(false);
+    QUnit.test('selectVariant', assert => {
+      const done = assert.async();
+      new GLTFLoader()
+        .register(parser => new GLTFMaterialsVariantsExtension(parser))
+        .load(assetPath, async gltf => {
+          const variants = gltf.userData.variants;
+          const scene = gltf.scene;
+
+          // The function should have an effect to even user defined Meshes
+          const userMesh = new Mesh();
+          userMesh.userData.variantMaterials = {};
+          userMesh.userData.variantMaterials[variants[0]] = {
+            material: new MeshStandardMaterial()
+          };
+
+          scene.traverse(object => {
+            if (object.isMesh && object.userData.variantMaterials && userMesh.parent === null) {
+              object.add(userMesh);
+            }
+          });
+
+          assert.ok(userMesh.parent !== null, 'user mesh is added');
+
+          const objects = [];
+          scene.traverse(object => object.isMesh &&
+            object.userData.variantMaterials && objects.push(object));
+
+          await gltf.functions.selectVariant(scene, variants[0]);
+
+          assert.ok(objects.length ===
+            objects.filter(o => o.userData.variantMaterials[variants[0]].material !== null).length,
+            'Cached');
+          assert.ok(objects.length ===
+            objects.filter(o => o.material === o.userData.variantMaterials[variants[0]].material).length,
+            'Selected correctly');
+
+          await gltf.functions.selectVariant(scene, null);
+
+          assert.ok(objects.length ===
+            objects.filter(o => o.material === o.userData.originalMaterial).length,
+            'Deselected correctly');
+
+          await gltf.functions.selectVariant(userMesh.parent, variants[0], false);
+
+          assert.ok(objects.length ===
+            objects.filter(o =>
+              (o === userMesh.parent && o.material === o.userData.variantMaterials[variants[0]].material) ||
+              (o !== userMesh.parent && o.material === o.userData.originalMaterial)
+            ).length,
+            'doTraverse option works');
+
+          done();
+        }, undefined, error => {
+          assert.ok(false, 'can load');
+          done();
+        });
+    });
+
+    QUnit.test('ensureLoadVariantMaterials', assert => {
+      const done = assert.async();
+      new GLTFLoader()
+        .register(parser => new GLTFMaterialsVariantsExtension(parser))
+        .load(assetPath, async gltf => {
+          const variants = gltf.userData.variants;
+          const scene = gltf.scene;
+
+          await gltf.functions.ensureLoadVariantMaterials(scene);
+
+          let loaded = true;
+
+          scene.traverse(object => {
+            if (object.isMesh && object.userData.variantMaterials) {
+              for (const key in object.userData.variantMaterials) {
+                if (object.userData.variantMaterials[key].material === null) {
+                  loaded = false;
+                }
+              }
+            }
+          });
+
+          assert.ok(loaded, 'Loaded');
+
+          // @TODO: Test doTraverse option
+
+          done();
+        }, undefined, error => {
+          assert.ok(false, 'can load');
+          done();
+        });
     });
   });
 
