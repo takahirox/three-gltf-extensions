@@ -139,8 +139,37 @@ export default QUnit.module('KHR_materials_variants', () => {
         });
     });
 
-    QUnit.todo('ensureLoadVariants', assert => {
-      assert.ok(false);
+    QUnit.test('ensureLoadVariantMaterials', assert => {
+      const done = assert.async();
+      new GLTFLoader()
+        .register(parser => new GLTFMaterialsVariantsExtension(parser))
+        .load(assetPath, async gltf => {
+          const variants = gltf.userData.variants;
+          const scene = gltf.scene;
+
+          await gltf.functions.ensureLoadVariantMaterials(scene);
+
+          let loaded = true;
+
+          scene.traverse(object => {
+            if (object.isMesh && object.userData.variantMaterials) {
+              for (const key in object.userData.variantMaterials) {
+                if (object.userData.variantMaterials[key].material === null) {
+                  loaded = false;
+                }
+              }
+            }
+          });
+
+          assert.ok(loaded, 'Loaded');
+
+          // @TODO: Test doTraverse option
+
+          done();
+        }, undefined, error => {
+          assert.ok(false, 'can load');
+          done();
+        });
     });
   });
 
