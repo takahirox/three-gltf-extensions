@@ -23,8 +23,27 @@ export default QUnit.module('MSFT_texture_dds', () => {
   });
 
   QUnit.module('GLTFMaterialsVariantsExtension-webonly', () => {
-    QUnit.todo('parse', assert => {
-      assert.ok(false);
+    QUnit.test('parse', assert => {
+      const done = assert.async();
+      new GLTFLoader()
+        .register(parser => new GLTFTextureDDSExtension(parser, new DDSLoader()))
+        .load(assetPath, gltf => {
+          assert.ok(true, 'can load');
+
+          const scene = gltf.scene;
+          const meshes = [];
+          scene.traverse(object => object.isMesh && object.material && meshes.push(object));;
+
+          // @TODO: Properer check
+          assert.ok(meshes.length > 0 &&
+            meshes.filter(m => m.material.map && m.material.map.isCompressedTexture === true).length === meshes.length,
+            'Textures are compressed textures');
+
+          done();
+        }, undefined, error => {
+          assert.ok(false, 'can load');
+          done();
+        });
 	});
   });
 });
