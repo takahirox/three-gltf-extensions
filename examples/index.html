@@ -10,8 +10,11 @@
     <div id="panel">
       <div id="header">
         <h1><a href="https://github.com/takahirox/three-gltf-extensions" target="_blank">three-gltf-extensions</a></h1>
+        <div id="expandButton"></div>
       </div>
-      <div id="content">
+      <div id="panelScrim"></div>
+      <div id="contentWrapper">
+        <div id="content"></div>
       </div>
     </div>
 
@@ -26,11 +29,15 @@
 
       const content = document.getElementById('content');
       const viewer = document.getElementById('viewer');
+      const panel = document.getElementById('panel');
+      const panelScrim = document.getElementById('panelScrim');
+      const expandButton = document.getElementById('expandButton');
 
       const openExample = pluginName => {
         viewer.src = pluginName + '.html';
         window.location.hash = pluginName;
         viewer.focus();
+        panel.classList.remove('open');
       };
 
       pluginNames.forEach(name => {
@@ -49,6 +56,21 @@
         content.appendChild(a);
         content.appendChild(document.createElement('br'));
       });
+
+      const onClickForOpen = event => {
+        event.preventDefault();
+        panel.classList.toggle('open');
+      };
+
+      expandButton.addEventListener('click', onClickForOpen);
+      panelScrim.addEventListener('click', onClickForOpen);
+
+      // iOS iframe auto-resize workaround
+      if (/(iPad|iPhone|iPod)/g.test(navigator.userAgent)) {
+        viewer.style.width = getComputedStyle(viewer).width;
+        viewer.style.height = getComputedStyle(viewer).height;
+        viewer.setAttribute('scrolling', 'no');
+      }
 
       if (window.location.hash !== '') {
         const hash = window.location.hash.substring(1);

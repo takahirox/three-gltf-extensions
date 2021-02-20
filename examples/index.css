@@ -166,10 +166,10 @@ h1 a {
 		cursor: pointer;
 		background-color: var(--text-color);
 		background-size: var(--icon-size);
-		-webkit-mask-image: url(../files/ic_menu_black_24dp.svg);
+		-webkit-mask-image: url(./ic_menu_black_24dp.svg);
 		-webkit-mask-position: 50% 50%;
 		-webkit-mask-repeat: no-repeat;
-		mask-image: url(../files/ic_menu_black_24dp.svg);
+		mask-image: url(./ic_menu_black_24dp.svg);
 		mask-position: 50% 50%;
 		mask-repeat: no-repeat;
 	}
