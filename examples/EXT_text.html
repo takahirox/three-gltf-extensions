@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Three.js glTF loader EXT_text extension</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <link type="text/css" rel="stylesheet" href="main.css">
+  </head>
+
+  <body>
+    <div id="info">
+      <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> - GLTFLoader + <a href="https://github.com/takahirox/EXT_text" target="_blank" rel="noopener">EXT_text</a> extension<br />
+      BoomBox by <a href="https://www.microsoft.com/" target="_blank" rel="noopener">MicroSoft</a><br />
+      <a href="https://hdrihaven.com/hdri/?h=royal_esplanade" target="_blank" rel="noopener">Royal Esplanade</a> by <a href="https://hdrihaven.com/" target="_blank" rel="noopener">HDRI Haven</a>
+    </div>
+
+    <script type="module">
+      import * as THREE from './three/three.module.js';
+
+      import {OrbitControls} from './three/controls/OrbitControls.js';
+      import {GLTFLoader} from './three/loaders/GLTFLoader.js';
+      import {RGBELoader} from './three/loaders/RGBELoader.js';
+
+      import GLTFTextExtension from '../loaders/EXT_text/EXT_text.js';
+
+      let camera, scene, renderer;
+
+      const init = () => {
+        const container = document.createElement('div');
+        document.body.appendChild(container);
+
+        camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.001, 1000);
+        camera.position.set(0.02, 0.01, 0.03);
+
+        scene = new THREE.Scene();
+
+        new RGBELoader()
+          .setDataType(THREE.UnsignedByteType)
+          .setPath('./assets/textures/equirectangular/')
+          .load('royal_esplanade_1k.hdr', texture => {
+            const envMap = pmremGenerator.fromEquirectangular(texture).texture;
+
+            scene.background = envMap;
+            scene.environment = envMap;
+
+            texture.dispose();
+            pmremGenerator.dispose();
+
+            render();
+
+            // model
+
+            const loader = new GLTFLoader().setPath('assets/gltf/BoomBox/glTF-text/');
+            loader.register(parser => new GLTFTextExtension(
+              parser, new THREE.FontLoader(),
+              'assets/fonts/helvetiker_regular.typeface.json', THREE));
+            loader.load('BoomBox.gltf', gltf => {
+              gltf.scene.rotation.y = Math.PI;
+              scene.add(gltf.scene);
+              render();
+            });
+          });
+
+        renderer = new THREE.WebGLRenderer({antialias: true});
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1;
+        renderer.outputEncoding = THREE.sRGBEncoding;
+        container.appendChild(renderer.domElement);
+
+        const pmremGenerator = new THREE.PMREMGenerator(renderer);
+        pmremGenerator.compileEquirectangularShader();
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.addEventListener('change', render); // use if there is no animation loop
+        controls.update();
+
+        window.addEventListener('resize', onWindowResize);
+      };
+
+      const onWindowResize = () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        render();
+      };
+
+      //
+
+      const render = () => {
+        renderer.render(scene, camera);
+      };
+
+      init();
+      render();
+    </script>
+  </body>
+</html>
