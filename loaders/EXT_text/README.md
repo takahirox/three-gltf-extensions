@@ -42,8 +42,11 @@ Pass the classes to `GLTFTextExtension` constructor as the fourth argument.
 `GLTFTextureExtension(parser: GLTFParser, fontLoader: FontLoader, fontUrl: string, THREE: Object)`
 
 `parser` -- `GLTFParser` instance which comes from `GLTFLoader.register()` callback
+
 `fontLoader` -- [Three.js `FontLoader`](https://threejs.org/docs/#api/en/loaders/FontLoader) instance
+
 `fontUrl` -- The url of font file passed to `FileLoader.load()`
+
 `THREE` -- Three.js dependencies the plugin needs. Either following style is expected to pass
 
 ```
