@@ -14,7 +14,7 @@ export default class GLTFTextExtension {
     this.fontPromise = null;
   }
 
-  async createNodeAttachment(nodeIndex) {
+  createNodeAttachment(nodeIndex) {
     const json = this.parser.json;
     const nodeDef = json.nodes[nodeIndex];
     if (!json.extensions || !json.extensions[this.name] ||
@@ -26,8 +26,7 @@ export default class GLTFTextExtension {
     const textDef = textsDef[extensionDef.text];
     const textContent = textDef.text;
     const color = textDef.color || [0.5, 0.5, 0.5, 1.0];
-    try {
-      const font = await this._loadFont();
+    return this._loadFont().then(font => {
       const shapes = font.generateShapes(textContent);
       const geometry = new this.THREE.ShapeGeometry(shapes);
       return new this.THREE.Mesh(
@@ -39,11 +38,11 @@ export default class GLTFTextExtension {
           opacity: color[3]
         })
       );
-    } catch (e) {
+    }).catch(error => {
       // @TODO: Properer error handling
       console.error(e);
       return this.THREE.Object3D();
-    }
+    });
   }
 
   _loadFont() {
