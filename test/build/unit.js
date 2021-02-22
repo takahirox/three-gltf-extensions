@@ -5,9 +5,13 @@
 
 	// threejs.org/license
 	const REVISION = '126dev';
+	const MOUSE = { LEFT: 0, MIDDLE: 1, RIGHT: 2, ROTATE: 0, DOLLY: 1, PAN: 2 };
+	const TOUCH = { ROTATE: 0, PAN: 1, DOLLY_PAN: 2, DOLLY_ROTATE: 3 };
 	const CullFaceNone = 0;
 	const CullFaceBack = 1;
 	const CullFaceFront = 2;
+	const CullFaceFrontBack = 3;
+	const BasicShadowMap = 0;
 	const PCFShadowMap = 1;
 	const PCFSoftShadowMap = 2;
 	const VSMShadowMap = 3;
@@ -15,6 +19,7 @@
 	const BackSide = 1;
 	const DoubleSide = 2;
 	const FlatShading = 1;
+	const SmoothShading = 2;
 	const NoBlending = 0;
 	const NormalBlending = 1;
 	const AdditiveBlending = 2;
@@ -67,10 +72,14 @@
 	const MirroredRepeatWrapping = 1002;
 	const NearestFilter = 1003;
 	const NearestMipmapNearestFilter = 1004;
+	const NearestMipMapNearestFilter = 1004;
 	const NearestMipmapLinearFilter = 1005;
+	const NearestMipMapLinearFilter = 1005;
 	const LinearFilter = 1006;
 	const LinearMipmapNearestFilter = 1007;
+	const LinearMipMapNearestFilter = 1007;
 	const LinearMipmapLinearFilter = 1008;
+	const LinearMipMapLinearFilter = 1008;
 	const UnsignedByteType = 1009;
 	const ByteType = 1010;
 	const ShortType = 1011;
@@ -88,6 +97,7 @@
 	const RGBAFormat = 1023;
 	const LuminanceFormat = 1024;
 	const LuminanceAlphaFormat = 1025;
+	const RGBEFormat = RGBAFormat;
 	const DepthFormat = 1026;
 	const DepthStencilFormat = 1027;
 	const RedFormat = 1028;
@@ -163,11 +173,36 @@
 	const RGBADepthPacking = 3201;
 	const TangentSpaceNormalMap = 0;
 	const ObjectSpaceNormalMap = 1;
+
+	const ZeroStencilOp = 0;
 	const KeepStencilOp = 7680;
+	const ReplaceStencilOp = 7681;
+	const IncrementStencilOp = 7682;
+	const DecrementStencilOp = 7683;
+	const IncrementWrapStencilOp = 34055;
+	const DecrementWrapStencilOp = 34056;
+	const InvertStencilOp = 5386;
+
+	const NeverStencilFunc = 512;
+	const LessStencilFunc = 513;
+	const EqualStencilFunc = 514;
+	const LessEqualStencilFunc = 515;
+	const GreaterStencilFunc = 516;
+	const NotEqualStencilFunc = 517;
+	const GreaterEqualStencilFunc = 518;
 	const AlwaysStencilFunc = 519;
 
 	const StaticDrawUsage = 35044;
 	const DynamicDrawUsage = 35048;
+	const StreamDrawUsage = 35040;
+	const StaticReadUsage = 35045;
+	const DynamicReadUsage = 35049;
+	const StreamReadUsage = 35041;
+	const StaticCopyUsage = 35046;
+	const DynamicCopyUsage = 35050;
+	const StreamCopyUsage = 35042;
+
+	const GLSL1 = '100';
 	const GLSL3 = '300 es';
 
 	/**
@@ -2469,6 +2504,30 @@
 		dispose() {
 
 			this.dispatchEvent( { type: 'dispose' } );
+
+		}
+
+	}
+
+	class WebGLMultisampleRenderTarget extends WebGLRenderTarget {
+
+		constructor( width, height, options ) {
+
+			super( width, height, options );
+
+			Object.defineProperty( this, 'isWebGLMultisampleRenderTarget', { value: true } );
+
+			this.samples = 4;
+
+		}
+
+		copy( source ) {
+
+			super.copy.call( this, source );
+
+			this.samples = source.samples;
+
+			return this;
 
 		}
 
@@ -9466,6 +9525,25 @@
 		}
 
 		return max;
+
+	}
+
+	const TYPED_ARRAYS = {
+		Int8Array: Int8Array,
+		Uint8Array: Uint8Array,
+		// Workaround for IE11 pre KB2929437. See #11440
+		Uint8ClampedArray: typeof Uint8ClampedArray !== 'undefined' ? Uint8ClampedArray : Uint8Array,
+		Int16Array: Int16Array,
+		Uint16Array: Uint16Array,
+		Int32Array: Int32Array,
+		Uint32Array: Uint32Array,
+		Float32Array: Float32Array,
+		Float64Array: Float64Array
+	};
+
+	function getTypedArray( type, buffer ) {
+
+		return new TYPED_ARRAYS[ type ]( buffer );
 
 	}
 
@@ -24874,6 +24952,71 @@
 
 	} );
 
+	class FogExp2 {
+
+		constructor( color, density ) {
+
+			Object.defineProperty( this, 'isFogExp2', { value: true } );
+
+			this.name = '';
+
+			this.color = new Color( color );
+			this.density = ( density !== undefined ) ? density : 0.00025;
+
+		}
+
+		clone() {
+
+			return new FogExp2( this.color, this.density );
+
+		}
+
+		toJSON( /* meta */ ) {
+
+			return {
+				type: 'FogExp2',
+				color: this.color.getHex(),
+				density: this.density
+			};
+
+		}
+
+	}
+
+	class Fog {
+
+		constructor( color, near, far ) {
+
+			Object.defineProperty( this, 'isFog', { value: true } );
+
+			this.name = '';
+
+			this.color = new Color( color );
+
+			this.near = ( near !== undefined ) ? near : 1;
+			this.far = ( far !== undefined ) ? far : 1000;
+
+		}
+
+		clone() {
+
+			return new Fog( this.color, this.near, this.far );
+
+		}
+
+		toJSON( /* meta */ ) {
+
+			return {
+				type: 'Fog',
+				color: this.color.getHex(),
+				near: this.near,
+				far: this.far
+			};
+
+		}
+
+	}
+
 	class Scene extends Object3D {
 
 		constructor() {
@@ -27009,10 +27152,859 @@
 	DepthTexture.prototype.constructor = DepthTexture;
 	DepthTexture.prototype.isDepthTexture = true;
 
-	new Vector3();
-	new Vector3();
-	new Vector3();
-	new Triangle();
+	class CircleGeometry extends BufferGeometry {
+
+		constructor( radius = 1, segments = 8, thetaStart = 0, thetaLength = Math.PI * 2 ) {
+
+			super();
+
+			this.type = 'CircleGeometry';
+
+			this.parameters = {
+				radius: radius,
+				segments: segments,
+				thetaStart: thetaStart,
+				thetaLength: thetaLength
+			};
+
+			segments = Math.max( 3, segments );
+
+			// buffers
+
+			const indices = [];
+			const vertices = [];
+			const normals = [];
+			const uvs = [];
+
+			// helper variables
+
+			const vertex = new Vector3();
+			const uv = new Vector2();
+
+			// center point
+
+			vertices.push( 0, 0, 0 );
+			normals.push( 0, 0, 1 );
+			uvs.push( 0.5, 0.5 );
+
+			for ( let s = 0, i = 3; s <= segments; s ++, i += 3 ) {
+
+				const segment = thetaStart + s / segments * thetaLength;
+
+				// vertex
+
+				vertex.x = radius * Math.cos( segment );
+				vertex.y = radius * Math.sin( segment );
+
+				vertices.push( vertex.x, vertex.y, vertex.z );
+
+				// normal
+
+				normals.push( 0, 0, 1 );
+
+				// uvs
+
+				uv.x = ( vertices[ i ] / radius + 1 ) / 2;
+				uv.y = ( vertices[ i + 1 ] / radius + 1 ) / 2;
+
+				uvs.push( uv.x, uv.y );
+
+			}
+
+			// indices
+
+			for ( let i = 1; i <= segments; i ++ ) {
+
+				indices.push( i, i + 1, 0 );
+
+			}
+
+			// build geometry
+
+			this.setIndex( indices );
+			this.setAttribute( 'position', new Float32BufferAttribute( vertices, 3 ) );
+			this.setAttribute( 'normal', new Float32BufferAttribute( normals, 3 ) );
+			this.setAttribute( 'uv', new Float32BufferAttribute( uvs, 2 ) );
+
+		}
+
+	}
+
+	class CylinderGeometry extends BufferGeometry {
+
+		constructor( radiusTop = 1, radiusBottom = 1, height = 1, radialSegments = 8, heightSegments = 1, openEnded = false, thetaStart = 0, thetaLength = Math.PI * 2 ) {
+
+			super();
+			this.type = 'CylinderGeometry';
+
+			this.parameters = {
+				radiusTop: radiusTop,
+				radiusBottom: radiusBottom,
+				height: height,
+				radialSegments: radialSegments,
+				heightSegments: heightSegments,
+				openEnded: openEnded,
+				thetaStart: thetaStart,
+				thetaLength: thetaLength
+			};
+
+			const scope = this;
+
+			radialSegments = Math.floor( radialSegments );
+			heightSegments = Math.floor( heightSegments );
+
+			// buffers
+
+			const indices = [];
+			const vertices = [];
+			const normals = [];
+			const uvs = [];
+
+			// helper variables
+
+			let index = 0;
+			const indexArray = [];
+			const halfHeight = height / 2;
+			let groupStart = 0;
+
+			// generate geometry
+
+			generateTorso();
+
+			if ( openEnded === false ) {
+
+				if ( radiusTop > 0 ) generateCap( true );
+				if ( radiusBottom > 0 ) generateCap( false );
+
+			}
+
+			// build geometry
+
+			this.setIndex( indices );
+			this.setAttribute( 'position', new Float32BufferAttribute( vertices, 3 ) );
+			this.setAttribute( 'normal', new Float32BufferAttribute( normals, 3 ) );
+			this.setAttribute( 'uv', new Float32BufferAttribute( uvs, 2 ) );
+
+			function generateTorso() {
+
+				const normal = new Vector3();
+				const vertex = new Vector3();
+
+				let groupCount = 0;
+
+				// this will be used to calculate the normal
+				const slope = ( radiusBottom - radiusTop ) / height;
+
+				// generate vertices, normals and uvs
+
+				for ( let y = 0; y <= heightSegments; y ++ ) {
+
+					const indexRow = [];
+
+					const v = y / heightSegments;
+
+					// calculate the radius of the current row
+
+					const radius = v * ( radiusBottom - radiusTop ) + radiusTop;
+
+					for ( let x = 0; x <= radialSegments; x ++ ) {
+
+						const u = x / radialSegments;
+
+						const theta = u * thetaLength + thetaStart;
+
+						const sinTheta = Math.sin( theta );
+						const cosTheta = Math.cos( theta );
+
+						// vertex
+
+						vertex.x = radius * sinTheta;
+						vertex.y = - v * height + halfHeight;
+						vertex.z = radius * cosTheta;
+						vertices.push( vertex.x, vertex.y, vertex.z );
+
+						// normal
+
+						normal.set( sinTheta, slope, cosTheta ).normalize();
+						normals.push( normal.x, normal.y, normal.z );
+
+						// uv
+
+						uvs.push( u, 1 - v );
+
+						// save index of vertex in respective row
+
+						indexRow.push( index ++ );
+
+					}
+
+					// now save vertices of the row in our index array
+
+					indexArray.push( indexRow );
+
+				}
+
+				// generate indices
+
+				for ( let x = 0; x < radialSegments; x ++ ) {
+
+					for ( let y = 0; y < heightSegments; y ++ ) {
+
+						// we use the index array to access the correct indices
+
+						const a = indexArray[ y ][ x ];
+						const b = indexArray[ y + 1 ][ x ];
+						const c = indexArray[ y + 1 ][ x + 1 ];
+						const d = indexArray[ y ][ x + 1 ];
+
+						// faces
+
+						indices.push( a, b, d );
+						indices.push( b, c, d );
+
+						// update group counter
+
+						groupCount += 6;
+
+					}
+
+				}
+
+				// add a group to the geometry. this will ensure multi material support
+
+				scope.addGroup( groupStart, groupCount, 0 );
+
+				// calculate new start value for groups
+
+				groupStart += groupCount;
+
+			}
+
+			function generateCap( top ) {
+
+				// save the index of the first center vertex
+				const centerIndexStart = index;
+
+				const uv = new Vector2();
+				const vertex = new Vector3();
+
+				let groupCount = 0;
+
+				const radius = ( top === true ) ? radiusTop : radiusBottom;
+				const sign = ( top === true ) ? 1 : - 1;
+
+				// first we generate the center vertex data of the cap.
+				// because the geometry needs one set of uvs per face,
+				// we must generate a center vertex per face/segment
+
+				for ( let x = 1; x <= radialSegments; x ++ ) {
+
+					// vertex
+
+					vertices.push( 0, halfHeight * sign, 0 );
+
+					// normal
+
+					normals.push( 0, sign, 0 );
+
+					// uv
+
+					uvs.push( 0.5, 0.5 );
+
+					// increase index
+
+					index ++;
+
+				}
+
+				// save the index of the last center vertex
+				const centerIndexEnd = index;
+
+				// now we generate the surrounding vertices, normals and uvs
+
+				for ( let x = 0; x <= radialSegments; x ++ ) {
+
+					const u = x / radialSegments;
+					const theta = u * thetaLength + thetaStart;
+
+					const cosTheta = Math.cos( theta );
+					const sinTheta = Math.sin( theta );
+
+					// vertex
+
+					vertex.x = radius * sinTheta;
+					vertex.y = halfHeight * sign;
+					vertex.z = radius * cosTheta;
+					vertices.push( vertex.x, vertex.y, vertex.z );
+
+					// normal
+
+					normals.push( 0, sign, 0 );
+
+					// uv
+
+					uv.x = ( cosTheta * 0.5 ) + 0.5;
+					uv.y = ( sinTheta * 0.5 * sign ) + 0.5;
+					uvs.push( uv.x, uv.y );
+
+					// increase index
+
+					index ++;
+
+				}
+
+				// generate indices
+
+				for ( let x = 0; x < radialSegments; x ++ ) {
+
+					const c = centerIndexStart + x;
+					const i = centerIndexEnd + x;
+
+					if ( top === true ) {
+
+						// face top
+
+						indices.push( i, i + 1, c );
+
+					} else {
+
+						// face bottom
+
+						indices.push( i + 1, i, c );
+
+					}
+
+					groupCount += 3;
+
+				}
+
+				// add a group to the geometry. this will ensure multi material support
+
+				scope.addGroup( groupStart, groupCount, top === true ? 1 : 2 );
+
+				// calculate new start value for groups
+
+				groupStart += groupCount;
+
+			}
+
+		}
+
+	}
+
+	class ConeGeometry extends CylinderGeometry {
+
+		constructor( radius = 1, height = 1, radialSegments = 8, heightSegments = 1, openEnded = false, thetaStart = 0, thetaLength = Math.PI * 2 ) {
+
+			super( 0, radius, height, radialSegments, heightSegments, openEnded, thetaStart, thetaLength );
+
+			this.type = 'ConeGeometry';
+
+			this.parameters = {
+				radius: radius,
+				height: height,
+				radialSegments: radialSegments,
+				heightSegments: heightSegments,
+				openEnded: openEnded,
+				thetaStart: thetaStart,
+				thetaLength: thetaLength
+			};
+
+		}
+
+	}
+
+	class PolyhedronGeometry extends BufferGeometry {
+
+		constructor( vertices, indices, radius = 1, detail = 0 ) {
+
+			super();
+
+			this.type = 'PolyhedronGeometry';
+
+			this.parameters = {
+				vertices: vertices,
+				indices: indices,
+				radius: radius,
+				detail: detail
+			};
+
+			// default buffer data
+
+			const vertexBuffer = [];
+			const uvBuffer = [];
+
+			// the subdivision creates the vertex buffer data
+
+			subdivide( detail );
+
+			// all vertices should lie on a conceptual sphere with a given radius
+
+			applyRadius( radius );
+
+			// finally, create the uv data
+
+			generateUVs();
+
+			// build non-indexed geometry
+
+			this.setAttribute( 'position', new Float32BufferAttribute( vertexBuffer, 3 ) );
+			this.setAttribute( 'normal', new Float32BufferAttribute( vertexBuffer.slice(), 3 ) );
+			this.setAttribute( 'uv', new Float32BufferAttribute( uvBuffer, 2 ) );
+
+			if ( detail === 0 ) {
+
+				this.computeVertexNormals(); // flat normals
+
+			} else {
+
+				this.normalizeNormals(); // smooth normals
+
+			}
+
+			// helper functions
+
+			function subdivide( detail ) {
+
+				const a = new Vector3();
+				const b = new Vector3();
+				const c = new Vector3();
+
+				// iterate over all faces and apply a subdivison with the given detail value
+
+				for ( let i = 0; i < indices.length; i += 3 ) {
+
+					// get the vertices of the face
+
+					getVertexByIndex( indices[ i + 0 ], a );
+					getVertexByIndex( indices[ i + 1 ], b );
+					getVertexByIndex( indices[ i + 2 ], c );
+
+					// perform subdivision
+
+					subdivideFace( a, b, c, detail );
+
+				}
+
+			}
+
+			function subdivideFace( a, b, c, detail ) {
+
+				const cols = detail + 1;
+
+				// we use this multidimensional array as a data structure for creating the subdivision
+
+				const v = [];
+
+				// construct all of the vertices for this subdivision
+
+				for ( let i = 0; i <= cols; i ++ ) {
+
+					v[ i ] = [];
+
+					const aj = a.clone().lerp( c, i / cols );
+					const bj = b.clone().lerp( c, i / cols );
+
+					const rows = cols - i;
+
+					for ( let j = 0; j <= rows; j ++ ) {
+
+						if ( j === 0 && i === cols ) {
+
+							v[ i ][ j ] = aj;
+
+						} else {
+
+							v[ i ][ j ] = aj.clone().lerp( bj, j / rows );
+
+						}
+
+					}
+
+				}
+
+				// construct all of the faces
+
+				for ( let i = 0; i < cols; i ++ ) {
+
+					for ( let j = 0; j < 2 * ( cols - i ) - 1; j ++ ) {
+
+						const k = Math.floor( j / 2 );
+
+						if ( j % 2 === 0 ) {
+
+							pushVertex( v[ i ][ k + 1 ] );
+							pushVertex( v[ i + 1 ][ k ] );
+							pushVertex( v[ i ][ k ] );
+
+						} else {
+
+							pushVertex( v[ i ][ k + 1 ] );
+							pushVertex( v[ i + 1 ][ k + 1 ] );
+							pushVertex( v[ i + 1 ][ k ] );
+
+						}
+
+					}
+
+				}
+
+			}
+
+			function applyRadius( radius ) {
+
+				const vertex = new Vector3();
+
+				// iterate over the entire buffer and apply the radius to each vertex
+
+				for ( let i = 0; i < vertexBuffer.length; i += 3 ) {
+
+					vertex.x = vertexBuffer[ i + 0 ];
+					vertex.y = vertexBuffer[ i + 1 ];
+					vertex.z = vertexBuffer[ i + 2 ];
+
+					vertex.normalize().multiplyScalar( radius );
+
+					vertexBuffer[ i + 0 ] = vertex.x;
+					vertexBuffer[ i + 1 ] = vertex.y;
+					vertexBuffer[ i + 2 ] = vertex.z;
+
+				}
+
+			}
+
+			function generateUVs() {
+
+				const vertex = new Vector3();
+
+				for ( let i = 0; i < vertexBuffer.length; i += 3 ) {
+
+					vertex.x = vertexBuffer[ i + 0 ];
+					vertex.y = vertexBuffer[ i + 1 ];
+					vertex.z = vertexBuffer[ i + 2 ];
+
+					const u = azimuth( vertex ) / 2 / Math.PI + 0.5;
+					const v = inclination( vertex ) / Math.PI + 0.5;
+					uvBuffer.push( u, 1 - v );
+
+				}
+
+				correctUVs();
+
+				correctSeam();
+
+			}
+
+			function correctSeam() {
+
+				// handle case when face straddles the seam, see #3269
+
+				for ( let i = 0; i < uvBuffer.length; i += 6 ) {
+
+					// uv data of a single face
+
+					const x0 = uvBuffer[ i + 0 ];
+					const x1 = uvBuffer[ i + 2 ];
+					const x2 = uvBuffer[ i + 4 ];
+
+					const max = Math.max( x0, x1, x2 );
+					const min = Math.min( x0, x1, x2 );
+
+					// 0.9 is somewhat arbitrary
+
+					if ( max > 0.9 && min < 0.1 ) {
+
+						if ( x0 < 0.2 ) uvBuffer[ i + 0 ] += 1;
+						if ( x1 < 0.2 ) uvBuffer[ i + 2 ] += 1;
+						if ( x2 < 0.2 ) uvBuffer[ i + 4 ] += 1;
+
+					}
+
+				}
+
+			}
+
+			function pushVertex( vertex ) {
+
+				vertexBuffer.push( vertex.x, vertex.y, vertex.z );
+
+			}
+
+			function getVertexByIndex( index, vertex ) {
+
+				const stride = index * 3;
+
+				vertex.x = vertices[ stride + 0 ];
+				vertex.y = vertices[ stride + 1 ];
+				vertex.z = vertices[ stride + 2 ];
+
+			}
+
+			function correctUVs() {
+
+				const a = new Vector3();
+				const b = new Vector3();
+				const c = new Vector3();
+
+				const centroid = new Vector3();
+
+				const uvA = new Vector2();
+				const uvB = new Vector2();
+				const uvC = new Vector2();
+
+				for ( let i = 0, j = 0; i < vertexBuffer.length; i += 9, j += 6 ) {
+
+					a.set( vertexBuffer[ i + 0 ], vertexBuffer[ i + 1 ], vertexBuffer[ i + 2 ] );
+					b.set( vertexBuffer[ i + 3 ], vertexBuffer[ i + 4 ], vertexBuffer[ i + 5 ] );
+					c.set( vertexBuffer[ i + 6 ], vertexBuffer[ i + 7 ], vertexBuffer[ i + 8 ] );
+
+					uvA.set( uvBuffer[ j + 0 ], uvBuffer[ j + 1 ] );
+					uvB.set( uvBuffer[ j + 2 ], uvBuffer[ j + 3 ] );
+					uvC.set( uvBuffer[ j + 4 ], uvBuffer[ j + 5 ] );
+
+					centroid.copy( a ).add( b ).add( c ).divideScalar( 3 );
+
+					const azi = azimuth( centroid );
+
+					correctUV( uvA, j + 0, a, azi );
+					correctUV( uvB, j + 2, b, azi );
+					correctUV( uvC, j + 4, c, azi );
+
+				}
+
+			}
+
+			function correctUV( uv, stride, vector, azimuth ) {
+
+				if ( ( azimuth < 0 ) && ( uv.x === 1 ) ) {
+
+					uvBuffer[ stride ] = uv.x - 1;
+
+				}
+
+				if ( ( vector.x === 0 ) && ( vector.z === 0 ) ) {
+
+					uvBuffer[ stride ] = azimuth / 2 / Math.PI + 0.5;
+
+				}
+
+			}
+
+			// Angle around the Y axis, counter-clockwise when looking from above.
+
+			function azimuth( vector ) {
+
+				return Math.atan2( vector.z, - vector.x );
+
+			}
+
+
+			// Angle above the XZ plane.
+
+			function inclination( vector ) {
+
+				return Math.atan2( - vector.y, Math.sqrt( ( vector.x * vector.x ) + ( vector.z * vector.z ) ) );
+
+			}
+
+		}
+
+	}
+
+	class DodecahedronGeometry extends PolyhedronGeometry {
+
+		constructor( radius = 1, detail = 0 ) {
+
+			const t = ( 1 + Math.sqrt( 5 ) ) / 2;
+			const r = 1 / t;
+
+			const vertices = [
+
+				// (±1, ±1, ±1)
+				- 1, - 1, - 1,	- 1, - 1, 1,
+				- 1, 1, - 1, - 1, 1, 1,
+				1, - 1, - 1, 1, - 1, 1,
+				1, 1, - 1, 1, 1, 1,
+
+				// (0, ±1/φ, ±φ)
+				0, - r, - t, 0, - r, t,
+				0, r, - t, 0, r, t,
+
+				// (±1/φ, ±φ, 0)
+				- r, - t, 0, - r, t, 0,
+				r, - t, 0, r, t, 0,
+
+				// (±φ, 0, ±1/φ)
+				- t, 0, - r, t, 0, - r,
+				- t, 0, r, t, 0, r
+			];
+
+			const indices = [
+				3, 11, 7, 	3, 7, 15, 	3, 15, 13,
+				7, 19, 17, 	7, 17, 6, 	7, 6, 15,
+				17, 4, 8, 	17, 8, 10, 	17, 10, 6,
+				8, 0, 16, 	8, 16, 2, 	8, 2, 10,
+				0, 12, 1, 	0, 1, 18, 	0, 18, 16,
+				6, 10, 2, 	6, 2, 13, 	6, 13, 15,
+				2, 16, 18, 	2, 18, 3, 	2, 3, 13,
+				18, 1, 9, 	18, 9, 11, 	18, 11, 3,
+				4, 14, 12, 	4, 12, 0, 	4, 0, 8,
+				11, 9, 5, 	11, 5, 19, 	11, 19, 7,
+				19, 5, 14, 	19, 14, 4, 	19, 4, 17,
+				1, 12, 14, 	1, 14, 5, 	1, 5, 9
+			];
+
+			super( vertices, indices, radius, detail );
+
+			this.type = 'DodecahedronGeometry';
+
+			this.parameters = {
+				radius: radius,
+				detail: detail
+			};
+
+		}
+
+	}
+
+	const _v0$2 = new Vector3();
+	const _v1$5 = new Vector3();
+	const _normal$1 = new Vector3();
+	const _triangle = new Triangle();
+
+	class EdgesGeometry extends BufferGeometry {
+
+		constructor( geometry, thresholdAngle ) {
+
+			super();
+
+			this.type = 'EdgesGeometry';
+
+			this.parameters = {
+				thresholdAngle: thresholdAngle
+			};
+
+			thresholdAngle = ( thresholdAngle !== undefined ) ? thresholdAngle : 1;
+
+			if ( geometry.isGeometry === true ) {
+
+				console.error( 'THREE.EdgesGeometry no longer supports THREE.Geometry. Use THREE.BufferGeometry instead.' );
+				return;
+
+			}
+
+			const precisionPoints = 4;
+			const precision = Math.pow( 10, precisionPoints );
+			const thresholdDot = Math.cos( MathUtils.DEG2RAD * thresholdAngle );
+
+			const indexAttr = geometry.getIndex();
+			const positionAttr = geometry.getAttribute( 'position' );
+			const indexCount = indexAttr ? indexAttr.count : positionAttr.count;
+
+			const indexArr = [ 0, 0, 0 ];
+			const vertKeys = [ 'a', 'b', 'c' ];
+			const hashes = new Array( 3 );
+
+			const edgeData = {};
+			const vertices = [];
+			for ( let i = 0; i < indexCount; i += 3 ) {
+
+				if ( indexAttr ) {
+
+					indexArr[ 0 ] = indexAttr.getX( i );
+					indexArr[ 1 ] = indexAttr.getX( i + 1 );
+					indexArr[ 2 ] = indexAttr.getX( i + 2 );
+
+				} else {
+
+					indexArr[ 0 ] = i;
+					indexArr[ 1 ] = i + 1;
+					indexArr[ 2 ] = i + 2;
+
+				}
+
+				const { a, b, c } = _triangle;
+				a.fromBufferAttribute( positionAttr, indexArr[ 0 ] );
+				b.fromBufferAttribute( positionAttr, indexArr[ 1 ] );
+				c.fromBufferAttribute( positionAttr, indexArr[ 2 ] );
+				_triangle.getNormal( _normal$1 );
+
+				// create hashes for the edge from the vertices
+				hashes[ 0 ] = `${ Math.round( a.x * precision ) },${ Math.round( a.y * precision ) },${ Math.round( a.z * precision ) }`;
+				hashes[ 1 ] = `${ Math.round( b.x * precision ) },${ Math.round( b.y * precision ) },${ Math.round( b.z * precision ) }`;
+				hashes[ 2 ] = `${ Math.round( c.x * precision ) },${ Math.round( c.y * precision ) },${ Math.round( c.z * precision ) }`;
+
+				// skip degenerate triangles
+				if ( hashes[ 0 ] === hashes[ 1 ] || hashes[ 1 ] === hashes[ 2 ] || hashes[ 2 ] === hashes[ 0 ] ) {
+
+					continue;
+
+				}
+
+				// iterate over every edge
+				for ( let j = 0; j < 3; j ++ ) {
+
+					// get the first and next vertex making up the edge
+					const jNext = ( j + 1 ) % 3;
+					const vecHash0 = hashes[ j ];
+					const vecHash1 = hashes[ jNext ];
+					const v0 = _triangle[ vertKeys[ j ] ];
+					const v1 = _triangle[ vertKeys[ jNext ] ];
+
+					const hash = `${ vecHash0 }_${ vecHash1 }`;
+					const reverseHash = `${ vecHash1 }_${ vecHash0 }`;
+
+					if ( reverseHash in edgeData && edgeData[ reverseHash ] ) {
+
+						// if we found a sibling edge add it into the vertex array if
+						// it meets the angle threshold and delete the edge from the map.
+						if ( _normal$1.dot( edgeData[ reverseHash ].normal ) <= thresholdDot ) {
+
+							vertices.push( v0.x, v0.y, v0.z );
+							vertices.push( v1.x, v1.y, v1.z );
+
+						}
+
+						edgeData[ reverseHash ] = null;
+
+					} else if ( ! ( hash in edgeData ) ) {
+
+						// if we've already got an edge here then skip adding a new one
+						edgeData[ hash ] = {
+
+							index0: indexArr[ j ],
+							index1: indexArr[ jNext ],
+							normal: _normal$1.clone(),
+
+						};
+
+					}
+
+				}
+
+			}
+
+			// iterate over all remaining, unmatched edges and add them to the vertex array
+			for ( const key in edgeData ) {
+
+				if ( edgeData[ key ] ) {
+
+					const { index0, index1 } = edgeData[ key ];
+					_v0$2.fromBufferAttribute( positionAttr, index0 );
+					_v1$5.fromBufferAttribute( positionAttr, index1 );
+
+					vertices.push( _v0$2.x, _v0$2.y, _v0$2.z );
+					vertices.push( _v1$5.x, _v1$5.y, _v1$5.z );
+
+				}
+
+			}
+
+			this.setAttribute( 'position', new Float32BufferAttribute( vertices, 3 ) );
+
+		}
+
+	}
 
 	/**
 	 * Port from https://github.com/mapbox/earcut (v2.2.2)
@@ -28670,6 +29662,208 @@
 
 	}
 
+	class IcosahedronGeometry extends PolyhedronGeometry {
+
+		constructor( radius = 1, detail = 0 ) {
+
+			const t = ( 1 + Math.sqrt( 5 ) ) / 2;
+
+			const vertices = [
+				- 1, t, 0, 	1, t, 0, 	- 1, - t, 0, 	1, - t, 0,
+				0, - 1, t, 	0, 1, t,	0, - 1, - t, 	0, 1, - t,
+				t, 0, - 1, 	t, 0, 1, 	- t, 0, - 1, 	- t, 0, 1
+			];
+
+			const indices = [
+				0, 11, 5, 	0, 5, 1, 	0, 1, 7, 	0, 7, 10, 	0, 10, 11,
+				1, 5, 9, 	5, 11, 4,	11, 10, 2,	10, 7, 6,	7, 1, 8,
+				3, 9, 4, 	3, 4, 2,	3, 2, 6,	3, 6, 8,	3, 8, 9,
+				4, 9, 5, 	2, 4, 11,	6, 2, 10,	8, 6, 7,	9, 8, 1
+			];
+
+			super( vertices, indices, radius, detail );
+
+			this.type = 'IcosahedronGeometry';
+
+			this.parameters = {
+				radius: radius,
+				detail: detail
+			};
+
+		}
+
+	}
+
+	class LatheGeometry extends BufferGeometry {
+
+		constructor( points, segments = 12, phiStart = 0, phiLength = Math.PI * 2 ) {
+
+			super();
+
+			this.type = 'LatheGeometry';
+
+			this.parameters = {
+				points: points,
+				segments: segments,
+				phiStart: phiStart,
+				phiLength: phiLength
+			};
+
+			segments = Math.floor( segments );
+
+			// clamp phiLength so it's in range of [ 0, 2PI ]
+
+			phiLength = MathUtils.clamp( phiLength, 0, Math.PI * 2 );
+
+			// buffers
+
+			const indices = [];
+			const vertices = [];
+			const uvs = [];
+
+			// helper variables
+
+			const inverseSegments = 1.0 / segments;
+			const vertex = new Vector3();
+			const uv = new Vector2();
+
+			// generate vertices and uvs
+
+			for ( let i = 0; i <= segments; i ++ ) {
+
+				const phi = phiStart + i * inverseSegments * phiLength;
+
+				const sin = Math.sin( phi );
+				const cos = Math.cos( phi );
+
+				for ( let j = 0; j <= ( points.length - 1 ); j ++ ) {
+
+					// vertex
+
+					vertex.x = points[ j ].x * sin;
+					vertex.y = points[ j ].y;
+					vertex.z = points[ j ].x * cos;
+
+					vertices.push( vertex.x, vertex.y, vertex.z );
+
+					// uv
+
+					uv.x = i / segments;
+					uv.y = j / ( points.length - 1 );
+
+					uvs.push( uv.x, uv.y );
+
+
+				}
+
+			}
+
+			// indices
+
+			for ( let i = 0; i < segments; i ++ ) {
+
+				for ( let j = 0; j < ( points.length - 1 ); j ++ ) {
+
+					const base = j + i * points.length;
+
+					const a = base;
+					const b = base + points.length;
+					const c = base + points.length + 1;
+					const d = base + 1;
+
+					// faces
+
+					indices.push( a, b, d );
+					indices.push( b, c, d );
+
+				}
+
+			}
+
+			// build geometry
+
+			this.setIndex( indices );
+			this.setAttribute( 'position', new Float32BufferAttribute( vertices, 3 ) );
+			this.setAttribute( 'uv', new Float32BufferAttribute( uvs, 2 ) );
+
+			// generate normals
+
+			this.computeVertexNormals();
+
+			// if the geometry is closed, we need to average the normals along the seam.
+			// because the corresponding vertices are identical (but still have different UVs).
+
+			if ( phiLength === Math.PI * 2 ) {
+
+				const normals = this.attributes.normal.array;
+				const n1 = new Vector3();
+				const n2 = new Vector3();
+				const n = new Vector3();
+
+				// this is the buffer offset for the last line of vertices
+
+				const base = segments * points.length * 3;
+
+				for ( let i = 0, j = 0; i < points.length; i ++, j += 3 ) {
+
+					// select the normal of the vertex in the first line
+
+					n1.x = normals[ j + 0 ];
+					n1.y = normals[ j + 1 ];
+					n1.z = normals[ j + 2 ];
+
+					// select the normal of the vertex in the last line
+
+					n2.x = normals[ base + j + 0 ];
+					n2.y = normals[ base + j + 1 ];
+					n2.z = normals[ base + j + 2 ];
+
+					// average normals
+
+					n.addVectors( n1, n2 ).normalize();
+
+					// assign the new values to both normals
+
+					normals[ j + 0 ] = normals[ base + j + 0 ] = n.x;
+					normals[ j + 1 ] = normals[ base + j + 1 ] = n.y;
+					normals[ j + 2 ] = normals[ base + j + 2 ] = n.z;
+
+				}
+
+			}
+
+		}
+
+	}
+
+	class OctahedronGeometry extends PolyhedronGeometry {
+
+		constructor( radius = 1, detail = 0 ) {
+
+			const vertices = [
+				1, 0, 0, 	- 1, 0, 0,	0, 1, 0,
+				0, - 1, 0, 	0, 0, 1,	0, 0, - 1
+			];
+
+			const indices = [
+				0, 2, 4,	0, 4, 3,	0, 3, 5,
+				0, 5, 2,	1, 2, 5,	1, 5, 3,
+				1, 3, 4,	1, 4, 2
+			];
+
+			super( vertices, indices, radius, detail );
+
+			this.type = 'OctahedronGeometry';
+
+			this.parameters = {
+				radius: radius,
+				detail: detail
+			};
+
+		}
+
+	}
+
 	/**
 	 * Parametric Surfaces Geometry
 	 * based on the brilliant article by @prideout https://prideout.net/blog/old/blog/index.html@p=44.html
@@ -28796,6 +29990,111 @@
 
 	ParametricGeometry.prototype = Object.create( BufferGeometry.prototype );
 	ParametricGeometry.prototype.constructor = ParametricGeometry;
+
+	class RingGeometry extends BufferGeometry {
+
+		constructor( innerRadius = 0.5, outerRadius = 1, thetaSegments = 8, phiSegments = 1, thetaStart = 0, thetaLength = Math.PI * 2 ) {
+
+			super();
+
+			this.type = 'RingGeometry';
+
+			this.parameters = {
+				innerRadius: innerRadius,
+				outerRadius: outerRadius,
+				thetaSegments: thetaSegments,
+				phiSegments: phiSegments,
+				thetaStart: thetaStart,
+				thetaLength: thetaLength
+			};
+
+			thetaSegments = Math.max( 3, thetaSegments );
+			phiSegments = Math.max( 1, phiSegments );
+
+			// buffers
+
+			const indices = [];
+			const vertices = [];
+			const normals = [];
+			const uvs = [];
+
+			// some helper variables
+
+			let radius = innerRadius;
+			const radiusStep = ( ( outerRadius - innerRadius ) / phiSegments );
+			const vertex = new Vector3();
+			const uv = new Vector2();
+
+			// generate vertices, normals and uvs
+
+			for ( let j = 0; j <= phiSegments; j ++ ) {
+
+				for ( let i = 0; i <= thetaSegments; i ++ ) {
+
+					// values are generate from the inside of the ring to the outside
+
+					const segment = thetaStart + i / thetaSegments * thetaLength;
+
+					// vertex
+
+					vertex.x = radius * Math.cos( segment );
+					vertex.y = radius * Math.sin( segment );
+
+					vertices.push( vertex.x, vertex.y, vertex.z );
+
+					// normal
+
+					normals.push( 0, 0, 1 );
+
+					// uv
+
+					uv.x = ( vertex.x / outerRadius + 1 ) / 2;
+					uv.y = ( vertex.y / outerRadius + 1 ) / 2;
+
+					uvs.push( uv.x, uv.y );
+
+				}
+
+				// increase the radius for next row of vertices
+
+				radius += radiusStep;
+
+			}
+
+			// indices
+
+			for ( let j = 0; j < phiSegments; j ++ ) {
+
+				const thetaSegmentLevel = j * ( thetaSegments + 1 );
+
+				for ( let i = 0; i < thetaSegments; i ++ ) {
+
+					const segment = i + thetaSegmentLevel;
+
+					const a = segment;
+					const b = segment + thetaSegments + 1;
+					const c = segment + thetaSegments + 2;
+					const d = segment + 1;
+
+					// faces
+
+					indices.push( a, b, d );
+					indices.push( b, c, d );
+
+				}
+
+			}
+
+			// build geometry
+
+			this.setIndex( indices );
+			this.setAttribute( 'position', new Float32BufferAttribute( vertices, 3 ) );
+			this.setAttribute( 'normal', new Float32BufferAttribute( normals, 3 ) );
+			this.setAttribute( 'uv', new Float32BufferAttribute( uvs, 2 ) );
+
+		}
+
+	}
 
 	class ShapeGeometry extends BufferGeometry {
 
@@ -28957,6 +30256,773 @@
 		return data;
 
 	}
+
+	class SphereGeometry extends BufferGeometry {
+
+		constructor( radius = 1, widthSegments = 8, heightSegments = 6, phiStart = 0, phiLength = Math.PI * 2, thetaStart = 0, thetaLength = Math.PI ) {
+
+			super();
+			this.type = 'SphereGeometry';
+
+			this.parameters = {
+				radius: radius,
+				widthSegments: widthSegments,
+				heightSegments: heightSegments,
+				phiStart: phiStart,
+				phiLength: phiLength,
+				thetaStart: thetaStart,
+				thetaLength: thetaLength
+			};
+
+			widthSegments = Math.max( 3, Math.floor( widthSegments ) );
+			heightSegments = Math.max( 2, Math.floor( heightSegments ) );
+
+			const thetaEnd = Math.min( thetaStart + thetaLength, Math.PI );
+
+			let index = 0;
+			const grid = [];
+
+			const vertex = new Vector3();
+			const normal = new Vector3();
+
+			// buffers
+
+			const indices = [];
+			const vertices = [];
+			const normals = [];
+			const uvs = [];
+
+			// generate vertices, normals and uvs
+
+			for ( let iy = 0; iy <= heightSegments; iy ++ ) {
+
+				const verticesRow = [];
+
+				const v = iy / heightSegments;
+
+				// special case for the poles
+
+				let uOffset = 0;
+
+				if ( iy == 0 && thetaStart == 0 ) {
+
+					uOffset = 0.5 / widthSegments;
+
+				} else if ( iy == heightSegments && thetaEnd == Math.PI ) {
+
+					uOffset = - 0.5 / widthSegments;
+
+				}
+
+				for ( let ix = 0; ix <= widthSegments; ix ++ ) {
+
+					const u = ix / widthSegments;
+
+					// vertex
+
+					vertex.x = - radius * Math.cos( phiStart + u * phiLength ) * Math.sin( thetaStart + v * thetaLength );
+					vertex.y = radius * Math.cos( thetaStart + v * thetaLength );
+					vertex.z = radius * Math.sin( phiStart + u * phiLength ) * Math.sin( thetaStart + v * thetaLength );
+
+					vertices.push( vertex.x, vertex.y, vertex.z );
+
+					// normal
+
+					normal.copy( vertex ).normalize();
+					normals.push( normal.x, normal.y, normal.z );
+
+					// uv
+
+					uvs.push( u + uOffset, 1 - v );
+
+					verticesRow.push( index ++ );
+
+				}
+
+				grid.push( verticesRow );
+
+			}
+
+			// indices
+
+			for ( let iy = 0; iy < heightSegments; iy ++ ) {
+
+				for ( let ix = 0; ix < widthSegments; ix ++ ) {
+
+					const a = grid[ iy ][ ix + 1 ];
+					const b = grid[ iy ][ ix ];
+					const c = grid[ iy + 1 ][ ix ];
+					const d = grid[ iy + 1 ][ ix + 1 ];
+
+					if ( iy !== 0 || thetaStart > 0 ) indices.push( a, b, d );
+					if ( iy !== heightSegments - 1 || thetaEnd < Math.PI ) indices.push( b, c, d );
+
+				}
+
+			}
+
+			// build geometry
+
+			this.setIndex( indices );
+			this.setAttribute( 'position', new Float32BufferAttribute( vertices, 3 ) );
+			this.setAttribute( 'normal', new Float32BufferAttribute( normals, 3 ) );
+			this.setAttribute( 'uv', new Float32BufferAttribute( uvs, 2 ) );
+
+		}
+
+	}
+
+	class TetrahedronGeometry extends PolyhedronGeometry {
+
+		constructor( radius = 1, detail = 0 ) {
+
+			const vertices = [
+				1, 1, 1, 	- 1, - 1, 1, 	- 1, 1, - 1, 	1, - 1, - 1
+			];
+
+			const indices = [
+				2, 1, 0, 	0, 3, 2,	1, 3, 0,	2, 3, 1
+			];
+
+			super( vertices, indices, radius, detail );
+
+			this.type = 'TetrahedronGeometry';
+
+			this.parameters = {
+				radius: radius,
+				detail: detail
+			};
+
+		}
+
+	}
+
+	/**
+	 * Text = 3D Text
+	 *
+	 * parameters = {
+	 *  font: <THREE.Font>, // font
+	 *
+	 *  size: <float>, // size of the text
+	 *  height: <float>, // thickness to extrude text
+	 *  curveSegments: <int>, // number of points on the curves
+	 *
+	 *  bevelEnabled: <bool>, // turn on bevel
+	 *  bevelThickness: <float>, // how deep into text bevel goes
+	 *  bevelSize: <float>, // how far from text outline (including bevelOffset) is bevel
+	 *  bevelOffset: <float> // how far from text outline does bevel start
+	 * }
+	 */
+
+	class TextGeometry extends ExtrudeGeometry {
+
+		constructor( text, parameters = {} ) {
+
+			const font = parameters.font;
+
+			if ( ! ( font && font.isFont ) ) {
+
+				console.error( 'THREE.TextGeometry: font parameter is not an instance of THREE.Font.' );
+				return new BufferGeometry();
+
+			}
+
+			const shapes = font.generateShapes( text, parameters.size );
+
+			// translate parameters to ExtrudeGeometry API
+
+			parameters.depth = parameters.height !== undefined ? parameters.height : 50;
+
+			// defaults
+
+			if ( parameters.bevelThickness === undefined ) parameters.bevelThickness = 10;
+			if ( parameters.bevelSize === undefined ) parameters.bevelSize = 8;
+			if ( parameters.bevelEnabled === undefined ) parameters.bevelEnabled = false;
+
+			super( shapes, parameters );
+
+			this.type = 'TextGeometry';
+
+		}
+
+	}
+
+	class TorusGeometry extends BufferGeometry {
+
+		constructor( radius = 1, tube = 0.4, radialSegments = 8, tubularSegments = 6, arc = Math.PI * 2 ) {
+
+			super();
+			this.type = 'TorusGeometry';
+
+			this.parameters = {
+				radius: radius,
+				tube: tube,
+				radialSegments: radialSegments,
+				tubularSegments: tubularSegments,
+				arc: arc
+			};
+
+			radialSegments = Math.floor( radialSegments );
+			tubularSegments = Math.floor( tubularSegments );
+
+			// buffers
+
+			const indices = [];
+			const vertices = [];
+			const normals = [];
+			const uvs = [];
+
+			// helper variables
+
+			const center = new Vector3();
+			const vertex = new Vector3();
+			const normal = new Vector3();
+
+			// generate vertices, normals and uvs
+
+			for ( let j = 0; j <= radialSegments; j ++ ) {
+
+				for ( let i = 0; i <= tubularSegments; i ++ ) {
+
+					const u = i / tubularSegments * arc;
+					const v = j / radialSegments * Math.PI * 2;
+
+					// vertex
+
+					vertex.x = ( radius + tube * Math.cos( v ) ) * Math.cos( u );
+					vertex.y = ( radius + tube * Math.cos( v ) ) * Math.sin( u );
+					vertex.z = tube * Math.sin( v );
+
+					vertices.push( vertex.x, vertex.y, vertex.z );
+
+					// normal
+
+					center.x = radius * Math.cos( u );
+					center.y = radius * Math.sin( u );
+					normal.subVectors( vertex, center ).normalize();
+
+					normals.push( normal.x, normal.y, normal.z );
+
+					// uv
+
+					uvs.push( i / tubularSegments );
+					uvs.push( j / radialSegments );
+
+				}
+
+			}
+
+			// generate indices
+
+			for ( let j = 1; j <= radialSegments; j ++ ) {
+
+				for ( let i = 1; i <= tubularSegments; i ++ ) {
+
+					// indices
+
+					const a = ( tubularSegments + 1 ) * j + i - 1;
+					const b = ( tubularSegments + 1 ) * ( j - 1 ) + i - 1;
+					const c = ( tubularSegments + 1 ) * ( j - 1 ) + i;
+					const d = ( tubularSegments + 1 ) * j + i;
+
+					// faces
+
+					indices.push( a, b, d );
+					indices.push( b, c, d );
+
+				}
+
+			}
+
+			// build geometry
+
+			this.setIndex( indices );
+			this.setAttribute( 'position', new Float32BufferAttribute( vertices, 3 ) );
+			this.setAttribute( 'normal', new Float32BufferAttribute( normals, 3 ) );
+			this.setAttribute( 'uv', new Float32BufferAttribute( uvs, 2 ) );
+
+		}
+
+	}
+
+	class TorusKnotGeometry extends BufferGeometry {
+
+		constructor( radius = 1, tube = 0.4, tubularSegments = 64, radialSegments = 8, p = 2, q = 3 ) {
+
+			super();
+			this.type = 'TorusKnotGeometry';
+
+			this.parameters = {
+				radius: radius,
+				tube: tube,
+				tubularSegments: tubularSegments,
+				radialSegments: radialSegments,
+				p: p,
+				q: q
+			};
+
+			tubularSegments = Math.floor( tubularSegments );
+			radialSegments = Math.floor( radialSegments );
+
+			// buffers
+
+			const indices = [];
+			const vertices = [];
+			const normals = [];
+			const uvs = [];
+
+			// helper variables
+
+			const vertex = new Vector3();
+			const normal = new Vector3();
+
+			const P1 = new Vector3();
+			const P2 = new Vector3();
+
+			const B = new Vector3();
+			const T = new Vector3();
+			const N = new Vector3();
+
+			// generate vertices, normals and uvs
+
+			for ( let i = 0; i <= tubularSegments; ++ i ) {
+
+				// the radian "u" is used to calculate the position on the torus curve of the current tubular segement
+
+				const u = i / tubularSegments * p * Math.PI * 2;
+
+				// now we calculate two points. P1 is our current position on the curve, P2 is a little farther ahead.
+				// these points are used to create a special "coordinate space", which is necessary to calculate the correct vertex positions
+
+				calculatePositionOnCurve( u, p, q, radius, P1 );
+				calculatePositionOnCurve( u + 0.01, p, q, radius, P2 );
+
+				// calculate orthonormal basis
+
+				T.subVectors( P2, P1 );
+				N.addVectors( P2, P1 );
+				B.crossVectors( T, N );
+				N.crossVectors( B, T );
+
+				// normalize B, N. T can be ignored, we don't use it
+
+				B.normalize();
+				N.normalize();
+
+				for ( let j = 0; j <= radialSegments; ++ j ) {
+
+					// now calculate the vertices. they are nothing more than an extrusion of the torus curve.
+					// because we extrude a shape in the xy-plane, there is no need to calculate a z-value.
+
+					const v = j / radialSegments * Math.PI * 2;
+					const cx = - tube * Math.cos( v );
+					const cy = tube * Math.sin( v );
+
+					// now calculate the final vertex position.
+					// first we orient the extrusion with our basis vectos, then we add it to the current position on the curve
+
+					vertex.x = P1.x + ( cx * N.x + cy * B.x );
+					vertex.y = P1.y + ( cx * N.y + cy * B.y );
+					vertex.z = P1.z + ( cx * N.z + cy * B.z );
+
+					vertices.push( vertex.x, vertex.y, vertex.z );
+
+					// normal (P1 is always the center/origin of the extrusion, thus we can use it to calculate the normal)
+
+					normal.subVectors( vertex, P1 ).normalize();
+
+					normals.push( normal.x, normal.y, normal.z );
+
+					// uv
+
+					uvs.push( i / tubularSegments );
+					uvs.push( j / radialSegments );
+
+				}
+
+			}
+
+			// generate indices
+
+			for ( let j = 1; j <= tubularSegments; j ++ ) {
+
+				for ( let i = 1; i <= radialSegments; i ++ ) {
+
+					// indices
+
+					const a = ( radialSegments + 1 ) * ( j - 1 ) + ( i - 1 );
+					const b = ( radialSegments + 1 ) * j + ( i - 1 );
+					const c = ( radialSegments + 1 ) * j + i;
+					const d = ( radialSegments + 1 ) * ( j - 1 ) + i;
+
+					// faces
+
+					indices.push( a, b, d );
+					indices.push( b, c, d );
+
+				}
+
+			}
+
+			// build geometry
+
+			this.setIndex( indices );
+			this.setAttribute( 'position', new Float32BufferAttribute( vertices, 3 ) );
+			this.setAttribute( 'normal', new Float32BufferAttribute( normals, 3 ) );
+			this.setAttribute( 'uv', new Float32BufferAttribute( uvs, 2 ) );
+
+			// this function calculates the current position on the torus curve
+
+			function calculatePositionOnCurve( u, p, q, radius, position ) {
+
+				const cu = Math.cos( u );
+				const su = Math.sin( u );
+				const quOverP = q / p * u;
+				const cs = Math.cos( quOverP );
+
+				position.x = radius * ( 2 + cs ) * 0.5 * cu;
+				position.y = radius * ( 2 + cs ) * su * 0.5;
+				position.z = radius * Math.sin( quOverP ) * 0.5;
+
+			}
+
+		}
+
+	}
+
+	class TubeGeometry extends BufferGeometry {
+
+		constructor( path, tubularSegments = 64, radius = 1, radialSegments = 8, closed = false ) {
+
+			super();
+			this.type = 'TubeGeometry';
+
+			this.parameters = {
+				path: path,
+				tubularSegments: tubularSegments,
+				radius: radius,
+				radialSegments: radialSegments,
+				closed: closed
+			};
+
+			const frames = path.computeFrenetFrames( tubularSegments, closed );
+
+			// expose internals
+
+			this.tangents = frames.tangents;
+			this.normals = frames.normals;
+			this.binormals = frames.binormals;
+
+			// helper variables
+
+			const vertex = new Vector3();
+			const normal = new Vector3();
+			const uv = new Vector2();
+			let P = new Vector3();
+
+			// buffer
+
+			const vertices = [];
+			const normals = [];
+			const uvs = [];
+			const indices = [];
+
+			// create buffer data
+
+			generateBufferData();
+
+			// build geometry
+
+			this.setIndex( indices );
+			this.setAttribute( 'position', new Float32BufferAttribute( vertices, 3 ) );
+			this.setAttribute( 'normal', new Float32BufferAttribute( normals, 3 ) );
+			this.setAttribute( 'uv', new Float32BufferAttribute( uvs, 2 ) );
+
+			// functions
+
+			function generateBufferData() {
+
+				for ( let i = 0; i < tubularSegments; i ++ ) {
+
+					generateSegment( i );
+
+				}
+
+				// if the geometry is not closed, generate the last row of vertices and normals
+				// at the regular position on the given path
+				//
+				// if the geometry is closed, duplicate the first row of vertices and normals (uvs will differ)
+
+				generateSegment( ( closed === false ) ? tubularSegments : 0 );
+
+				// uvs are generated in a separate function.
+				// this makes it easy compute correct values for closed geometries
+
+				generateUVs();
+
+				// finally create faces
+
+				generateIndices();
+
+			}
+
+			function generateSegment( i ) {
+
+				// we use getPointAt to sample evenly distributed points from the given path
+
+				P = path.getPointAt( i / tubularSegments, P );
+
+				// retrieve corresponding normal and binormal
+
+				const N = frames.normals[ i ];
+				const B = frames.binormals[ i ];
+
+				// generate normals and vertices for the current segment
+
+				for ( let j = 0; j <= radialSegments; j ++ ) {
+
+					const v = j / radialSegments * Math.PI * 2;
+
+					const sin = Math.sin( v );
+					const cos = - Math.cos( v );
+
+					// normal
+
+					normal.x = ( cos * N.x + sin * B.x );
+					normal.y = ( cos * N.y + sin * B.y );
+					normal.z = ( cos * N.z + sin * B.z );
+					normal.normalize();
+
+					normals.push( normal.x, normal.y, normal.z );
+
+					// vertex
+
+					vertex.x = P.x + radius * normal.x;
+					vertex.y = P.y + radius * normal.y;
+					vertex.z = P.z + radius * normal.z;
+
+					vertices.push( vertex.x, vertex.y, vertex.z );
+
+				}
+
+			}
+
+			function generateIndices() {
+
+				for ( let j = 1; j <= tubularSegments; j ++ ) {
+
+					for ( let i = 1; i <= radialSegments; i ++ ) {
+
+						const a = ( radialSegments + 1 ) * ( j - 1 ) + ( i - 1 );
+						const b = ( radialSegments + 1 ) * j + ( i - 1 );
+						const c = ( radialSegments + 1 ) * j + i;
+						const d = ( radialSegments + 1 ) * ( j - 1 ) + i;
+
+						// faces
+
+						indices.push( a, b, d );
+						indices.push( b, c, d );
+
+					}
+
+				}
+
+			}
+
+			function generateUVs() {
+
+				for ( let i = 0; i <= tubularSegments; i ++ ) {
+
+					for ( let j = 0; j <= radialSegments; j ++ ) {
+
+						uv.x = i / tubularSegments;
+						uv.y = j / radialSegments;
+
+						uvs.push( uv.x, uv.y );
+
+					}
+
+				}
+
+			}
+
+		}
+		toJSON() {
+
+			const data = BufferGeometry.prototype.toJSON.call( this );
+
+			data.path = this.parameters.path.toJSON();
+
+			return data;
+
+		}
+
+	}
+
+	class WireframeGeometry extends BufferGeometry {
+
+		constructor( geometry ) {
+
+			super();
+			this.type = 'WireframeGeometry';
+
+			if ( geometry.isGeometry === true ) {
+
+				console.error( 'THREE.WireframeGeometry no longer supports THREE.Geometry. Use THREE.BufferGeometry instead.' );
+				return;
+
+			}
+
+			// buffer
+
+			const vertices = [];
+
+			// helper variables
+
+			const edge = [ 0, 0 ], edges = {};
+
+			const vertex = new Vector3();
+
+			if ( geometry.index !== null ) {
+
+				// indexed BufferGeometry
+
+				const position = geometry.attributes.position;
+				const indices = geometry.index;
+				let groups = geometry.groups;
+
+				if ( groups.length === 0 ) {
+
+					groups = [ { start: 0, count: indices.count, materialIndex: 0 } ];
+
+				}
+
+				// create a data structure that contains all eges without duplicates
+
+				for ( let o = 0, ol = groups.length; o < ol; ++ o ) {
+
+					const group = groups[ o ];
+
+					const start = group.start;
+					const count = group.count;
+
+					for ( let i = start, l = ( start + count ); i < l; i += 3 ) {
+
+						for ( let j = 0; j < 3; j ++ ) {
+
+							const edge1 = indices.getX( i + j );
+							const edge2 = indices.getX( i + ( j + 1 ) % 3 );
+							edge[ 0 ] = Math.min( edge1, edge2 ); // sorting prevents duplicates
+							edge[ 1 ] = Math.max( edge1, edge2 );
+
+							const key = edge[ 0 ] + ',' + edge[ 1 ];
+
+							if ( edges[ key ] === undefined ) {
+
+								edges[ key ] = { index1: edge[ 0 ], index2: edge[ 1 ] };
+
+							}
+
+						}
+
+					}
+
+				}
+
+				// generate vertices
+
+				for ( const key in edges ) {
+
+					const e = edges[ key ];
+
+					vertex.fromBufferAttribute( position, e.index1 );
+					vertices.push( vertex.x, vertex.y, vertex.z );
+
+					vertex.fromBufferAttribute( position, e.index2 );
+					vertices.push( vertex.x, vertex.y, vertex.z );
+
+				}
+
+			} else {
+
+				// non-indexed BufferGeometry
+
+				const position = geometry.attributes.position;
+
+				for ( let i = 0, l = ( position.count / 3 ); i < l; i ++ ) {
+
+					for ( let j = 0; j < 3; j ++ ) {
+
+						// three edges per triangle, an edge is represented as (index1, index2)
+						// e.g. the first triangle has the following edges: (0,1),(1,2),(2,0)
+
+						const index1 = 3 * i + j;
+						vertex.fromBufferAttribute( position, index1 );
+						vertices.push( vertex.x, vertex.y, vertex.z );
+
+						const index2 = 3 * i + ( ( j + 1 ) % 3 );
+						vertex.fromBufferAttribute( position, index2 );
+						vertices.push( vertex.x, vertex.y, vertex.z );
+
+					}
+
+				}
+
+			}
+
+			// build geometry
+
+			this.setAttribute( 'position', new Float32BufferAttribute( vertices, 3 ) );
+
+		}
+
+	}
+
+	var Geometries = /*#__PURE__*/Object.freeze({
+		__proto__: null,
+		BoxGeometry: BoxGeometry,
+		BoxBufferGeometry: BoxGeometry,
+		CircleGeometry: CircleGeometry,
+		CircleBufferGeometry: CircleGeometry,
+		ConeGeometry: ConeGeometry,
+		ConeBufferGeometry: ConeGeometry,
+		CylinderGeometry: CylinderGeometry,
+		CylinderBufferGeometry: CylinderGeometry,
+		DodecahedronGeometry: DodecahedronGeometry,
+		DodecahedronBufferGeometry: DodecahedronGeometry,
+		EdgesGeometry: EdgesGeometry,
+		ExtrudeGeometry: ExtrudeGeometry,
+		ExtrudeBufferGeometry: ExtrudeGeometry,
+		IcosahedronGeometry: IcosahedronGeometry,
+		IcosahedronBufferGeometry: IcosahedronGeometry,
+		LatheGeometry: LatheGeometry,
+		LatheBufferGeometry: LatheGeometry,
+		OctahedronGeometry: OctahedronGeometry,
+		OctahedronBufferGeometry: OctahedronGeometry,
+		ParametricGeometry: ParametricGeometry,
+		ParametricBufferGeometry: ParametricGeometry,
+		PlaneGeometry: PlaneGeometry,
+		PlaneBufferGeometry: PlaneGeometry,
+		PolyhedronGeometry: PolyhedronGeometry,
+		PolyhedronBufferGeometry: PolyhedronGeometry,
+		RingGeometry: RingGeometry,
+		RingBufferGeometry: RingGeometry,
+		ShapeGeometry: ShapeGeometry,
+		ShapeBufferGeometry: ShapeGeometry,
+		SphereGeometry: SphereGeometry,
+		SphereBufferGeometry: SphereGeometry,
+		TetrahedronGeometry: TetrahedronGeometry,
+		TetrahedronBufferGeometry: TetrahedronGeometry,
+		TextGeometry: TextGeometry,
+		TextBufferGeometry: TextGeometry,
+		TorusGeometry: TorusGeometry,
+		TorusBufferGeometry: TorusGeometry,
+		TorusKnotGeometry: TorusKnotGeometry,
+		TorusKnotBufferGeometry: TorusKnotGeometry,
+		TubeGeometry: TubeGeometry,
+		TubeBufferGeometry: TubeGeometry,
+		WireframeGeometry: WireframeGeometry
+	});
 
 	/**
 	 * parameters = {
@@ -29959,6 +32025,28 @@
 		return this;
 
 	};
+
+	var Materials = /*#__PURE__*/Object.freeze({
+		__proto__: null,
+		ShadowMaterial: ShadowMaterial,
+		SpriteMaterial: SpriteMaterial,
+		RawShaderMaterial: RawShaderMaterial,
+		ShaderMaterial: ShaderMaterial,
+		PointsMaterial: PointsMaterial,
+		MeshPhysicalMaterial: MeshPhysicalMaterial,
+		MeshStandardMaterial: MeshStandardMaterial,
+		MeshPhongMaterial: MeshPhongMaterial,
+		MeshToonMaterial: MeshToonMaterial,
+		MeshNormalMaterial: MeshNormalMaterial,
+		MeshLambertMaterial: MeshLambertMaterial,
+		MeshDepthMaterial: MeshDepthMaterial,
+		MeshDistanceMaterial: MeshDistanceMaterial,
+		MeshBasicMaterial: MeshBasicMaterial,
+		MeshMatcapMaterial: MeshMatcapMaterial,
+		LineDashedMaterial: LineDashedMaterial,
+		LineBasicMaterial: LineBasicMaterial,
+		Material: Material
+	});
 
 	const AnimationUtils = {
 
@@ -32426,6 +34514,66 @@
 
 	} );
 
+	class AnimationLoader extends Loader {
+
+		constructor( manager ) {
+
+			super( manager );
+
+		}
+
+		load( url, onLoad, onProgress, onError ) {
+
+			const scope = this;
+
+			const loader = new FileLoader( this.manager );
+			loader.setPath( this.path );
+			loader.setRequestHeader( this.requestHeader );
+			loader.setWithCredentials( this.withCredentials );
+			loader.load( url, function ( text ) {
+
+				try {
+
+					onLoad( scope.parse( JSON.parse( text ) ) );
+
+				} catch ( e ) {
+
+					if ( onError ) {
+
+						onError( e );
+
+					} else {
+
+						console.error( e );
+
+					}
+
+					scope.manager.itemError( url );
+
+				}
+
+			}, onProgress, onError );
+
+		}
+
+		parse( json ) {
+
+			const animations = [];
+
+			for ( let i = 0; i < json.length; i ++ ) {
+
+				const clip = AnimationClip.parse( json[ i ] );
+
+				animations.push( clip );
+
+			}
+
+			return animations;
+
+		}
+
+	}
+
 	/**
 	 * Abstract Base class to block based textures loader (dds, pvr, ...)
 	 *
@@ -34818,6 +36966,35 @@
 
 	}
 
+	class HemisphereLight extends Light {
+
+		constructor( skyColor, groundColor, intensity ) {
+
+			super( skyColor, intensity );
+
+			Object.defineProperty( this, 'isHemisphereLight', { value: true } );
+
+			this.type = 'HemisphereLight';
+
+			this.position.copy( Object3D.DefaultUp );
+			this.updateMatrix();
+
+			this.groundColor = new Color( groundColor );
+
+		}
+
+		copy( source ) {
+
+			Light.prototype.copy.call( this, source );
+
+			this.groundColor.copy( source.groundColor );
+
+			return this;
+
+		}
+
+	}
+
 	const _projScreenMatrix = /*@__PURE__*/ new Matrix4();
 	const _lightPositionWorld = /*@__PURE__*/ new Vector3();
 	const _lookTarget = /*@__PURE__*/ new Vector3();
@@ -35342,6 +37519,624 @@
 
 	}
 
+	class AmbientLight extends Light {
+
+		constructor( color, intensity ) {
+
+			super( color, intensity );
+
+			this.type = 'AmbientLight';
+			Object.defineProperty( this, 'isAmbientLight', { value: true } );
+
+		}
+
+	}
+
+	class RectAreaLight extends Light {
+
+		constructor( color, intensity, width = 10, height = 10 ) {
+
+			super( color, intensity );
+
+			Object.defineProperty( this, 'isRectAreaLight', { value: true } );
+
+			this.type = 'RectAreaLight';
+
+			this.width = width;
+			this.height = height;
+
+		}
+
+		copy( source ) {
+
+			super.copy( source );
+
+			this.width = source.width;
+			this.height = source.height;
+
+			return this;
+
+		}
+
+		toJSON( meta ) {
+
+			const data = super.toJSON( meta );
+
+			data.object.width = this.width;
+			data.object.height = this.height;
+
+			return data;
+
+		}
+
+	}
+
+	/**
+	 * Primary reference:
+	 *   https://graphics.stanford.edu/papers/envmap/envmap.pdf
+	 *
+	 * Secondary reference:
+	 *   https://www.ppsloan.org/publications/StupidSH36.pdf
+	 */
+
+	// 3-band SH defined by 9 coefficients
+
+	class SphericalHarmonics3 {
+
+		constructor() {
+
+			Object.defineProperty( this, 'isSphericalHarmonics3', { value: true } );
+
+			this.coefficients = [];
+
+			for ( let i = 0; i < 9; i ++ ) {
+
+				this.coefficients.push( new Vector3() );
+
+			}
+
+		}
+
+		set( coefficients ) {
+
+			for ( let i = 0; i < 9; i ++ ) {
+
+				this.coefficients[ i ].copy( coefficients[ i ] );
+
+			}
+
+			return this;
+
+		}
+
+		zero() {
+
+			for ( let i = 0; i < 9; i ++ ) {
+
+				this.coefficients[ i ].set( 0, 0, 0 );
+
+			}
+
+			return this;
+
+		}
+
+		// get the radiance in the direction of the normal
+		// target is a Vector3
+		getAt( normal, target ) {
+
+			// normal is assumed to be unit length
+
+			const x = normal.x, y = normal.y, z = normal.z;
+
+			const coeff = this.coefficients;
+
+			// band 0
+			target.copy( coeff[ 0 ] ).multiplyScalar( 0.282095 );
+
+			// band 1
+			target.addScaledVector( coeff[ 1 ], 0.488603 * y );
+			target.addScaledVector( coeff[ 2 ], 0.488603 * z );
+			target.addScaledVector( coeff[ 3 ], 0.488603 * x );
+
+			// band 2
+			target.addScaledVector( coeff[ 4 ], 1.092548 * ( x * y ) );
+			target.addScaledVector( coeff[ 5 ], 1.092548 * ( y * z ) );
+			target.addScaledVector( coeff[ 6 ], 0.315392 * ( 3.0 * z * z - 1.0 ) );
+			target.addScaledVector( coeff[ 7 ], 1.092548 * ( x * z ) );
+			target.addScaledVector( coeff[ 8 ], 0.546274 * ( x * x - y * y ) );
+
+			return target;
+
+		}
+
+		// get the irradiance (radiance convolved with cosine lobe) in the direction of the normal
+		// target is a Vector3
+		// https://graphics.stanford.edu/papers/envmap/envmap.pdf
+		getIrradianceAt( normal, target ) {
+
+			// normal is assumed to be unit length
+
+			const x = normal.x, y = normal.y, z = normal.z;
+
+			const coeff = this.coefficients;
+
+			// band 0
+			target.copy( coeff[ 0 ] ).multiplyScalar( 0.886227 ); // π * 0.282095
+
+			// band 1
+			target.addScaledVector( coeff[ 1 ], 2.0 * 0.511664 * y ); // ( 2 * π / 3 ) * 0.488603
+			target.addScaledVector( coeff[ 2 ], 2.0 * 0.511664 * z );
+			target.addScaledVector( coeff[ 3 ], 2.0 * 0.511664 * x );
+
+			// band 2
+			target.addScaledVector( coeff[ 4 ], 2.0 * 0.429043 * x * y ); // ( π / 4 ) * 1.092548
+			target.addScaledVector( coeff[ 5 ], 2.0 * 0.429043 * y * z );
+			target.addScaledVector( coeff[ 6 ], 0.743125 * z * z - 0.247708 ); // ( π / 4 ) * 0.315392 * 3
+			target.addScaledVector( coeff[ 7 ], 2.0 * 0.429043 * x * z );
+			target.addScaledVector( coeff[ 8 ], 0.429043 * ( x * x - y * y ) ); // ( π / 4 ) * 0.546274
+
+			return target;
+
+		}
+
+		add( sh ) {
+
+			for ( let i = 0; i < 9; i ++ ) {
+
+				this.coefficients[ i ].add( sh.coefficients[ i ] );
+
+			}
+
+			return this;
+
+		}
+
+		addScaledSH( sh, s ) {
+
+			for ( let i = 0; i < 9; i ++ ) {
+
+				this.coefficients[ i ].addScaledVector( sh.coefficients[ i ], s );
+
+			}
+
+			return this;
+
+		}
+
+		scale( s ) {
+
+			for ( let i = 0; i < 9; i ++ ) {
+
+				this.coefficients[ i ].multiplyScalar( s );
+
+			}
+
+			return this;
+
+		}
+
+		lerp( sh, alpha ) {
+
+			for ( let i = 0; i < 9; i ++ ) {
+
+				this.coefficients[ i ].lerp( sh.coefficients[ i ], alpha );
+
+			}
+
+			return this;
+
+		}
+
+		equals( sh ) {
+
+			for ( let i = 0; i < 9; i ++ ) {
+
+				if ( ! this.coefficients[ i ].equals( sh.coefficients[ i ] ) ) {
+
+					return false;
+
+				}
+
+			}
+
+			return true;
+
+		}
+
+		copy( sh ) {
+
+			return this.set( sh.coefficients );
+
+		}
+
+		clone() {
+
+			return new this.constructor().copy( this );
+
+		}
+
+		fromArray( array, offset = 0 ) {
+
+			const coefficients = this.coefficients;
+
+			for ( let i = 0; i < 9; i ++ ) {
+
+				coefficients[ i ].fromArray( array, offset + ( i * 3 ) );
+
+			}
+
+			return this;
+
+		}
+
+		toArray( array = [], offset = 0 ) {
+
+			const coefficients = this.coefficients;
+
+			for ( let i = 0; i < 9; i ++ ) {
+
+				coefficients[ i ].toArray( array, offset + ( i * 3 ) );
+
+			}
+
+			return array;
+
+		}
+
+		// evaluate the basis functions
+		// shBasis is an Array[ 9 ]
+		static getBasisAt( normal, shBasis ) {
+
+			// normal is assumed to be unit length
+
+			const x = normal.x, y = normal.y, z = normal.z;
+
+			// band 0
+			shBasis[ 0 ] = 0.282095;
+
+			// band 1
+			shBasis[ 1 ] = 0.488603 * y;
+			shBasis[ 2 ] = 0.488603 * z;
+			shBasis[ 3 ] = 0.488603 * x;
+
+			// band 2
+			shBasis[ 4 ] = 1.092548 * x * y;
+			shBasis[ 5 ] = 1.092548 * y * z;
+			shBasis[ 6 ] = 0.315392 * ( 3 * z * z - 1 );
+			shBasis[ 7 ] = 1.092548 * x * z;
+			shBasis[ 8 ] = 0.546274 * ( x * x - y * y );
+
+		}
+
+	}
+
+	class LightProbe extends Light {
+
+		constructor( sh = new SphericalHarmonics3(), intensity = 1 ) {
+
+			super( undefined, intensity );
+
+			Object.defineProperty( this, 'isLightProbe', { value: true } );
+
+			this.sh = sh;
+
+		}
+
+		copy( source ) {
+
+			super.copy( source );
+
+			this.sh.copy( source.sh );
+
+			return this;
+
+		}
+
+		fromJSON( json ) {
+
+			this.intensity = json.intensity; // TODO: Move this bit to Light.fromJSON();
+			this.sh.fromArray( json.sh );
+
+			return this;
+
+		}
+
+		toJSON( meta ) {
+
+			const data = super.toJSON( meta );
+
+			data.object.sh = this.sh.toArray();
+
+			return data;
+
+		}
+
+	}
+
+	class MaterialLoader extends Loader {
+
+		constructor( manager ) {
+
+			super( manager );
+			this.textures = {};
+
+		}
+
+		load( url, onLoad, onProgress, onError ) {
+
+			const scope = this;
+
+			const loader = new FileLoader( scope.manager );
+			loader.setPath( scope.path );
+			loader.setRequestHeader( scope.requestHeader );
+			loader.setWithCredentials( scope.withCredentials );
+			loader.load( url, function ( text ) {
+
+				try {
+
+					onLoad( scope.parse( JSON.parse( text ) ) );
+
+				} catch ( e ) {
+
+					if ( onError ) {
+
+						onError( e );
+
+					} else {
+
+						console.error( e );
+
+					}
+
+					scope.manager.itemError( url );
+
+				}
+
+			}, onProgress, onError );
+
+		}
+
+		parse( json ) {
+
+			const textures = this.textures;
+
+			function getTexture( name ) {
+
+				if ( textures[ name ] === undefined ) {
+
+					console.warn( 'THREE.MaterialLoader: Undefined texture', name );
+
+				}
+
+				return textures[ name ];
+
+			}
+
+			const material = new Materials[ json.type ]();
+
+			if ( json.uuid !== undefined ) material.uuid = json.uuid;
+			if ( json.name !== undefined ) material.name = json.name;
+			if ( json.color !== undefined && material.color !== undefined ) material.color.setHex( json.color );
+			if ( json.roughness !== undefined ) material.roughness = json.roughness;
+			if ( json.metalness !== undefined ) material.metalness = json.metalness;
+			if ( json.sheen !== undefined ) material.sheen = new Color().setHex( json.sheen );
+			if ( json.emissive !== undefined && material.emissive !== undefined ) material.emissive.setHex( json.emissive );
+			if ( json.specular !== undefined && material.specular !== undefined ) material.specular.setHex( json.specular );
+			if ( json.shininess !== undefined ) material.shininess = json.shininess;
+			if ( json.clearcoat !== undefined ) material.clearcoat = json.clearcoat;
+			if ( json.clearcoatRoughness !== undefined ) material.clearcoatRoughness = json.clearcoatRoughness;
+			if ( json.fog !== undefined ) material.fog = json.fog;
+			if ( json.flatShading !== undefined ) material.flatShading = json.flatShading;
+			if ( json.blending !== undefined ) material.blending = json.blending;
+			if ( json.combine !== undefined ) material.combine = json.combine;
+			if ( json.side !== undefined ) material.side = json.side;
+			if ( json.opacity !== undefined ) material.opacity = json.opacity;
+			if ( json.transparent !== undefined ) material.transparent = json.transparent;
+			if ( json.alphaTest !== undefined ) material.alphaTest = json.alphaTest;
+			if ( json.depthTest !== undefined ) material.depthTest = json.depthTest;
+			if ( json.depthWrite !== undefined ) material.depthWrite = json.depthWrite;
+			if ( json.colorWrite !== undefined ) material.colorWrite = json.colorWrite;
+
+			if ( json.stencilWrite !== undefined ) material.stencilWrite = json.stencilWrite;
+			if ( json.stencilWriteMask !== undefined ) material.stencilWriteMask = json.stencilWriteMask;
+			if ( json.stencilFunc !== undefined ) material.stencilFunc = json.stencilFunc;
+			if ( json.stencilRef !== undefined ) material.stencilRef = json.stencilRef;
+			if ( json.stencilFuncMask !== undefined ) material.stencilFuncMask = json.stencilFuncMask;
+			if ( json.stencilFail !== undefined ) material.stencilFail = json.stencilFail;
+			if ( json.stencilZFail !== undefined ) material.stencilZFail = json.stencilZFail;
+			if ( json.stencilZPass !== undefined ) material.stencilZPass = json.stencilZPass;
+
+			if ( json.wireframe !== undefined ) material.wireframe = json.wireframe;
+			if ( json.wireframeLinewidth !== undefined ) material.wireframeLinewidth = json.wireframeLinewidth;
+			if ( json.wireframeLinecap !== undefined ) material.wireframeLinecap = json.wireframeLinecap;
+			if ( json.wireframeLinejoin !== undefined ) material.wireframeLinejoin = json.wireframeLinejoin;
+
+			if ( json.rotation !== undefined ) material.rotation = json.rotation;
+
+			if ( json.linewidth !== 1 ) material.linewidth = json.linewidth;
+			if ( json.dashSize !== undefined ) material.dashSize = json.dashSize;
+			if ( json.gapSize !== undefined ) material.gapSize = json.gapSize;
+			if ( json.scale !== undefined ) material.scale = json.scale;
+
+			if ( json.polygonOffset !== undefined ) material.polygonOffset = json.polygonOffset;
+			if ( json.polygonOffsetFactor !== undefined ) material.polygonOffsetFactor = json.polygonOffsetFactor;
+			if ( json.polygonOffsetUnits !== undefined ) material.polygonOffsetUnits = json.polygonOffsetUnits;
+
+			if ( json.skinning !== undefined ) material.skinning = json.skinning;
+			if ( json.morphTargets !== undefined ) material.morphTargets = json.morphTargets;
+			if ( json.morphNormals !== undefined ) material.morphNormals = json.morphNormals;
+			if ( json.dithering !== undefined ) material.dithering = json.dithering;
+
+			if ( json.vertexTangents !== undefined ) material.vertexTangents = json.vertexTangents;
+
+			if ( json.visible !== undefined ) material.visible = json.visible;
+
+			if ( json.toneMapped !== undefined ) material.toneMapped = json.toneMapped;
+
+			if ( json.userData !== undefined ) material.userData = json.userData;
+
+			if ( json.vertexColors !== undefined ) {
+
+				if ( typeof json.vertexColors === 'number' ) {
+
+					material.vertexColors = ( json.vertexColors > 0 ) ? true : false;
+
+				} else {
+
+					material.vertexColors = json.vertexColors;
+
+				}
+
+			}
+
+			// Shader Material
+
+			if ( json.uniforms !== undefined ) {
+
+				for ( const name in json.uniforms ) {
+
+					const uniform = json.uniforms[ name ];
+
+					material.uniforms[ name ] = {};
+
+					switch ( uniform.type ) {
+
+						case 't':
+							material.uniforms[ name ].value = getTexture( uniform.value );
+							break;
+
+						case 'c':
+							material.uniforms[ name ].value = new Color().setHex( uniform.value );
+							break;
+
+						case 'v2':
+							material.uniforms[ name ].value = new Vector2().fromArray( uniform.value );
+							break;
+
+						case 'v3':
+							material.uniforms[ name ].value = new Vector3().fromArray( uniform.value );
+							break;
+
+						case 'v4':
+							material.uniforms[ name ].value = new Vector4().fromArray( uniform.value );
+							break;
+
+						case 'm3':
+							material.uniforms[ name ].value = new Matrix3().fromArray( uniform.value );
+							break;
+
+						case 'm4':
+							material.uniforms[ name ].value = new Matrix4().fromArray( uniform.value );
+							break;
+
+						default:
+							material.uniforms[ name ].value = uniform.value;
+
+					}
+
+				}
+
+			}
+
+			if ( json.defines !== undefined ) material.defines = json.defines;
+			if ( json.vertexShader !== undefined ) material.vertexShader = json.vertexShader;
+			if ( json.fragmentShader !== undefined ) material.fragmentShader = json.fragmentShader;
+
+			if ( json.extensions !== undefined ) {
+
+				for ( const key in json.extensions ) {
+
+					material.extensions[ key ] = json.extensions[ key ];
+
+				}
+
+			}
+
+			// Deprecated
+
+			if ( json.shading !== undefined ) material.flatShading = json.shading === 1; // THREE.FlatShading
+
+			// for PointsMaterial
+
+			if ( json.size !== undefined ) material.size = json.size;
+			if ( json.sizeAttenuation !== undefined ) material.sizeAttenuation = json.sizeAttenuation;
+
+			// maps
+
+			if ( json.map !== undefined ) material.map = getTexture( json.map );
+			if ( json.matcap !== undefined ) material.matcap = getTexture( json.matcap );
+
+			if ( json.alphaMap !== undefined ) material.alphaMap = getTexture( json.alphaMap );
+
+			if ( json.bumpMap !== undefined ) material.bumpMap = getTexture( json.bumpMap );
+			if ( json.bumpScale !== undefined ) material.bumpScale = json.bumpScale;
+
+			if ( json.normalMap !== undefined ) material.normalMap = getTexture( json.normalMap );
+			if ( json.normalMapType !== undefined ) material.normalMapType = json.normalMapType;
+			if ( json.normalScale !== undefined ) {
+
+				let normalScale = json.normalScale;
+
+				if ( Array.isArray( normalScale ) === false ) {
+
+					// Blender exporter used to export a scalar. See #7459
+
+					normalScale = [ normalScale, normalScale ];
+
+				}
+
+				material.normalScale = new Vector2().fromArray( normalScale );
+
+			}
+
+			if ( json.displacementMap !== undefined ) material.displacementMap = getTexture( json.displacementMap );
+			if ( json.displacementScale !== undefined ) material.displacementScale = json.displacementScale;
+			if ( json.displacementBias !== undefined ) material.displacementBias = json.displacementBias;
+
+			if ( json.roughnessMap !== undefined ) material.roughnessMap = getTexture( json.roughnessMap );
+			if ( json.metalnessMap !== undefined ) material.metalnessMap = getTexture( json.metalnessMap );
+
+			if ( json.emissiveMap !== undefined ) material.emissiveMap = getTexture( json.emissiveMap );
+			if ( json.emissiveIntensity !== undefined ) material.emissiveIntensity = json.emissiveIntensity;
+
+			if ( json.specularMap !== undefined ) material.specularMap = getTexture( json.specularMap );
+
+			if ( json.envMap !== undefined ) material.envMap = getTexture( json.envMap );
+			if ( json.envMapIntensity !== undefined ) material.envMapIntensity = json.envMapIntensity;
+
+			if ( json.reflectivity !== undefined ) material.reflectivity = json.reflectivity;
+			if ( json.refractionRatio !== undefined ) material.refractionRatio = json.refractionRatio;
+
+			if ( json.lightMap !== undefined ) material.lightMap = getTexture( json.lightMap );
+			if ( json.lightMapIntensity !== undefined ) material.lightMapIntensity = json.lightMapIntensity;
+
+			if ( json.aoMap !== undefined ) material.aoMap = getTexture( json.aoMap );
+			if ( json.aoMapIntensity !== undefined ) material.aoMapIntensity = json.aoMapIntensity;
+
+			if ( json.gradientMap !== undefined ) material.gradientMap = getTexture( json.gradientMap );
+
+			if ( json.clearcoatMap !== undefined ) material.clearcoatMap = getTexture( json.clearcoatMap );
+			if ( json.clearcoatRoughnessMap !== undefined ) material.clearcoatRoughnessMap = getTexture( json.clearcoatRoughnessMap );
+			if ( json.clearcoatNormalMap !== undefined ) material.clearcoatNormalMap = getTexture( json.clearcoatNormalMap );
+			if ( json.clearcoatNormalScale !== undefined ) material.clearcoatNormalScale = new Vector2().fromArray( json.clearcoatNormalScale );
+
+			if ( json.transmission !== undefined ) material.transmission = json.transmission;
+			if ( json.transmissionMap !== undefined ) material.transmissionMap = getTexture( json.transmissionMap );
+
+			return material;
+
+		}
+
+		setTextures( value ) {
+
+			this.textures = value;
+			return this;
+
+		}
+
+	}
+
 	const LoaderUtils = {
 
 		decodeText: function ( array ) {
@@ -35483,6 +38278,1321 @@
 
 	} );
 
+	class BufferGeometryLoader extends Loader {
+
+		constructor( manager ) {
+
+			super( manager );
+
+		}
+
+		load( url, onLoad, onProgress, onError ) {
+
+			const scope = this;
+
+			const loader = new FileLoader( scope.manager );
+			loader.setPath( scope.path );
+			loader.setRequestHeader( scope.requestHeader );
+			loader.setWithCredentials( scope.withCredentials );
+			loader.load( url, function ( text ) {
+
+				try {
+
+					onLoad( scope.parse( JSON.parse( text ) ) );
+
+				} catch ( e ) {
+
+					if ( onError ) {
+
+						onError( e );
+
+					} else {
+
+						console.error( e );
+
+					}
+
+					scope.manager.itemError( url );
+
+				}
+
+			}, onProgress, onError );
+
+		}
+
+		parse( json ) {
+
+			const interleavedBufferMap = {};
+			const arrayBufferMap = {};
+
+			function getInterleavedBuffer( json, uuid ) {
+
+				if ( interleavedBufferMap[ uuid ] !== undefined ) return interleavedBufferMap[ uuid ];
+
+				const interleavedBuffers = json.interleavedBuffers;
+				const interleavedBuffer = interleavedBuffers[ uuid ];
+
+				const buffer = getArrayBuffer( json, interleavedBuffer.buffer );
+
+				const array = getTypedArray( interleavedBuffer.type, buffer );
+				const ib = new InterleavedBuffer( array, interleavedBuffer.stride );
+				ib.uuid = interleavedBuffer.uuid;
+
+				interleavedBufferMap[ uuid ] = ib;
+
+				return ib;
+
+			}
+
+			function getArrayBuffer( json, uuid ) {
+
+				if ( arrayBufferMap[ uuid ] !== undefined ) return arrayBufferMap[ uuid ];
+
+				const arrayBuffers = json.arrayBuffers;
+				const arrayBuffer = arrayBuffers[ uuid ];
+
+				const ab = new Uint32Array( arrayBuffer ).buffer;
+
+				arrayBufferMap[ uuid ] = ab;
+
+				return ab;
+
+			}
+
+			const geometry = json.isInstancedBufferGeometry ? new InstancedBufferGeometry() : new BufferGeometry();
+
+			const index = json.data.index;
+
+			if ( index !== undefined ) {
+
+				const typedArray = getTypedArray( index.type, index.array );
+				geometry.setIndex( new BufferAttribute( typedArray, 1 ) );
+
+			}
+
+			const attributes = json.data.attributes;
+
+			for ( const key in attributes ) {
+
+				const attribute = attributes[ key ];
+				let bufferAttribute;
+
+				if ( attribute.isInterleavedBufferAttribute ) {
+
+					const interleavedBuffer = getInterleavedBuffer( json.data, attribute.data );
+					bufferAttribute = new InterleavedBufferAttribute( interleavedBuffer, attribute.itemSize, attribute.offset, attribute.normalized );
+
+				} else {
+
+					const typedArray = getTypedArray( attribute.type, attribute.array );
+					const bufferAttributeConstr = attribute.isInstancedBufferAttribute ? InstancedBufferAttribute : BufferAttribute;
+					bufferAttribute = new bufferAttributeConstr( typedArray, attribute.itemSize, attribute.normalized );
+
+				}
+
+				if ( attribute.name !== undefined ) bufferAttribute.name = attribute.name;
+				geometry.setAttribute( key, bufferAttribute );
+
+			}
+
+			const morphAttributes = json.data.morphAttributes;
+
+			if ( morphAttributes ) {
+
+				for ( const key in morphAttributes ) {
+
+					const attributeArray = morphAttributes[ key ];
+
+					const array = [];
+
+					for ( let i = 0, il = attributeArray.length; i < il; i ++ ) {
+
+						const attribute = attributeArray[ i ];
+						let bufferAttribute;
+
+						if ( attribute.isInterleavedBufferAttribute ) {
+
+							const interleavedBuffer = getInterleavedBuffer( json.data, attribute.data );
+							bufferAttribute = new InterleavedBufferAttribute( interleavedBuffer, attribute.itemSize, attribute.offset, attribute.normalized );
+
+						} else {
+
+							const typedArray = getTypedArray( attribute.type, attribute.array );
+							bufferAttribute = new BufferAttribute( typedArray, attribute.itemSize, attribute.normalized );
+
+						}
+
+						if ( attribute.name !== undefined ) bufferAttribute.name = attribute.name;
+						array.push( bufferAttribute );
+
+					}
+
+					geometry.morphAttributes[ key ] = array;
+
+				}
+
+			}
+
+			const morphTargetsRelative = json.data.morphTargetsRelative;
+
+			if ( morphTargetsRelative ) {
+
+				geometry.morphTargetsRelative = true;
+
+			}
+
+			const groups = json.data.groups || json.data.drawcalls || json.data.offsets;
+
+			if ( groups !== undefined ) {
+
+				for ( let i = 0, n = groups.length; i !== n; ++ i ) {
+
+					const group = groups[ i ];
+
+					geometry.addGroup( group.start, group.count, group.materialIndex );
+
+				}
+
+			}
+
+			const boundingSphere = json.data.boundingSphere;
+
+			if ( boundingSphere !== undefined ) {
+
+				const center = new Vector3();
+
+				if ( boundingSphere.center !== undefined ) {
+
+					center.fromArray( boundingSphere.center );
+
+				}
+
+				geometry.boundingSphere = new Sphere( center, boundingSphere.radius );
+
+			}
+
+			if ( json.name ) geometry.name = json.name;
+			if ( json.userData ) geometry.userData = json.userData;
+
+			return geometry;
+
+		}
+
+	}
+
+	class ObjectLoader extends Loader {
+
+		constructor( manager ) {
+
+			super( manager );
+
+		}
+
+		load( url, onLoad, onProgress, onError ) {
+
+			const scope = this;
+
+			const path = ( this.path === '' ) ? LoaderUtils.extractUrlBase( url ) : this.path;
+			this.resourcePath = this.resourcePath || path;
+
+			const loader = new FileLoader( this.manager );
+			loader.setPath( this.path );
+			loader.setRequestHeader( this.requestHeader );
+			loader.setWithCredentials( this.withCredentials );
+			loader.load( url, function ( text ) {
+
+				let json = null;
+
+				try {
+
+					json = JSON.parse( text );
+
+				} catch ( error ) {
+
+					if ( onError !== undefined ) onError( error );
+
+					console.error( 'THREE:ObjectLoader: Can\'t parse ' + url + '.', error.message );
+
+					return;
+
+				}
+
+				const metadata = json.metadata;
+
+				if ( metadata === undefined || metadata.type === undefined || metadata.type.toLowerCase() === 'geometry' ) {
+
+					console.error( 'THREE.ObjectLoader: Can\'t load ' + url );
+					return;
+
+				}
+
+				scope.parse( json, onLoad );
+
+			}, onProgress, onError );
+
+		}
+
+		parse( json, onLoad ) {
+
+			const animations = this.parseAnimations( json.animations );
+			const shapes = this.parseShapes( json.shapes );
+			const geometries = this.parseGeometries( json.geometries, shapes );
+
+			const images = this.parseImages( json.images, function () {
+
+				if ( onLoad !== undefined ) onLoad( object );
+
+			} );
+
+			const textures = this.parseTextures( json.textures, images );
+			const materials = this.parseMaterials( json.materials, textures );
+
+			const object = this.parseObject( json.object, geometries, materials, animations );
+			const skeletons = this.parseSkeletons( json.skeletons, object );
+
+			this.bindSkeletons( object, skeletons );
+
+			//
+
+			if ( onLoad !== undefined ) {
+
+				let hasImages = false;
+
+				for ( const uuid in images ) {
+
+					if ( images[ uuid ] instanceof HTMLImageElement ) {
+
+						hasImages = true;
+						break;
+
+					}
+
+				}
+
+				if ( hasImages === false ) onLoad( object );
+
+			}
+
+			return object;
+
+		}
+
+		parseShapes( json ) {
+
+			const shapes = {};
+
+			if ( json !== undefined ) {
+
+				for ( let i = 0, l = json.length; i < l; i ++ ) {
+
+					const shape = new Shape().fromJSON( json[ i ] );
+
+					shapes[ shape.uuid ] = shape;
+
+				}
+
+			}
+
+			return shapes;
+
+		}
+
+		parseSkeletons( json, object ) {
+
+			const skeletons = {};
+			const bones = {};
+
+			// generate bone lookup table
+
+			object.traverse( function ( child ) {
+
+				if ( child.isBone ) bones[ child.uuid ] = child;
+
+			} );
+
+			// create skeletons
+
+			if ( json !== undefined ) {
+
+				for ( let i = 0, l = json.length; i < l; i ++ ) {
+
+					const skeleton = new Skeleton().fromJSON( json[ i ], bones );
+
+					skeletons[ skeleton.uuid ] = skeleton;
+
+				}
+
+			}
+
+			return skeletons;
+
+		}
+
+		parseGeometries( json, shapes ) {
+
+			const geometries = {};
+			let geometryShapes;
+
+			if ( json !== undefined ) {
+
+				const bufferGeometryLoader = new BufferGeometryLoader();
+
+				for ( let i = 0, l = json.length; i < l; i ++ ) {
+
+					let geometry;
+					const data = json[ i ];
+
+					switch ( data.type ) {
+
+						case 'PlaneGeometry':
+						case 'PlaneBufferGeometry':
+
+							geometry = new Geometries[ data.type ](
+								data.width,
+								data.height,
+								data.widthSegments,
+								data.heightSegments
+							);
+
+							break;
+
+						case 'BoxGeometry':
+						case 'BoxBufferGeometry':
+
+							geometry = new Geometries[ data.type ](
+								data.width,
+								data.height,
+								data.depth,
+								data.widthSegments,
+								data.heightSegments,
+								data.depthSegments
+							);
+
+							break;
+
+						case 'CircleGeometry':
+						case 'CircleBufferGeometry':
+
+							geometry = new Geometries[ data.type ](
+								data.radius,
+								data.segments,
+								data.thetaStart,
+								data.thetaLength
+							);
+
+							break;
+
+						case 'CylinderGeometry':
+						case 'CylinderBufferGeometry':
+
+							geometry = new Geometries[ data.type ](
+								data.radiusTop,
+								data.radiusBottom,
+								data.height,
+								data.radialSegments,
+								data.heightSegments,
+								data.openEnded,
+								data.thetaStart,
+								data.thetaLength
+							);
+
+							break;
+
+						case 'ConeGeometry':
+						case 'ConeBufferGeometry':
+
+							geometry = new Geometries[ data.type ](
+								data.radius,
+								data.height,
+								data.radialSegments,
+								data.heightSegments,
+								data.openEnded,
+								data.thetaStart,
+								data.thetaLength
+							);
+
+							break;
+
+						case 'SphereGeometry':
+						case 'SphereBufferGeometry':
+
+							geometry = new Geometries[ data.type ](
+								data.radius,
+								data.widthSegments,
+								data.heightSegments,
+								data.phiStart,
+								data.phiLength,
+								data.thetaStart,
+								data.thetaLength
+							);
+
+							break;
+
+						case 'DodecahedronGeometry':
+						case 'DodecahedronBufferGeometry':
+						case 'IcosahedronGeometry':
+						case 'IcosahedronBufferGeometry':
+						case 'OctahedronGeometry':
+						case 'OctahedronBufferGeometry':
+						case 'TetrahedronGeometry':
+						case 'TetrahedronBufferGeometry':
+
+							geometry = new Geometries[ data.type ](
+								data.radius,
+								data.detail
+							);
+
+							break;
+
+						case 'RingGeometry':
+						case 'RingBufferGeometry':
+
+							geometry = new Geometries[ data.type ](
+								data.innerRadius,
+								data.outerRadius,
+								data.thetaSegments,
+								data.phiSegments,
+								data.thetaStart,
+								data.thetaLength
+							);
+
+							break;
+
+						case 'TorusGeometry':
+						case 'TorusBufferGeometry':
+
+							geometry = new Geometries[ data.type ](
+								data.radius,
+								data.tube,
+								data.radialSegments,
+								data.tubularSegments,
+								data.arc
+							);
+
+							break;
+
+						case 'TorusKnotGeometry':
+						case 'TorusKnotBufferGeometry':
+
+							geometry = new Geometries[ data.type ](
+								data.radius,
+								data.tube,
+								data.tubularSegments,
+								data.radialSegments,
+								data.p,
+								data.q
+							);
+
+							break;
+
+						case 'TubeGeometry':
+						case 'TubeBufferGeometry':
+
+							// This only works for built-in curves (e.g. CatmullRomCurve3).
+							// User defined curves or instances of CurvePath will not be deserialized.
+							geometry = new Geometries[ data.type ](
+								new Curves[ data.path.type ]().fromJSON( data.path ),
+								data.tubularSegments,
+								data.radius,
+								data.radialSegments,
+								data.closed
+							);
+
+							break;
+
+						case 'LatheGeometry':
+						case 'LatheBufferGeometry':
+
+							geometry = new Geometries[ data.type ](
+								data.points,
+								data.segments,
+								data.phiStart,
+								data.phiLength
+							);
+
+							break;
+
+						case 'PolyhedronGeometry':
+						case 'PolyhedronBufferGeometry':
+
+							geometry = new Geometries[ data.type ](
+								data.vertices,
+								data.indices,
+								data.radius,
+								data.details
+							);
+
+							break;
+
+						case 'ShapeGeometry':
+						case 'ShapeBufferGeometry':
+
+							geometryShapes = [];
+
+							for ( let j = 0, jl = data.shapes.length; j < jl; j ++ ) {
+
+								const shape = shapes[ data.shapes[ j ] ];
+
+								geometryShapes.push( shape );
+
+							}
+
+							geometry = new Geometries[ data.type ](
+								geometryShapes,
+								data.curveSegments
+							);
+
+							break;
+
+
+						case 'ExtrudeGeometry':
+						case 'ExtrudeBufferGeometry':
+
+							geometryShapes = [];
+
+							for ( let j = 0, jl = data.shapes.length; j < jl; j ++ ) {
+
+								const shape = shapes[ data.shapes[ j ] ];
+
+								geometryShapes.push( shape );
+
+							}
+
+							const extrudePath = data.options.extrudePath;
+
+							if ( extrudePath !== undefined ) {
+
+								data.options.extrudePath = new Curves[ extrudePath.type ]().fromJSON( extrudePath );
+
+							}
+
+							geometry = new Geometries[ data.type ](
+								geometryShapes,
+								data.options
+							);
+
+							break;
+
+						case 'BufferGeometry':
+						case 'InstancedBufferGeometry':
+
+							geometry = bufferGeometryLoader.parse( data );
+
+							break;
+
+						case 'Geometry':
+
+							console.error( 'THREE.ObjectLoader: Loading "Geometry" is not supported anymore.' );
+
+							break;
+
+						default:
+
+							console.warn( 'THREE.ObjectLoader: Unsupported geometry type "' + data.type + '"' );
+
+							continue;
+
+					}
+
+					geometry.uuid = data.uuid;
+
+					if ( data.name !== undefined ) geometry.name = data.name;
+					if ( geometry.isBufferGeometry === true && data.userData !== undefined ) geometry.userData = data.userData;
+
+					geometries[ data.uuid ] = geometry;
+
+				}
+
+			}
+
+			return geometries;
+
+		}
+
+		parseMaterials( json, textures ) {
+
+			const cache = {}; // MultiMaterial
+			const materials = {};
+
+			if ( json !== undefined ) {
+
+				const loader = new MaterialLoader();
+				loader.setTextures( textures );
+
+				for ( let i = 0, l = json.length; i < l; i ++ ) {
+
+					const data = json[ i ];
+
+					if ( data.type === 'MultiMaterial' ) {
+
+						// Deprecated
+
+						const array = [];
+
+						for ( let j = 0; j < data.materials.length; j ++ ) {
+
+							const material = data.materials[ j ];
+
+							if ( cache[ material.uuid ] === undefined ) {
+
+								cache[ material.uuid ] = loader.parse( material );
+
+							}
+
+							array.push( cache[ material.uuid ] );
+
+						}
+
+						materials[ data.uuid ] = array;
+
+					} else {
+
+						if ( cache[ data.uuid ] === undefined ) {
+
+							cache[ data.uuid ] = loader.parse( data );
+
+						}
+
+						materials[ data.uuid ] = cache[ data.uuid ];
+
+					}
+
+				}
+
+			}
+
+			return materials;
+
+		}
+
+		parseAnimations( json ) {
+
+			const animations = {};
+
+			if ( json !== undefined ) {
+
+				for ( let i = 0; i < json.length; i ++ ) {
+
+					const data = json[ i ];
+
+					const clip = AnimationClip.parse( data );
+
+					animations[ clip.uuid ] = clip;
+
+				}
+
+			}
+
+			return animations;
+
+		}
+
+		parseImages( json, onLoad ) {
+
+			const scope = this;
+			const images = {};
+
+			let loader;
+
+			function loadImage( url ) {
+
+				scope.manager.itemStart( url );
+
+				return loader.load( url, function () {
+
+					scope.manager.itemEnd( url );
+
+				}, undefined, function () {
+
+					scope.manager.itemError( url );
+					scope.manager.itemEnd( url );
+
+				} );
+
+			}
+
+			function deserializeImage( image ) {
+
+				if ( typeof image === 'string' ) {
+
+					const url = image;
+
+					const path = /^(\/\/)|([a-z]+:(\/\/)?)/i.test( url ) ? url : scope.resourcePath + url;
+
+					return loadImage( path );
+
+				} else {
+
+					if ( image.data ) {
+
+						return {
+							data: getTypedArray( image.type, image.data ),
+							width: image.width,
+							height: image.height
+						};
+
+					} else {
+
+						return null;
+
+					}
+
+				}
+
+			}
+
+			if ( json !== undefined && json.length > 0 ) {
+
+				const manager = new LoadingManager( onLoad );
+
+				loader = new ImageLoader( manager );
+				loader.setCrossOrigin( this.crossOrigin );
+
+				for ( let i = 0, il = json.length; i < il; i ++ ) {
+
+					const image = json[ i ];
+					const url = image.url;
+
+					if ( Array.isArray( url ) ) {
+
+						// load array of images e.g CubeTexture
+
+						images[ image.uuid ] = [];
+
+						for ( let j = 0, jl = url.length; j < jl; j ++ ) {
+
+							const currentUrl = url[ j ];
+
+							const deserializedImage = deserializeImage( currentUrl );
+
+							if ( deserializedImage !== null ) {
+
+								if ( deserializedImage instanceof HTMLImageElement ) {
+
+									images[ image.uuid ].push( deserializedImage );
+
+								} else {
+
+									// special case: handle array of data textures for cube textures
+
+									images[ image.uuid ].push( new DataTexture( deserializedImage.data, deserializedImage.width, deserializedImage.height ) );
+
+								}
+
+							}
+
+						}
+
+					} else {
+
+						// load single image
+
+						const deserializedImage = deserializeImage( image.url );
+
+						if ( deserializedImage !== null ) {
+
+							images[ image.uuid ] = deserializedImage;
+
+						}
+
+					}
+
+				}
+
+			}
+
+			return images;
+
+		}
+
+		parseTextures( json, images ) {
+
+			function parseConstant( value, type ) {
+
+				if ( typeof value === 'number' ) return value;
+
+				console.warn( 'THREE.ObjectLoader.parseTexture: Constant should be in numeric form.', value );
+
+				return type[ value ];
+
+			}
+
+			const textures = {};
+
+			if ( json !== undefined ) {
+
+				for ( let i = 0, l = json.length; i < l; i ++ ) {
+
+					const data = json[ i ];
+
+					if ( data.image === undefined ) {
+
+						console.warn( 'THREE.ObjectLoader: No "image" specified for', data.uuid );
+
+					}
+
+					if ( images[ data.image ] === undefined ) {
+
+						console.warn( 'THREE.ObjectLoader: Undefined image', data.image );
+
+					}
+
+					let texture;
+					const image = images[ data.image ];
+
+					if ( Array.isArray( image ) ) {
+
+						texture = new CubeTexture( image );
+
+						if ( image.length === 6 ) texture.needsUpdate = true;
+
+					} else {
+
+						if ( image && image.data ) {
+
+							texture = new DataTexture( image.data, image.width, image.height );
+
+						} else {
+
+							texture = new Texture( image );
+
+						}
+
+						if ( image ) texture.needsUpdate = true; // textures can have undefined image data
+
+					}
+
+					texture.uuid = data.uuid;
+
+					if ( data.name !== undefined ) texture.name = data.name;
+
+					if ( data.mapping !== undefined ) texture.mapping = parseConstant( data.mapping, TEXTURE_MAPPING );
+
+					if ( data.offset !== undefined ) texture.offset.fromArray( data.offset );
+					if ( data.repeat !== undefined ) texture.repeat.fromArray( data.repeat );
+					if ( data.center !== undefined ) texture.center.fromArray( data.center );
+					if ( data.rotation !== undefined ) texture.rotation = data.rotation;
+
+					if ( data.wrap !== undefined ) {
+
+						texture.wrapS = parseConstant( data.wrap[ 0 ], TEXTURE_WRAPPING );
+						texture.wrapT = parseConstant( data.wrap[ 1 ], TEXTURE_WRAPPING );
+
+					}
+
+					if ( data.format !== undefined ) texture.format = data.format;
+					if ( data.type !== undefined ) texture.type = data.type;
+					if ( data.encoding !== undefined ) texture.encoding = data.encoding;
+
+					if ( data.minFilter !== undefined ) texture.minFilter = parseConstant( data.minFilter, TEXTURE_FILTER );
+					if ( data.magFilter !== undefined ) texture.magFilter = parseConstant( data.magFilter, TEXTURE_FILTER );
+					if ( data.anisotropy !== undefined ) texture.anisotropy = data.anisotropy;
+
+					if ( data.flipY !== undefined ) texture.flipY = data.flipY;
+
+					if ( data.premultiplyAlpha !== undefined ) texture.premultiplyAlpha = data.premultiplyAlpha;
+					if ( data.unpackAlignment !== undefined ) texture.unpackAlignment = data.unpackAlignment;
+
+					textures[ data.uuid ] = texture;
+
+				}
+
+			}
+
+			return textures;
+
+		}
+
+		parseObject( data, geometries, materials, animations ) {
+
+			let object;
+
+			function getGeometry( name ) {
+
+				if ( geometries[ name ] === undefined ) {
+
+					console.warn( 'THREE.ObjectLoader: Undefined geometry', name );
+
+				}
+
+				return geometries[ name ];
+
+			}
+
+			function getMaterial( name ) {
+
+				if ( name === undefined ) return undefined;
+
+				if ( Array.isArray( name ) ) {
+
+					const array = [];
+
+					for ( let i = 0, l = name.length; i < l; i ++ ) {
+
+						const uuid = name[ i ];
+
+						if ( materials[ uuid ] === undefined ) {
+
+							console.warn( 'THREE.ObjectLoader: Undefined material', uuid );
+
+						}
+
+						array.push( materials[ uuid ] );
+
+					}
+
+					return array;
+
+				}
+
+				if ( materials[ name ] === undefined ) {
+
+					console.warn( 'THREE.ObjectLoader: Undefined material', name );
+
+				}
+
+				return materials[ name ];
+
+			}
+
+			let geometry, material;
+
+			switch ( data.type ) {
+
+				case 'Scene':
+
+					object = new Scene();
+
+					if ( data.background !== undefined ) {
+
+						if ( Number.isInteger( data.background ) ) {
+
+							object.background = new Color( data.background );
+
+						}
+
+					}
+
+					if ( data.fog !== undefined ) {
+
+						if ( data.fog.type === 'Fog' ) {
+
+							object.fog = new Fog( data.fog.color, data.fog.near, data.fog.far );
+
+						} else if ( data.fog.type === 'FogExp2' ) {
+
+							object.fog = new FogExp2( data.fog.color, data.fog.density );
+
+						}
+
+					}
+
+					break;
+
+				case 'PerspectiveCamera':
+
+					object = new PerspectiveCamera( data.fov, data.aspect, data.near, data.far );
+
+					if ( data.focus !== undefined ) object.focus = data.focus;
+					if ( data.zoom !== undefined ) object.zoom = data.zoom;
+					if ( data.filmGauge !== undefined ) object.filmGauge = data.filmGauge;
+					if ( data.filmOffset !== undefined ) object.filmOffset = data.filmOffset;
+					if ( data.view !== undefined ) object.view = Object.assign( {}, data.view );
+
+					break;
+
+				case 'OrthographicCamera':
+
+					object = new OrthographicCamera( data.left, data.right, data.top, data.bottom, data.near, data.far );
+
+					if ( data.zoom !== undefined ) object.zoom = data.zoom;
+					if ( data.view !== undefined ) object.view = Object.assign( {}, data.view );
+
+					break;
+
+				case 'AmbientLight':
+
+					object = new AmbientLight( data.color, data.intensity );
+
+					break;
+
+				case 'DirectionalLight':
+
+					object = new DirectionalLight( data.color, data.intensity );
+
+					break;
+
+				case 'PointLight':
+
+					object = new PointLight( data.color, data.intensity, data.distance, data.decay );
+
+					break;
+
+				case 'RectAreaLight':
+
+					object = new RectAreaLight( data.color, data.intensity, data.width, data.height );
+
+					break;
+
+				case 'SpotLight':
+
+					object = new SpotLight( data.color, data.intensity, data.distance, data.angle, data.penumbra, data.decay );
+
+					break;
+
+				case 'HemisphereLight':
+
+					object = new HemisphereLight( data.color, data.groundColor, data.intensity );
+
+					break;
+
+				case 'LightProbe':
+
+					object = new LightProbe().fromJSON( data );
+
+					break;
+
+				case 'SkinnedMesh':
+
+					geometry = getGeometry( data.geometry );
+				 	material = getMaterial( data.material );
+
+					object = new SkinnedMesh( geometry, material );
+
+					if ( data.bindMode !== undefined ) object.bindMode = data.bindMode;
+					if ( data.bindMatrix !== undefined ) object.bindMatrix.fromArray( data.bindMatrix );
+					if ( data.skeleton !== undefined ) object.skeleton = data.skeleton;
+
+					break;
+
+				case 'Mesh':
+
+					geometry = getGeometry( data.geometry );
+					material = getMaterial( data.material );
+
+					object = new Mesh( geometry, material );
+
+					break;
+
+				case 'InstancedMesh':
+
+					geometry = getGeometry( data.geometry );
+					material = getMaterial( data.material );
+					const count = data.count;
+					const instanceMatrix = data.instanceMatrix;
+
+					object = new InstancedMesh( geometry, material, count );
+					object.instanceMatrix = new BufferAttribute( new Float32Array( instanceMatrix.array ), 16 );
+
+					break;
+
+				case 'LOD':
+
+					object = new LOD();
+
+					break;
+
+				case 'Line':
+
+					object = new Line( getGeometry( data.geometry ), getMaterial( data.material ) );
+
+					break;
+
+				case 'LineLoop':
+
+					object = new LineLoop( getGeometry( data.geometry ), getMaterial( data.material ) );
+
+					break;
+
+				case 'LineSegments':
+
+					object = new LineSegments( getGeometry( data.geometry ), getMaterial( data.material ) );
+
+					break;
+
+				case 'PointCloud':
+				case 'Points':
+
+					object = new Points( getGeometry( data.geometry ), getMaterial( data.material ) );
+
+					break;
+
+				case 'Sprite':
+
+					object = new Sprite( getMaterial( data.material ) );
+
+					break;
+
+				case 'Group':
+
+					object = new Group();
+
+					break;
+
+				case 'Bone':
+
+					object = new Bone();
+
+					break;
+
+				default:
+
+					object = new Object3D();
+
+			}
+
+			object.uuid = data.uuid;
+
+			if ( data.name !== undefined ) object.name = data.name;
+
+			if ( data.matrix !== undefined ) {
+
+				object.matrix.fromArray( data.matrix );
+
+				if ( data.matrixAutoUpdate !== undefined ) object.matrixAutoUpdate = data.matrixAutoUpdate;
+				if ( object.matrixAutoUpdate ) object.matrix.decompose( object.position, object.quaternion, object.scale );
+
+			} else {
+
+				if ( data.position !== undefined ) object.position.fromArray( data.position );
+				if ( data.rotation !== undefined ) object.rotation.fromArray( data.rotation );
+				if ( data.quaternion !== undefined ) object.quaternion.fromArray( data.quaternion );
+				if ( data.scale !== undefined ) object.scale.fromArray( data.scale );
+
+			}
+
+			if ( data.castShadow !== undefined ) object.castShadow = data.castShadow;
+			if ( data.receiveShadow !== undefined ) object.receiveShadow = data.receiveShadow;
+
+			if ( data.shadow ) {
+
+				if ( data.shadow.bias !== undefined ) object.shadow.bias = data.shadow.bias;
+				if ( data.shadow.normalBias !== undefined ) object.shadow.normalBias = data.shadow.normalBias;
+				if ( data.shadow.radius !== undefined ) object.shadow.radius = data.shadow.radius;
+				if ( data.shadow.mapSize !== undefined ) object.shadow.mapSize.fromArray( data.shadow.mapSize );
+				if ( data.shadow.camera !== undefined ) object.shadow.camera = this.parseObject( data.shadow.camera );
+
+			}
+
+			if ( data.visible !== undefined ) object.visible = data.visible;
+			if ( data.frustumCulled !== undefined ) object.frustumCulled = data.frustumCulled;
+			if ( data.renderOrder !== undefined ) object.renderOrder = data.renderOrder;
+			if ( data.userData !== undefined ) object.userData = data.userData;
+			if ( data.layers !== undefined ) object.layers.mask = data.layers;
+
+			if ( data.children !== undefined ) {
+
+				const children = data.children;
+
+				for ( let i = 0; i < children.length; i ++ ) {
+
+					object.add( this.parseObject( children[ i ], geometries, materials, animations ) );
+
+				}
+
+			}
+
+			if ( data.animations !== undefined ) {
+
+				const objectAnimations = data.animations;
+
+				for ( let i = 0; i < objectAnimations.length; i ++ ) {
+
+					const uuid = objectAnimations[ i ];
+
+					object.animations.push( animations[ uuid ] );
+
+				}
+
+			}
+
+			if ( data.type === 'LOD' ) {
+
+				if ( data.autoUpdate !== undefined ) object.autoUpdate = data.autoUpdate;
+
+				const levels = data.levels;
+
+				for ( let l = 0; l < levels.length; l ++ ) {
+
+					const level = levels[ l ];
+					const child = object.getObjectByProperty( 'uuid', level.object );
+
+					if ( child !== undefined ) {
+
+						object.addLevel( child, level.distance );
+
+					}
+
+				}
+
+			}
+
+			return object;
+
+		}
+
+		bindSkeletons( object, skeletons ) {
+
+			if ( Object.keys( skeletons ).length === 0 ) return;
+
+			object.traverse( function ( child ) {
+
+				if ( child.isSkinnedMesh === true && child.skeleton !== undefined ) {
+
+					const skeleton = skeletons[ child.skeleton ];
+
+					if ( skeleton === undefined ) {
+
+						console.warn( 'THREE.ObjectLoader: No skeleton found with UUID:', child.skeleton );
+
+					} else {
+
+						child.bind( skeleton, child.bindMatrix );
+
+					}
+
+				}
+
+			} );
+
+		}
+
+		/* DEPRECATED */
+
+		setTexturePath( value ) {
+
+			console.warn( 'THREE.ObjectLoader: .setTexturePath() has been renamed to .setResourcePath().' );
+			return this.setResourcePath( value );
+
+		}
+
+	}
+
+	const TEXTURE_MAPPING = {
+		UVMapping: UVMapping,
+		CubeReflectionMapping: CubeReflectionMapping,
+		CubeRefractionMapping: CubeRefractionMapping,
+		EquirectangularReflectionMapping: EquirectangularReflectionMapping,
+		EquirectangularRefractionMapping: EquirectangularRefractionMapping,
+		CubeUVReflectionMapping: CubeUVReflectionMapping,
+		CubeUVRefractionMapping: CubeUVRefractionMapping
+	};
+
+	const TEXTURE_WRAPPING = {
+		RepeatWrapping: RepeatWrapping,
+		ClampToEdgeWrapping: ClampToEdgeWrapping,
+		MirroredRepeatWrapping: MirroredRepeatWrapping
+	};
+
+	const TEXTURE_FILTER = {
+		NearestFilter: NearestFilter,
+		NearestMipmapNearestFilter: NearestMipmapNearestFilter,
+		NearestMipmapLinearFilter: NearestMipmapLinearFilter,
+		LinearFilter: LinearFilter,
+		LinearMipmapNearestFilter: LinearMipmapNearestFilter,
+		LinearMipmapLinearFilter: LinearMipmapLinearFilter
+	};
+
 	function ImageBitmapLoader( manager ) {
 
 		if ( typeof createImageBitmap === 'undefined' ) {
@@ -35579,6 +39689,481 @@
 
 	} );
 
+	class ShapePath {
+
+		constructor() {
+
+			this.type = 'ShapePath';
+
+			this.color = new Color();
+
+			this.subPaths = [];
+			this.currentPath = null;
+
+		}
+
+		moveTo( x, y ) {
+
+			this.currentPath = new Path();
+			this.subPaths.push( this.currentPath );
+			this.currentPath.moveTo( x, y );
+
+			return this;
+
+		}
+
+		lineTo( x, y ) {
+
+			this.currentPath.lineTo( x, y );
+
+			return this;
+
+		}
+
+		quadraticCurveTo( aCPx, aCPy, aX, aY ) {
+
+			this.currentPath.quadraticCurveTo( aCPx, aCPy, aX, aY );
+
+			return this;
+
+		}
+
+		bezierCurveTo( aCP1x, aCP1y, aCP2x, aCP2y, aX, aY ) {
+
+			this.currentPath.bezierCurveTo( aCP1x, aCP1y, aCP2x, aCP2y, aX, aY );
+
+			return this;
+
+		}
+
+		splineThru( pts ) {
+
+			this.currentPath.splineThru( pts );
+
+			return this;
+
+		}
+
+		toShapes( isCCW, noHoles ) {
+
+			function toShapesNoHoles( inSubpaths ) {
+
+				const shapes = [];
+
+				for ( let i = 0, l = inSubpaths.length; i < l; i ++ ) {
+
+					const tmpPath = inSubpaths[ i ];
+
+					const tmpShape = new Shape();
+					tmpShape.curves = tmpPath.curves;
+
+					shapes.push( tmpShape );
+
+				}
+
+				return shapes;
+
+			}
+
+			function isPointInsidePolygon( inPt, inPolygon ) {
+
+				const polyLen = inPolygon.length;
+
+				// inPt on polygon contour => immediate success    or
+				// toggling of inside/outside at every single! intersection point of an edge
+				//  with the horizontal line through inPt, left of inPt
+				//  not counting lowerY endpoints of edges and whole edges on that line
+				let inside = false;
+				for ( let p = polyLen - 1, q = 0; q < polyLen; p = q ++ ) {
+
+					let edgeLowPt = inPolygon[ p ];
+					let edgeHighPt = inPolygon[ q ];
+
+					let edgeDx = edgeHighPt.x - edgeLowPt.x;
+					let edgeDy = edgeHighPt.y - edgeLowPt.y;
+
+					if ( Math.abs( edgeDy ) > Number.EPSILON ) {
+
+						// not parallel
+						if ( edgeDy < 0 ) {
+
+							edgeLowPt = inPolygon[ q ]; edgeDx = - edgeDx;
+							edgeHighPt = inPolygon[ p ]; edgeDy = - edgeDy;
+
+						}
+
+						if ( ( inPt.y < edgeLowPt.y ) || ( inPt.y > edgeHighPt.y ) ) 		continue;
+
+						if ( inPt.y === edgeLowPt.y ) {
+
+							if ( inPt.x === edgeLowPt.x )		return	true;		// inPt is on contour ?
+							// continue;				// no intersection or edgeLowPt => doesn't count !!!
+
+						} else {
+
+							const perpEdge = edgeDy * ( inPt.x - edgeLowPt.x ) - edgeDx * ( inPt.y - edgeLowPt.y );
+							if ( perpEdge === 0 )				return	true;		// inPt is on contour ?
+							if ( perpEdge < 0 ) 				continue;
+							inside = ! inside;		// true intersection left of inPt
+
+						}
+
+					} else {
+
+						// parallel or collinear
+						if ( inPt.y !== edgeLowPt.y ) 		continue;			// parallel
+						// edge lies on the same horizontal line as inPt
+						if ( ( ( edgeHighPt.x <= inPt.x ) && ( inPt.x <= edgeLowPt.x ) ) ||
+							 ( ( edgeLowPt.x <= inPt.x ) && ( inPt.x <= edgeHighPt.x ) ) )		return	true;	// inPt: Point on contour !
+						// continue;
+
+					}
+
+				}
+
+				return	inside;
+
+			}
+
+			const isClockWise = ShapeUtils.isClockWise;
+
+			const subPaths = this.subPaths;
+			if ( subPaths.length === 0 ) return [];
+
+			if ( noHoles === true )	return	toShapesNoHoles( subPaths );
+
+
+			let solid, tmpPath, tmpShape;
+			const shapes = [];
+
+			if ( subPaths.length === 1 ) {
+
+				tmpPath = subPaths[ 0 ];
+				tmpShape = new Shape();
+				tmpShape.curves = tmpPath.curves;
+				shapes.push( tmpShape );
+				return shapes;
+
+			}
+
+			let holesFirst = ! isClockWise( subPaths[ 0 ].getPoints() );
+			holesFirst = isCCW ? ! holesFirst : holesFirst;
+
+			// console.log("Holes first", holesFirst);
+
+			const betterShapeHoles = [];
+			const newShapes = [];
+			let newShapeHoles = [];
+			let mainIdx = 0;
+			let tmpPoints;
+
+			newShapes[ mainIdx ] = undefined;
+			newShapeHoles[ mainIdx ] = [];
+
+			for ( let i = 0, l = subPaths.length; i < l; i ++ ) {
+
+				tmpPath = subPaths[ i ];
+				tmpPoints = tmpPath.getPoints();
+				solid = isClockWise( tmpPoints );
+				solid = isCCW ? ! solid : solid;
+
+				if ( solid ) {
+
+					if ( ( ! holesFirst ) && ( newShapes[ mainIdx ] ) )	mainIdx ++;
+
+					newShapes[ mainIdx ] = { s: new Shape(), p: tmpPoints };
+					newShapes[ mainIdx ].s.curves = tmpPath.curves;
+
+					if ( holesFirst )	mainIdx ++;
+					newShapeHoles[ mainIdx ] = [];
+
+					//console.log('cw', i);
+
+				} else {
+
+					newShapeHoles[ mainIdx ].push( { h: tmpPath, p: tmpPoints[ 0 ] } );
+
+					//console.log('ccw', i);
+
+				}
+
+			}
+
+			// only Holes? -> probably all Shapes with wrong orientation
+			if ( ! newShapes[ 0 ] )	return	toShapesNoHoles( subPaths );
+
+
+			if ( newShapes.length > 1 ) {
+
+				let ambiguous = false;
+				const toChange = [];
+
+				for ( let sIdx = 0, sLen = newShapes.length; sIdx < sLen; sIdx ++ ) {
+
+					betterShapeHoles[ sIdx ] = [];
+
+				}
+
+				for ( let sIdx = 0, sLen = newShapes.length; sIdx < sLen; sIdx ++ ) {
+
+					const sho = newShapeHoles[ sIdx ];
+
+					for ( let hIdx = 0; hIdx < sho.length; hIdx ++ ) {
+
+						const ho = sho[ hIdx ];
+						let hole_unassigned = true;
+
+						for ( let s2Idx = 0; s2Idx < newShapes.length; s2Idx ++ ) {
+
+							if ( isPointInsidePolygon( ho.p, newShapes[ s2Idx ].p ) ) {
+
+								if ( sIdx !== s2Idx )	toChange.push( { froms: sIdx, tos: s2Idx, hole: hIdx } );
+								if ( hole_unassigned ) {
+
+									hole_unassigned = false;
+									betterShapeHoles[ s2Idx ].push( ho );
+
+								} else {
+
+									ambiguous = true;
+
+								}
+
+							}
+
+						}
+
+						if ( hole_unassigned ) {
+
+							betterShapeHoles[ sIdx ].push( ho );
+
+						}
+
+					}
+
+				}
+				// console.log("ambiguous: ", ambiguous);
+
+				if ( toChange.length > 0 ) {
+
+					// console.log("to change: ", toChange);
+					if ( ! ambiguous )	newShapeHoles = betterShapeHoles;
+
+				}
+
+			}
+
+			let tmpHoles;
+
+			for ( let i = 0, il = newShapes.length; i < il; i ++ ) {
+
+				tmpShape = newShapes[ i ].s;
+				shapes.push( tmpShape );
+				tmpHoles = newShapeHoles[ i ];
+
+				for ( let j = 0, jl = tmpHoles.length; j < jl; j ++ ) {
+
+					tmpShape.holes.push( tmpHoles[ j ].h );
+
+				}
+
+			}
+
+			//console.log("shape", shapes);
+
+			return shapes;
+
+		}
+
+	}
+
+	class Font {
+
+		constructor( data ) {
+
+			Object.defineProperty( this, 'isFont', { value: true } );
+
+			this.type = 'Font';
+
+			this.data = data;
+
+		}
+
+		generateShapes( text, size = 100 ) {
+
+			const shapes = [];
+			const paths = createPaths( text, size, this.data );
+
+			for ( let p = 0, pl = paths.length; p < pl; p ++ ) {
+
+				Array.prototype.push.apply( shapes, paths[ p ].toShapes() );
+
+			}
+
+			return shapes;
+
+		}
+
+	}
+
+	function createPaths( text, size, data ) {
+
+		const chars = Array.from ? Array.from( text ) : String( text ).split( '' ); // workaround for IE11, see #13988
+		const scale = size / data.resolution;
+		const line_height = ( data.boundingBox.yMax - data.boundingBox.yMin + data.underlineThickness ) * scale;
+
+		const paths = [];
+
+		let offsetX = 0, offsetY = 0;
+
+		for ( let i = 0; i < chars.length; i ++ ) {
+
+			const char = chars[ i ];
+
+			if ( char === '\n' ) {
+
+				offsetX = 0;
+				offsetY -= line_height;
+
+			} else {
+
+				const ret = createPath( char, scale, offsetX, offsetY, data );
+				offsetX += ret.offsetX;
+				paths.push( ret.path );
+
+			}
+
+		}
+
+		return paths;
+
+	}
+
+	function createPath( char, scale, offsetX, offsetY, data ) {
+
+		const glyph = data.glyphs[ char ] || data.glyphs[ '?' ];
+
+		if ( ! glyph ) {
+
+			console.error( 'THREE.Font: character "' + char + '" does not exists in font family ' + data.familyName + '.' );
+
+			return;
+
+		}
+
+		const path = new ShapePath();
+
+		let x, y, cpx, cpy, cpx1, cpy1, cpx2, cpy2;
+
+		if ( glyph.o ) {
+
+			const outline = glyph._cachedOutline || ( glyph._cachedOutline = glyph.o.split( ' ' ) );
+
+			for ( let i = 0, l = outline.length; i < l; ) {
+
+				const action = outline[ i ++ ];
+
+				switch ( action ) {
+
+					case 'm': // moveTo
+
+						x = outline[ i ++ ] * scale + offsetX;
+						y = outline[ i ++ ] * scale + offsetY;
+
+						path.moveTo( x, y );
+
+						break;
+
+					case 'l': // lineTo
+
+						x = outline[ i ++ ] * scale + offsetX;
+						y = outline[ i ++ ] * scale + offsetY;
+
+						path.lineTo( x, y );
+
+						break;
+
+					case 'q': // quadraticCurveTo
+
+						cpx = outline[ i ++ ] * scale + offsetX;
+						cpy = outline[ i ++ ] * scale + offsetY;
+						cpx1 = outline[ i ++ ] * scale + offsetX;
+						cpy1 = outline[ i ++ ] * scale + offsetY;
+
+						path.quadraticCurveTo( cpx1, cpy1, cpx, cpy );
+
+						break;
+
+					case 'b': // bezierCurveTo
+
+						cpx = outline[ i ++ ] * scale + offsetX;
+						cpy = outline[ i ++ ] * scale + offsetY;
+						cpx1 = outline[ i ++ ] * scale + offsetX;
+						cpy1 = outline[ i ++ ] * scale + offsetY;
+						cpx2 = outline[ i ++ ] * scale + offsetX;
+						cpy2 = outline[ i ++ ] * scale + offsetY;
+
+						path.bezierCurveTo( cpx1, cpy1, cpx2, cpy2, cpx, cpy );
+
+						break;
+
+				}
+
+			}
+
+		}
+
+		return { offsetX: glyph.ha * scale, path: path };
+
+	}
+
+	class FontLoader extends Loader {
+
+		constructor( manager ) {
+
+			super( manager );
+
+		}
+
+		load( url, onLoad, onProgress, onError ) {
+
+			const scope = this;
+
+			const loader = new FileLoader( this.manager );
+			loader.setPath( this.path );
+			loader.setRequestHeader( this.requestHeader );
+			loader.setWithCredentials( scope.withCredentials );
+			loader.load( url, function ( text ) {
+
+				let json;
+
+				try {
+
+					json = JSON.parse( text );
+
+				} catch ( e ) {
+
+					console.warn( 'THREE.FontLoader: typeface.js support is being deprecated. Use typeface.json instead.' );
+					json = JSON.parse( text.substring( 65, text.length - 2 ) );
+
+				}
+
+				const font = scope.parse( json );
+
+				if ( onLoad ) onLoad( font );
+
+			}, onProgress, onError );
+
+		}
+
+		parse( json ) {
+
+			return new Font( json );
+
+		}
+
+	}
+
 	let _context;
 
 	const AudioContext = {
@@ -35652,6 +40237,48 @@
 				}
 
 			}, onProgress, onError );
+
+		}
+
+	}
+
+	class HemisphereLightProbe extends LightProbe {
+
+		constructor( skyColor, groundColor, intensity = 1 ) {
+
+			super( undefined, intensity );
+
+			Object.defineProperty( this, 'isHemisphereLightProbe', { value: true } );
+
+			const color1 = new Color().set( skyColor );
+			const color2 = new Color().set( groundColor );
+
+			const sky = new Vector3( color1.r, color1.g, color1.b );
+			const ground = new Vector3( color2.r, color2.g, color2.b );
+
+			// without extra factor of PI in the shader, should = 1 / Math.sqrt( Math.PI );
+			const c0 = Math.sqrt( Math.PI );
+			const c1 = c0 * Math.sqrt( 0.75 );
+
+			this.sh.coefficients[ 0 ].copy( sky ).add( ground ).multiplyScalar( c0 );
+			this.sh.coefficients[ 1 ].copy( sky ).sub( ground ).multiplyScalar( c1 );
+
+		}
+
+	}
+
+	class AmbientLightProbe extends LightProbe {
+
+		constructor( color, intensity = 1 ) {
+
+			super( undefined, intensity );
+
+			Object.defineProperty( this, 'isAmbientLightProbe', { value: true } );
+
+			const color1 = new Color().set( color );
+
+			// without extra factor of PI in the shader, would be 2 / Math.sqrt( Math.PI );
+			this.sh.coefficients[ 0 ].set( color1.r, color1.g, color1.b ).multiplyScalar( 2 * Math.sqrt( Math.PI ) );
 
 		}
 
@@ -35750,6 +40377,209 @@
 		}
 
 	} );
+
+	class Clock {
+
+		constructor( autoStart ) {
+
+			this.autoStart = ( autoStart !== undefined ) ? autoStart : true;
+
+			this.startTime = 0;
+			this.oldTime = 0;
+			this.elapsedTime = 0;
+
+			this.running = false;
+
+		}
+
+		start() {
+
+			this.startTime = now();
+
+			this.oldTime = this.startTime;
+			this.elapsedTime = 0;
+			this.running = true;
+
+		}
+
+		stop() {
+
+			this.getElapsedTime();
+			this.running = false;
+			this.autoStart = false;
+
+		}
+
+		getElapsedTime() {
+
+			this.getDelta();
+			return this.elapsedTime;
+
+		}
+
+		getDelta() {
+
+			let diff = 0;
+
+			if ( this.autoStart && ! this.running ) {
+
+				this.start();
+				return 0;
+
+			}
+
+			if ( this.running ) {
+
+				const newTime = now();
+
+				diff = ( newTime - this.oldTime ) / 1000;
+				this.oldTime = newTime;
+
+				this.elapsedTime += diff;
+
+			}
+
+			return diff;
+
+		}
+
+	}
+
+	function now() {
+
+		return ( typeof performance === 'undefined' ? Date : performance ).now(); // see #10732
+
+	}
+
+	const _position$2 = /*@__PURE__*/ new Vector3();
+	const _quaternion$3 = /*@__PURE__*/ new Quaternion();
+	const _scale$1 = /*@__PURE__*/ new Vector3();
+	const _orientation = /*@__PURE__*/ new Vector3();
+
+	class AudioListener extends Object3D {
+
+		constructor() {
+
+			super();
+
+			this.type = 'AudioListener';
+
+			this.context = AudioContext.getContext();
+
+			this.gain = this.context.createGain();
+			this.gain.connect( this.context.destination );
+
+			this.filter = null;
+
+			this.timeDelta = 0;
+
+			// private
+
+			this._clock = new Clock();
+
+		}
+
+		getInput() {
+
+			return this.gain;
+
+		}
+
+		removeFilter() {
+
+			if ( this.filter !== null ) {
+
+				this.gain.disconnect( this.filter );
+				this.filter.disconnect( this.context.destination );
+				this.gain.connect( this.context.destination );
+				this.filter = null;
+
+			}
+
+			return this;
+
+		}
+
+		getFilter() {
+
+			return this.filter;
+
+		}
+
+		setFilter( value ) {
+
+			if ( this.filter !== null ) {
+
+				this.gain.disconnect( this.filter );
+				this.filter.disconnect( this.context.destination );
+
+			} else {
+
+				this.gain.disconnect( this.context.destination );
+
+			}
+
+			this.filter = value;
+			this.gain.connect( this.filter );
+			this.filter.connect( this.context.destination );
+
+			return this;
+
+		}
+
+		getMasterVolume() {
+
+			return this.gain.gain.value;
+
+		}
+
+		setMasterVolume( value ) {
+
+			this.gain.gain.setTargetAtTime( value, this.context.currentTime, 0.01 );
+
+			return this;
+
+		}
+
+		updateMatrixWorld( force ) {
+
+			super.updateMatrixWorld( force );
+
+			const listener = this.context.listener;
+			const up = this.up;
+
+			this.timeDelta = this._clock.getDelta();
+
+			this.matrixWorld.decompose( _position$2, _quaternion$3, _scale$1 );
+
+			_orientation.set( 0, 0, - 1 ).applyQuaternion( _quaternion$3 );
+
+			if ( listener.positionX ) {
+
+				// code path for Chrome (see #14393)
+
+				const endTime = this.context.currentTime + this.timeDelta;
+
+				listener.positionX.linearRampToValueAtTime( _position$2.x, endTime );
+				listener.positionY.linearRampToValueAtTime( _position$2.y, endTime );
+				listener.positionZ.linearRampToValueAtTime( _position$2.z, endTime );
+				listener.forwardX.linearRampToValueAtTime( _orientation.x, endTime );
+				listener.forwardY.linearRampToValueAtTime( _orientation.y, endTime );
+				listener.forwardZ.linearRampToValueAtTime( _orientation.z, endTime );
+				listener.upX.linearRampToValueAtTime( up.x, endTime );
+				listener.upY.linearRampToValueAtTime( up.y, endTime );
+				listener.upZ.linearRampToValueAtTime( up.z, endTime );
+
+			} else {
+
+				listener.setPosition( _position$2.x, _position$2.y, _position$2.z );
+				listener.setOrientation( _orientation.x, _orientation.y, _orientation.z, up.x, up.y, up.z );
+
+			}
+
+		}
+
+	}
 
 	class Audio extends Object3D {
 
@@ -36134,6 +40964,170 @@
 			this.gain.gain.setTargetAtTime( value, this.context.currentTime, 0.01 );
 
 			return this;
+
+		}
+
+	}
+
+	const _position$3 = /*@__PURE__*/ new Vector3();
+	const _quaternion$4 = /*@__PURE__*/ new Quaternion();
+	const _scale$2 = /*@__PURE__*/ new Vector3();
+	const _orientation$1 = /*@__PURE__*/ new Vector3();
+
+	class PositionalAudio extends Audio {
+
+		constructor( listener ) {
+
+			super( listener );
+
+			this.panner = this.context.createPanner();
+			this.panner.panningModel = 'HRTF';
+			this.panner.connect( this.gain );
+
+		}
+
+		getOutput() {
+
+			return this.panner;
+
+		}
+
+		getRefDistance() {
+
+			return this.panner.refDistance;
+
+		}
+
+		setRefDistance( value ) {
+
+			this.panner.refDistance = value;
+
+			return this;
+
+		}
+
+		getRolloffFactor() {
+
+			return this.panner.rolloffFactor;
+
+		}
+
+		setRolloffFactor( value ) {
+
+			this.panner.rolloffFactor = value;
+
+			return this;
+
+		}
+
+		getDistanceModel() {
+
+			return this.panner.distanceModel;
+
+		}
+
+		setDistanceModel( value ) {
+
+			this.panner.distanceModel = value;
+
+			return this;
+
+		}
+
+		getMaxDistance() {
+
+			return this.panner.maxDistance;
+
+		}
+
+		setMaxDistance( value ) {
+
+			this.panner.maxDistance = value;
+
+			return this;
+
+		}
+
+		setDirectionalCone( coneInnerAngle, coneOuterAngle, coneOuterGain ) {
+
+			this.panner.coneInnerAngle = coneInnerAngle;
+			this.panner.coneOuterAngle = coneOuterAngle;
+			this.panner.coneOuterGain = coneOuterGain;
+
+			return this;
+
+		}
+
+		updateMatrixWorld( force ) {
+
+			super.updateMatrixWorld( force );
+
+			if ( this.hasPlaybackControl === true && this.isPlaying === false ) return;
+
+			this.matrixWorld.decompose( _position$3, _quaternion$4, _scale$2 );
+
+			_orientation$1.set( 0, 0, 1 ).applyQuaternion( _quaternion$4 );
+
+			const panner = this.panner;
+
+			if ( panner.positionX ) {
+
+				// code path for Chrome and Firefox (see #14393)
+
+				const endTime = this.context.currentTime + this.listener.timeDelta;
+
+				panner.positionX.linearRampToValueAtTime( _position$3.x, endTime );
+				panner.positionY.linearRampToValueAtTime( _position$3.y, endTime );
+				panner.positionZ.linearRampToValueAtTime( _position$3.z, endTime );
+				panner.orientationX.linearRampToValueAtTime( _orientation$1.x, endTime );
+				panner.orientationY.linearRampToValueAtTime( _orientation$1.y, endTime );
+				panner.orientationZ.linearRampToValueAtTime( _orientation$1.z, endTime );
+
+			} else {
+
+				panner.setPosition( _position$3.x, _position$3.y, _position$3.z );
+				panner.setOrientation( _orientation$1.x, _orientation$1.y, _orientation$1.z );
+
+			}
+
+		}
+
+	}
+
+	class AudioAnalyser {
+
+		constructor( audio, fftSize = 2048 ) {
+
+			this.analyser = audio.context.createAnalyser();
+			this.analyser.fftSize = fftSize;
+
+			this.data = new Uint8Array( this.analyser.frequencyBinCount );
+
+			audio.getOutput().connect( this.analyser );
+
+		}
+
+
+		getFrequencyData() {
+
+			this.analyser.getByteFrequencyData( this.data );
+
+			return this.data;
+
+		}
+
+		getAverageFrequency() {
+
+			let value = 0;
+			const data = this.getFrequencyData();
+
+			for ( let i = 0; i < data.length; i ++ ) {
+
+				value += data[ i ];
+
+			}
+
+			return value / data.length;
 
 		}
 
@@ -39232,6 +44226,149 @@
 
 	} );
 
+	/**
+	 * Ref: https://en.wikipedia.org/wiki/Spherical_coordinate_system
+	 *
+	 * The polar angle (phi) is measured from the positive y-axis. The positive y-axis is up.
+	 * The azimuthal angle (theta) is measured from the positive z-axis.
+	 */
+
+	class Spherical {
+
+		constructor( radius = 1, phi = 0, theta = 0 ) {
+
+			this.radius = radius;
+			this.phi = phi; // polar angle
+			this.theta = theta; // azimuthal angle
+
+			return this;
+
+		}
+
+		set( radius, phi, theta ) {
+
+			this.radius = radius;
+			this.phi = phi;
+			this.theta = theta;
+
+			return this;
+
+		}
+
+		clone() {
+
+			return new this.constructor().copy( this );
+
+		}
+
+		copy( other ) {
+
+			this.radius = other.radius;
+			this.phi = other.phi;
+			this.theta = other.theta;
+
+			return this;
+
+		}
+
+		// restrict phi to be betwee EPS and PI-EPS
+		makeSafe() {
+
+			const EPS = 0.000001;
+			this.phi = Math.max( EPS, Math.min( Math.PI - EPS, this.phi ) );
+
+			return this;
+
+		}
+
+		setFromVector3( v ) {
+
+			return this.setFromCartesianCoords( v.x, v.y, v.z );
+
+		}
+
+		setFromCartesianCoords( x, y, z ) {
+
+			this.radius = Math.sqrt( x * x + y * y + z * z );
+
+			if ( this.radius === 0 ) {
+
+				this.theta = 0;
+				this.phi = 0;
+
+			} else {
+
+				this.theta = Math.atan2( x, z );
+				this.phi = Math.acos( MathUtils.clamp( y / this.radius, - 1, 1 ) );
+
+			}
+
+			return this;
+
+		}
+
+	}
+
+	/**
+	 * Ref: https://en.wikipedia.org/wiki/Cylindrical_coordinate_system
+	 */
+
+	class Cylindrical {
+
+		constructor( radius, theta, y ) {
+
+			this.radius = ( radius !== undefined ) ? radius : 1.0; // distance from the origin to a point in the x-z plane
+			this.theta = ( theta !== undefined ) ? theta : 0; // counterclockwise angle in the x-z plane measured in radians from the positive z-axis
+			this.y = ( y !== undefined ) ? y : 0; // height above the x-z plane
+
+			return this;
+
+		}
+
+		set( radius, theta, y ) {
+
+			this.radius = radius;
+			this.theta = theta;
+			this.y = y;
+
+			return this;
+
+		}
+
+		clone() {
+
+			return new this.constructor().copy( this );
+
+		}
+
+		copy( other ) {
+
+			this.radius = other.radius;
+			this.theta = other.theta;
+			this.y = other.y;
+
+			return this;
+
+		}
+
+		setFromVector3( v ) {
+
+			return this.setFromCartesianCoords( v.x, v.y, v.z );
+
+		}
+
+		setFromCartesianCoords( x, y, z ) {
+
+			this.radius = Math.sqrt( x * x + z * z );
+			this.theta = Math.atan2( x, z );
+			this.y = y;
+
+			return this;
+
+		}
+
+	}
+
 	const _vector$8 = /*@__PURE__*/ new Vector2();
 
 	class Box2 {
@@ -39460,6 +44597,145 @@
 
 	}
 
+	const _startP = /*@__PURE__*/ new Vector3();
+	const _startEnd = /*@__PURE__*/ new Vector3();
+
+	class Line3 {
+
+		constructor( start, end ) {
+
+			this.start = ( start !== undefined ) ? start : new Vector3();
+			this.end = ( end !== undefined ) ? end : new Vector3();
+
+		}
+
+		set( start, end ) {
+
+			this.start.copy( start );
+			this.end.copy( end );
+
+			return this;
+
+		}
+
+		clone() {
+
+			return new this.constructor().copy( this );
+
+		}
+
+		copy( line ) {
+
+			this.start.copy( line.start );
+			this.end.copy( line.end );
+
+			return this;
+
+		}
+
+		getCenter( target ) {
+
+			if ( target === undefined ) {
+
+				console.warn( 'THREE.Line3: .getCenter() target is now required' );
+				target = new Vector3();
+
+			}
+
+			return target.addVectors( this.start, this.end ).multiplyScalar( 0.5 );
+
+		}
+
+		delta( target ) {
+
+			if ( target === undefined ) {
+
+				console.warn( 'THREE.Line3: .delta() target is now required' );
+				target = new Vector3();
+
+			}
+
+			return target.subVectors( this.end, this.start );
+
+		}
+
+		distanceSq() {
+
+			return this.start.distanceToSquared( this.end );
+
+		}
+
+		distance() {
+
+			return this.start.distanceTo( this.end );
+
+		}
+
+		at( t, target ) {
+
+			if ( target === undefined ) {
+
+				console.warn( 'THREE.Line3: .at() target is now required' );
+				target = new Vector3();
+
+			}
+
+			return this.delta( target ).multiplyScalar( t ).add( this.start );
+
+		}
+
+		closestPointToPointParameter( point, clampToLine ) {
+
+			_startP.subVectors( point, this.start );
+			_startEnd.subVectors( this.end, this.start );
+
+			const startEnd2 = _startEnd.dot( _startEnd );
+			const startEnd_startP = _startEnd.dot( _startP );
+
+			let t = startEnd_startP / startEnd2;
+
+			if ( clampToLine ) {
+
+				t = MathUtils.clamp( t, 0, 1 );
+
+			}
+
+			return t;
+
+		}
+
+		closestPointToPoint( point, clampToLine, target ) {
+
+			const t = this.closestPointToPointParameter( point, clampToLine );
+
+			if ( target === undefined ) {
+
+				console.warn( 'THREE.Line3: .closestPointToPoint() target is now required' );
+				target = new Vector3();
+
+			}
+
+			return this.delta( target ).multiplyScalar( t ).add( this.start );
+
+		}
+
+		applyMatrix4( matrix ) {
+
+			this.start.applyMatrix4( matrix );
+			this.end.applyMatrix4( matrix );
+
+			return this;
+
+		}
+
+		equals( line ) {
+
+			return line.start.equals( this.start ) && line.end.equals( this.end );
+
+		}
+
+	}
+
 	function ImmediateRenderObject( material ) {
 
 		Object3D.call( this );
@@ -39486,12 +44762,2244 @@
 
 	ImmediateRenderObject.prototype.isImmediateRenderObject = true;
 
+	const _vector$9 = /*@__PURE__*/ new Vector3();
+
+	class SpotLightHelper extends Object3D {
+
+		constructor( light, color ) {
+
+			super();
+			this.light = light;
+			this.light.updateMatrixWorld();
+
+			this.matrix = light.matrixWorld;
+			this.matrixAutoUpdate = false;
+
+			this.color = color;
+
+			const geometry = new BufferGeometry();
+
+			const positions = [
+				0, 0, 0, 	0, 0, 1,
+				0, 0, 0, 	1, 0, 1,
+				0, 0, 0,	- 1, 0, 1,
+				0, 0, 0, 	0, 1, 1,
+				0, 0, 0, 	0, - 1, 1
+			];
+
+			for ( let i = 0, j = 1, l = 32; i < l; i ++, j ++ ) {
+
+				const p1 = ( i / l ) * Math.PI * 2;
+				const p2 = ( j / l ) * Math.PI * 2;
+
+				positions.push(
+					Math.cos( p1 ), Math.sin( p1 ), 1,
+					Math.cos( p2 ), Math.sin( p2 ), 1
+				);
+
+			}
+
+			geometry.setAttribute( 'position', new Float32BufferAttribute( positions, 3 ) );
+
+			const material = new LineBasicMaterial( { fog: false, toneMapped: false } );
+
+			this.cone = new LineSegments( geometry, material );
+			this.add( this.cone );
+
+			this.update();
+
+		}
+
+		dispose() {
+
+			this.cone.geometry.dispose();
+			this.cone.material.dispose();
+
+		}
+
+		update() {
+
+			this.light.updateMatrixWorld();
+
+			const coneLength = this.light.distance ? this.light.distance : 1000;
+			const coneWidth = coneLength * Math.tan( this.light.angle );
+
+			this.cone.scale.set( coneWidth, coneWidth, coneLength );
+
+			_vector$9.setFromMatrixPosition( this.light.target.matrixWorld );
+
+			this.cone.lookAt( _vector$9 );
+
+			if ( this.color !== undefined ) {
+
+				this.cone.material.color.set( this.color );
+
+			} else {
+
+				this.cone.material.color.copy( this.light.color );
+
+			}
+
+		}
+
+	}
+
+	const _vector$a = /*@__PURE__*/ new Vector3();
+	const _boneMatrix = /*@__PURE__*/ new Matrix4();
+	const _matrixWorldInv = /*@__PURE__*/ new Matrix4();
+
+
+	class SkeletonHelper extends LineSegments {
+
+		constructor( object ) {
+
+			const bones = getBoneList( object );
+
+			const geometry = new BufferGeometry();
+
+			const vertices = [];
+			const colors = [];
+
+			const color1 = new Color( 0, 0, 1 );
+			const color2 = new Color( 0, 1, 0 );
+
+			for ( let i = 0; i < bones.length; i ++ ) {
+
+				const bone = bones[ i ];
+
+				if ( bone.parent && bone.parent.isBone ) {
+
+					vertices.push( 0, 0, 0 );
+					vertices.push( 0, 0, 0 );
+					colors.push( color1.r, color1.g, color1.b );
+					colors.push( color2.r, color2.g, color2.b );
+
+				}
+
+			}
+
+			geometry.setAttribute( 'position', new Float32BufferAttribute( vertices, 3 ) );
+			geometry.setAttribute( 'color', new Float32BufferAttribute( colors, 3 ) );
+
+			const material = new LineBasicMaterial( { vertexColors: true, depthTest: false, depthWrite: false, toneMapped: false, transparent: true } );
+
+			super( geometry, material );
+
+			this.type = 'SkeletonHelper';
+			this.isSkeletonHelper = true;
+
+			this.root = object;
+			this.bones = bones;
+
+			this.matrix = object.matrixWorld;
+			this.matrixAutoUpdate = false;
+
+		}
+
+		updateMatrixWorld( force ) {
+
+			const bones = this.bones;
+
+			const geometry = this.geometry;
+			const position = geometry.getAttribute( 'position' );
+
+			_matrixWorldInv.copy( this.root.matrixWorld ).invert();
+
+			for ( let i = 0, j = 0; i < bones.length; i ++ ) {
+
+				const bone = bones[ i ];
+
+				if ( bone.parent && bone.parent.isBone ) {
+
+					_boneMatrix.multiplyMatrices( _matrixWorldInv, bone.matrixWorld );
+					_vector$a.setFromMatrixPosition( _boneMatrix );
+					position.setXYZ( j, _vector$a.x, _vector$a.y, _vector$a.z );
+
+					_boneMatrix.multiplyMatrices( _matrixWorldInv, bone.parent.matrixWorld );
+					_vector$a.setFromMatrixPosition( _boneMatrix );
+					position.setXYZ( j + 1, _vector$a.x, _vector$a.y, _vector$a.z );
+
+					j += 2;
+
+				}
+
+			}
+
+			geometry.getAttribute( 'position' ).needsUpdate = true;
+
+			super.updateMatrixWorld( force );
+
+		}
+
+	}
+
+
+	function getBoneList( object ) {
+
+		const boneList = [];
+
+		if ( object && object.isBone ) {
+
+			boneList.push( object );
+
+		}
+
+		for ( let i = 0; i < object.children.length; i ++ ) {
+
+			boneList.push.apply( boneList, getBoneList( object.children[ i ] ) );
+
+		}
+
+		return boneList;
+
+	}
+
+	class PointLightHelper extends Mesh {
+
+		constructor( light, sphereSize, color ) {
+
+			const geometry = new SphereGeometry( sphereSize, 4, 2 );
+			const material = new MeshBasicMaterial( { wireframe: true, fog: false, toneMapped: false } );
+
+			super( geometry, material );
+
+			this.light = light;
+			this.light.updateMatrixWorld();
+
+			this.color = color;
+
+			this.type = 'PointLightHelper';
+
+			this.matrix = this.light.matrixWorld;
+			this.matrixAutoUpdate = false;
+
+			this.update();
+
+
+			/*
+		// TODO: delete this comment?
+		const distanceGeometry = new THREE.IcosahedronBufferGeometry( 1, 2 );
+		const distanceMaterial = new THREE.MeshBasicMaterial( { color: hexColor, fog: false, wireframe: true, opacity: 0.1, transparent: true } );
+
+		this.lightSphere = new THREE.Mesh( bulbGeometry, bulbMaterial );
+		this.lightDistance = new THREE.Mesh( distanceGeometry, distanceMaterial );
+
+		const d = light.distance;
+
+		if ( d === 0.0 ) {
+
+			this.lightDistance.visible = false;
+
+		} else {
+
+			this.lightDistance.scale.set( d, d, d );
+
+		}
+
+		this.add( this.lightDistance );
+		*/
+
+		}
+
+		dispose() {
+
+			this.geometry.dispose();
+			this.material.dispose();
+
+		}
+
+		update() {
+
+			if ( this.color !== undefined ) {
+
+				this.material.color.set( this.color );
+
+			} else {
+
+				this.material.color.copy( this.light.color );
+
+			}
+
+			/*
+			const d = this.light.distance;
+
+			if ( d === 0.0 ) {
+
+				this.lightDistance.visible = false;
+
+			} else {
+
+				this.lightDistance.visible = true;
+				this.lightDistance.scale.set( d, d, d );
+
+			}
+			*/
+
+		}
+
+	}
+
+	const _vector$b = /*@__PURE__*/ new Vector3();
+	const _color1 = /*@__PURE__*/ new Color();
+	const _color2 = /*@__PURE__*/ new Color();
+
+	class HemisphereLightHelper extends Object3D {
+
+		constructor( light, size, color ) {
+
+			super();
+			this.light = light;
+			this.light.updateMatrixWorld();
+
+			this.matrix = light.matrixWorld;
+			this.matrixAutoUpdate = false;
+
+			this.color = color;
+
+			const geometry = new OctahedronGeometry( size );
+			geometry.rotateY( Math.PI * 0.5 );
+
+			this.material = new MeshBasicMaterial( { wireframe: true, fog: false, toneMapped: false } );
+			if ( this.color === undefined ) this.material.vertexColors = true;
+
+			const position = geometry.getAttribute( 'position' );
+			const colors = new Float32Array( position.count * 3 );
+
+			geometry.setAttribute( 'color', new BufferAttribute( colors, 3 ) );
+
+			this.add( new Mesh( geometry, this.material ) );
+
+			this.update();
+
+		}
+
+		dispose() {
+
+			this.children[ 0 ].geometry.dispose();
+			this.children[ 0 ].material.dispose();
+
+		}
+
+		update() {
+
+			const mesh = this.children[ 0 ];
+
+			if ( this.color !== undefined ) {
+
+				this.material.color.set( this.color );
+
+			} else {
+
+				const colors = mesh.geometry.getAttribute( 'color' );
+
+				_color1.copy( this.light.color );
+				_color2.copy( this.light.groundColor );
+
+				for ( let i = 0, l = colors.count; i < l; i ++ ) {
+
+					const color = ( i < ( l / 2 ) ) ? _color1 : _color2;
+
+					colors.setXYZ( i, color.r, color.g, color.b );
+
+				}
+
+				colors.needsUpdate = true;
+
+			}
+
+			mesh.lookAt( _vector$b.setFromMatrixPosition( this.light.matrixWorld ).negate() );
+
+		}
+
+	}
+
+	class GridHelper extends LineSegments {
+
+		constructor( size = 10, divisions = 10, color1 = 0x444444, color2 = 0x888888 ) {
+
+			color1 = new Color( color1 );
+			color2 = new Color( color2 );
+
+			const center = divisions / 2;
+			const step = size / divisions;
+			const halfSize = size / 2;
+
+			const vertices = [], colors = [];
+
+			for ( let i = 0, j = 0, k = - halfSize; i <= divisions; i ++, k += step ) {
+
+				vertices.push( - halfSize, 0, k, halfSize, 0, k );
+				vertices.push( k, 0, - halfSize, k, 0, halfSize );
+
+				const color = i === center ? color1 : color2;
+
+				color.toArray( colors, j ); j += 3;
+				color.toArray( colors, j ); j += 3;
+				color.toArray( colors, j ); j += 3;
+				color.toArray( colors, j ); j += 3;
+
+			}
+
+			const geometry = new BufferGeometry();
+			geometry.setAttribute( 'position', new Float32BufferAttribute( vertices, 3 ) );
+			geometry.setAttribute( 'color', new Float32BufferAttribute( colors, 3 ) );
+
+			const material = new LineBasicMaterial( { vertexColors: true, toneMapped: false } );
+
+			super( geometry, material );
+
+			this.type = 'GridHelper';
+
+		}
+
+	}
+
+	class PolarGridHelper extends LineSegments {
+
+		constructor( radius = 10, radials = 16, circles = 8, divisions = 64, color1 = 0x444444, color2 = 0x888888 ) {
+
+			color1 = new Color( color1 );
+			color2 = new Color( color2 );
+
+			const vertices = [];
+			const colors = [];
+
+			// create the radials
+
+			for ( let i = 0; i <= radials; i ++ ) {
+
+				const v = ( i / radials ) * ( Math.PI * 2 );
+
+				const x = Math.sin( v ) * radius;
+				const z = Math.cos( v ) * radius;
+
+				vertices.push( 0, 0, 0 );
+				vertices.push( x, 0, z );
+
+				const color = ( i & 1 ) ? color1 : color2;
+
+				colors.push( color.r, color.g, color.b );
+				colors.push( color.r, color.g, color.b );
+
+			}
+
+			// create the circles
+
+			for ( let i = 0; i <= circles; i ++ ) {
+
+				const color = ( i & 1 ) ? color1 : color2;
+
+				const r = radius - ( radius / circles * i );
+
+				for ( let j = 0; j < divisions; j ++ ) {
+
+					// first vertex
+
+					let v = ( j / divisions ) * ( Math.PI * 2 );
+
+					let x = Math.sin( v ) * r;
+					let z = Math.cos( v ) * r;
+
+					vertices.push( x, 0, z );
+					colors.push( color.r, color.g, color.b );
+
+					// second vertex
+
+					v = ( ( j + 1 ) / divisions ) * ( Math.PI * 2 );
+
+					x = Math.sin( v ) * r;
+					z = Math.cos( v ) * r;
+
+					vertices.push( x, 0, z );
+					colors.push( color.r, color.g, color.b );
+
+				}
+
+			}
+
+			const geometry = new BufferGeometry();
+			geometry.setAttribute( 'position', new Float32BufferAttribute( vertices, 3 ) );
+			geometry.setAttribute( 'color', new Float32BufferAttribute( colors, 3 ) );
+
+			const material = new LineBasicMaterial( { vertexColors: true, toneMapped: false } );
+
+			super( geometry, material );
+
+			this.type = 'PolarGridHelper';
+
+		}
+
+	}
+
+	const _v1$6 = /*@__PURE__*/ new Vector3();
+	const _v2$3 = /*@__PURE__*/ new Vector3();
+	const _v3$1 = /*@__PURE__*/ new Vector3();
+
+	class DirectionalLightHelper extends Object3D {
+
+		constructor( light, size, color ) {
+
+			super();
+			this.light = light;
+			this.light.updateMatrixWorld();
+
+			this.matrix = light.matrixWorld;
+			this.matrixAutoUpdate = false;
+
+			this.color = color;
+
+			if ( size === undefined ) size = 1;
+
+			let geometry = new BufferGeometry();
+			geometry.setAttribute( 'position', new Float32BufferAttribute( [
+				- size, size, 0,
+				size, size, 0,
+				size, - size, 0,
+				- size, - size, 0,
+				- size, size, 0
+			], 3 ) );
+
+			const material = new LineBasicMaterial( { fog: false, toneMapped: false } );
+
+			this.lightPlane = new Line( geometry, material );
+			this.add( this.lightPlane );
+
+			geometry = new BufferGeometry();
+			geometry.setAttribute( 'position', new Float32BufferAttribute( [ 0, 0, 0, 0, 0, 1 ], 3 ) );
+
+			this.targetLine = new Line( geometry, material );
+			this.add( this.targetLine );
+
+			this.update();
+
+		}
+
+		dispose() {
+
+			this.lightPlane.geometry.dispose();
+			this.lightPlane.material.dispose();
+			this.targetLine.geometry.dispose();
+			this.targetLine.material.dispose();
+
+		}
+
+		update() {
+
+			_v1$6.setFromMatrixPosition( this.light.matrixWorld );
+			_v2$3.setFromMatrixPosition( this.light.target.matrixWorld );
+			_v3$1.subVectors( _v2$3, _v1$6 );
+
+			this.lightPlane.lookAt( _v2$3 );
+
+			if ( this.color !== undefined ) {
+
+				this.lightPlane.material.color.set( this.color );
+				this.targetLine.material.color.set( this.color );
+
+			} else {
+
+				this.lightPlane.material.color.copy( this.light.color );
+				this.targetLine.material.color.copy( this.light.color );
+
+			}
+
+			this.targetLine.lookAt( _v2$3 );
+			this.targetLine.scale.z = _v3$1.length();
+
+		}
+
+	}
+
+	const _vector$c = /*@__PURE__*/ new Vector3();
+	const _camera = /*@__PURE__*/ new Camera();
+
+	/**
+	 *	- shows frustum, line of sight and up of the camera
+	 *	- suitable for fast updates
+	 * 	- based on frustum visualization in lightgl.js shadowmap example
+	 *		http://evanw.github.com/lightgl.js/tests/shadowmap.html
+	 */
+
+	class CameraHelper extends LineSegments {
+
+		constructor( camera ) {
+
+			const geometry = new BufferGeometry();
+			const material = new LineBasicMaterial( { color: 0xffffff, vertexColors: true, toneMapped: false } );
+
+			const vertices = [];
+			const colors = [];
+
+			const pointMap = {};
+
+			// colors
+
+			const colorFrustum = new Color( 0xffaa00 );
+			const colorCone = new Color( 0xff0000 );
+			const colorUp = new Color( 0x00aaff );
+			const colorTarget = new Color( 0xffffff );
+			const colorCross = new Color( 0x333333 );
+
+			// near
+
+			addLine( 'n1', 'n2', colorFrustum );
+			addLine( 'n2', 'n4', colorFrustum );
+			addLine( 'n4', 'n3', colorFrustum );
+			addLine( 'n3', 'n1', colorFrustum );
+
+			// far
+
+			addLine( 'f1', 'f2', colorFrustum );
+			addLine( 'f2', 'f4', colorFrustum );
+			addLine( 'f4', 'f3', colorFrustum );
+			addLine( 'f3', 'f1', colorFrustum );
+
+			// sides
+
+			addLine( 'n1', 'f1', colorFrustum );
+			addLine( 'n2', 'f2', colorFrustum );
+			addLine( 'n3', 'f3', colorFrustum );
+			addLine( 'n4', 'f4', colorFrustum );
+
+			// cone
+
+			addLine( 'p', 'n1', colorCone );
+			addLine( 'p', 'n2', colorCone );
+			addLine( 'p', 'n3', colorCone );
+			addLine( 'p', 'n4', colorCone );
+
+			// up
+
+			addLine( 'u1', 'u2', colorUp );
+			addLine( 'u2', 'u3', colorUp );
+			addLine( 'u3', 'u1', colorUp );
+
+			// target
+
+			addLine( 'c', 't', colorTarget );
+			addLine( 'p', 'c', colorCross );
+
+			// cross
+
+			addLine( 'cn1', 'cn2', colorCross );
+			addLine( 'cn3', 'cn4', colorCross );
+
+			addLine( 'cf1', 'cf2', colorCross );
+			addLine( 'cf3', 'cf4', colorCross );
+
+			function addLine( a, b, color ) {
+
+				addPoint( a, color );
+				addPoint( b, color );
+
+			}
+
+			function addPoint( id, color ) {
+
+				vertices.push( 0, 0, 0 );
+				colors.push( color.r, color.g, color.b );
+
+				if ( pointMap[ id ] === undefined ) {
+
+					pointMap[ id ] = [];
+
+				}
+
+				pointMap[ id ].push( ( vertices.length / 3 ) - 1 );
+
+			}
+
+			geometry.setAttribute( 'position', new Float32BufferAttribute( vertices, 3 ) );
+			geometry.setAttribute( 'color', new Float32BufferAttribute( colors, 3 ) );
+
+			super( geometry, material );
+
+			this.type = 'CameraHelper';
+
+			this.camera = camera;
+			if ( this.camera.updateProjectionMatrix ) this.camera.updateProjectionMatrix();
+
+			this.matrix = camera.matrixWorld;
+			this.matrixAutoUpdate = false;
+
+			this.pointMap = pointMap;
+
+			this.update();
+
+		}
+
+		update() {
+
+			const geometry = this.geometry;
+			const pointMap = this.pointMap;
+
+			const w = 1, h = 1;
+
+			// we need just camera projection matrix inverse
+			// world matrix must be identity
+
+			_camera.projectionMatrixInverse.copy( this.camera.projectionMatrixInverse );
+
+			// center / target
+
+			setPoint( 'c', pointMap, geometry, _camera, 0, 0, - 1 );
+			setPoint( 't', pointMap, geometry, _camera, 0, 0, 1 );
+
+			// near
+
+			setPoint( 'n1', pointMap, geometry, _camera, - w, - h, - 1 );
+			setPoint( 'n2', pointMap, geometry, _camera, w, - h, - 1 );
+			setPoint( 'n3', pointMap, geometry, _camera, - w, h, - 1 );
+			setPoint( 'n4', pointMap, geometry, _camera, w, h, - 1 );
+
+			// far
+
+			setPoint( 'f1', pointMap, geometry, _camera, - w, - h, 1 );
+			setPoint( 'f2', pointMap, geometry, _camera, w, - h, 1 );
+			setPoint( 'f3', pointMap, geometry, _camera, - w, h, 1 );
+			setPoint( 'f4', pointMap, geometry, _camera, w, h, 1 );
+
+			// up
+
+			setPoint( 'u1', pointMap, geometry, _camera, w * 0.7, h * 1.1, - 1 );
+			setPoint( 'u2', pointMap, geometry, _camera, - w * 0.7, h * 1.1, - 1 );
+			setPoint( 'u3', pointMap, geometry, _camera, 0, h * 2, - 1 );
+
+			// cross
+
+			setPoint( 'cf1', pointMap, geometry, _camera, - w, 0, 1 );
+			setPoint( 'cf2', pointMap, geometry, _camera, w, 0, 1 );
+			setPoint( 'cf3', pointMap, geometry, _camera, 0, - h, 1 );
+			setPoint( 'cf4', pointMap, geometry, _camera, 0, h, 1 );
+
+			setPoint( 'cn1', pointMap, geometry, _camera, - w, 0, - 1 );
+			setPoint( 'cn2', pointMap, geometry, _camera, w, 0, - 1 );
+			setPoint( 'cn3', pointMap, geometry, _camera, 0, - h, - 1 );
+			setPoint( 'cn4', pointMap, geometry, _camera, 0, h, - 1 );
+
+			geometry.getAttribute( 'position' ).needsUpdate = true;
+
+		}
+
+	}
+
+
+	function setPoint( point, pointMap, geometry, camera, x, y, z ) {
+
+		_vector$c.set( x, y, z ).unproject( camera );
+
+		const points = pointMap[ point ];
+
+		if ( points !== undefined ) {
+
+			const position = geometry.getAttribute( 'position' );
+
+			for ( let i = 0, l = points.length; i < l; i ++ ) {
+
+				position.setXYZ( points[ i ], _vector$c.x, _vector$c.y, _vector$c.z );
+
+			}
+
+		}
+
+	}
+
+	const _box$3 = /*@__PURE__*/ new Box3();
+
+	class BoxHelper extends LineSegments {
+
+		constructor( object, color = 0xffff00 ) {
+
+			const indices = new Uint16Array( [ 0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7 ] );
+			const positions = new Float32Array( 8 * 3 );
+
+			const geometry = new BufferGeometry();
+			geometry.setIndex( new BufferAttribute( indices, 1 ) );
+			geometry.setAttribute( 'position', new BufferAttribute( positions, 3 ) );
+
+			super( geometry, new LineBasicMaterial( { color: color, toneMapped: false } ) );
+
+			this.object = object;
+			this.type = 'BoxHelper';
+
+			this.matrixAutoUpdate = false;
+
+			this.update();
+
+		}
+
+		update( object ) {
+
+			if ( object !== undefined ) {
+
+				console.warn( 'THREE.BoxHelper: .update() has no longer arguments.' );
+
+			}
+
+			if ( this.object !== undefined ) {
+
+				_box$3.setFromObject( this.object );
+
+			}
+
+			if ( _box$3.isEmpty() ) return;
+
+			const min = _box$3.min;
+			const max = _box$3.max;
+
+			/*
+				5____4
+			1/___0/|
+			| 6__|_7
+			2/___3/
+
+			0: max.x, max.y, max.z
+			1: min.x, max.y, max.z
+			2: min.x, min.y, max.z
+			3: max.x, min.y, max.z
+			4: max.x, max.y, min.z
+			5: min.x, max.y, min.z
+			6: min.x, min.y, min.z
+			7: max.x, min.y, min.z
+			*/
+
+			const position = this.geometry.attributes.position;
+			const array = position.array;
+
+			array[ 0 ] = max.x; array[ 1 ] = max.y; array[ 2 ] = max.z;
+			array[ 3 ] = min.x; array[ 4 ] = max.y; array[ 5 ] = max.z;
+			array[ 6 ] = min.x; array[ 7 ] = min.y; array[ 8 ] = max.z;
+			array[ 9 ] = max.x; array[ 10 ] = min.y; array[ 11 ] = max.z;
+			array[ 12 ] = max.x; array[ 13 ] = max.y; array[ 14 ] = min.z;
+			array[ 15 ] = min.x; array[ 16 ] = max.y; array[ 17 ] = min.z;
+			array[ 18 ] = min.x; array[ 19 ] = min.y; array[ 20 ] = min.z;
+			array[ 21 ] = max.x; array[ 22 ] = min.y; array[ 23 ] = min.z;
+
+			position.needsUpdate = true;
+
+			this.geometry.computeBoundingSphere();
+
+
+		}
+
+		setFromObject( object ) {
+
+			this.object = object;
+			this.update();
+
+			return this;
+
+		}
+
+		copy( source ) {
+
+			LineSegments.prototype.copy.call( this, source );
+
+			this.object = source.object;
+
+			return this;
+
+		}
+
+	}
+
+	class Box3Helper extends LineSegments {
+
+		constructor( box, color = 0xffff00 ) {
+
+			const indices = new Uint16Array( [ 0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7 ] );
+
+			const positions = [ 1, 1, 1, - 1, 1, 1, - 1, - 1, 1, 1, - 1, 1, 1, 1, - 1, - 1, 1, - 1, - 1, - 1, - 1, 1, - 1, - 1 ];
+
+			const geometry = new BufferGeometry();
+
+			geometry.setIndex( new BufferAttribute( indices, 1 ) );
+
+			geometry.setAttribute( 'position', new Float32BufferAttribute( positions, 3 ) );
+
+			super( geometry, new LineBasicMaterial( { color: color, toneMapped: false } ) );
+
+			this.box = box;
+
+			this.type = 'Box3Helper';
+
+			this.geometry.computeBoundingSphere();
+
+		}
+
+		updateMatrixWorld( force ) {
+
+			const box = this.box;
+
+			if ( box.isEmpty() ) return;
+
+			box.getCenter( this.position );
+
+			box.getSize( this.scale );
+
+			this.scale.multiplyScalar( 0.5 );
+
+			super.updateMatrixWorld( force );
+
+		}
+
+	}
+
+	class PlaneHelper extends Line {
+
+		constructor( plane, size = 1, hex = 0xffff00 ) {
+
+			const color = hex;
+
+			const positions = [ 1, - 1, 1, - 1, 1, 1, - 1, - 1, 1, 1, 1, 1, - 1, 1, 1, - 1, - 1, 1, 1, - 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0 ];
+
+			const geometry = new BufferGeometry();
+			geometry.setAttribute( 'position', new Float32BufferAttribute( positions, 3 ) );
+			geometry.computeBoundingSphere();
+
+			super( geometry, new LineBasicMaterial( { color: color, toneMapped: false } ) );
+
+			this.type = 'PlaneHelper';
+
+			this.plane = plane;
+
+			this.size = size;
+
+			const positions2 = [ 1, 1, 1, - 1, 1, 1, - 1, - 1, 1, 1, 1, 1, - 1, - 1, 1, 1, - 1, 1 ];
+
+			const geometry2 = new BufferGeometry();
+			geometry2.setAttribute( 'position', new Float32BufferAttribute( positions2, 3 ) );
+			geometry2.computeBoundingSphere();
+
+			this.add( new Mesh( geometry2, new MeshBasicMaterial( { color: color, opacity: 0.2, transparent: true, depthWrite: false, toneMapped: false } ) ) );
+
+		}
+
+		updateMatrixWorld( force ) {
+
+			let scale = - this.plane.constant;
+
+			if ( Math.abs( scale ) < 1e-8 ) scale = 1e-8; // sign does not matter
+
+			this.scale.set( 0.5 * this.size, 0.5 * this.size, scale );
+
+			this.children[ 0 ].material.side = ( scale < 0 ) ? BackSide : FrontSide; // renderer flips side when determinant < 0; flipping not wanted here
+
+			this.lookAt( this.plane.normal );
+
+			super.updateMatrixWorld( force );
+
+		}
+
+	}
+
+	const _axis = /*@__PURE__*/ new Vector3();
+	let _lineGeometry, _coneGeometry;
+
+	class ArrowHelper extends Object3D {
+
+		constructor( dir, origin, length, color, headLength, headWidth ) {
+
+			super();
+			// dir is assumed to be normalized
+
+			this.type = 'ArrowHelper';
+
+			if ( dir === undefined ) dir = new Vector3( 0, 0, 1 );
+			if ( origin === undefined ) origin = new Vector3( 0, 0, 0 );
+			if ( length === undefined ) length = 1;
+			if ( color === undefined ) color = 0xffff00;
+			if ( headLength === undefined ) headLength = 0.2 * length;
+			if ( headWidth === undefined ) headWidth = 0.2 * headLength;
+
+			if ( _lineGeometry === undefined ) {
+
+				_lineGeometry = new BufferGeometry();
+				_lineGeometry.setAttribute( 'position', new Float32BufferAttribute( [ 0, 0, 0, 0, 1, 0 ], 3 ) );
+
+				_coneGeometry = new CylinderGeometry( 0, 0.5, 1, 5, 1 );
+				_coneGeometry.translate( 0, - 0.5, 0 );
+
+			}
+
+			this.position.copy( origin );
+
+			this.line = new Line( _lineGeometry, new LineBasicMaterial( { color: color, toneMapped: false } ) );
+			this.line.matrixAutoUpdate = false;
+			this.add( this.line );
+
+			this.cone = new Mesh( _coneGeometry, new MeshBasicMaterial( { color: color, toneMapped: false } ) );
+			this.cone.matrixAutoUpdate = false;
+			this.add( this.cone );
+
+			this.setDirection( dir );
+			this.setLength( length, headLength, headWidth );
+
+		}
+
+		setDirection( dir ) {
+
+			// dir is assumed to be normalized
+
+			if ( dir.y > 0.99999 ) {
+
+				this.quaternion.set( 0, 0, 0, 1 );
+
+			} else if ( dir.y < - 0.99999 ) {
+
+				this.quaternion.set( 1, 0, 0, 0 );
+
+			} else {
+
+				_axis.set( dir.z, 0, - dir.x ).normalize();
+
+				const radians = Math.acos( dir.y );
+
+				this.quaternion.setFromAxisAngle( _axis, radians );
+
+			}
+
+		}
+
+		setLength( length, headLength, headWidth ) {
+
+			if ( headLength === undefined ) headLength = 0.2 * length;
+			if ( headWidth === undefined ) headWidth = 0.2 * headLength;
+
+			this.line.scale.set( 1, Math.max( 0.0001, length - headLength ), 1 ); // see #17458
+			this.line.updateMatrix();
+
+			this.cone.scale.set( headWidth, headLength, headWidth );
+			this.cone.position.y = length;
+			this.cone.updateMatrix();
+
+		}
+
+		setColor( color ) {
+
+			this.line.material.color.set( color );
+			this.cone.material.color.set( color );
+
+		}
+
+		copy( source ) {
+
+			super.copy( source, false );
+
+			this.line.copy( source.line );
+			this.cone.copy( source.cone );
+
+			return this;
+
+		}
+
+	}
+
+	class AxesHelper extends LineSegments {
+
+		constructor( size = 1 ) {
+
+			const vertices = [
+				0, 0, 0,	size, 0, 0,
+				0, 0, 0,	0, size, 0,
+				0, 0, 0,	0, 0, size
+			];
+
+			const colors = [
+				1, 0, 0,	1, 0.6, 0,
+				0, 1, 0,	0.6, 1, 0,
+				0, 0, 1,	0, 0.6, 1
+			];
+
+			const geometry = new BufferGeometry();
+			geometry.setAttribute( 'position', new Float32BufferAttribute( vertices, 3 ) );
+			geometry.setAttribute( 'color', new Float32BufferAttribute( colors, 3 ) );
+
+			const material = new LineBasicMaterial( { vertexColors: true, toneMapped: false } );
+
+			super( geometry, material );
+
+			this.type = 'AxesHelper';
+
+		}
+
+	}
+
+	const _floatView = new Float32Array( 1 );
+	const _int32View = new Int32Array( _floatView.buffer );
+
+	const DataUtils = {
+
+		// Converts float32 to float16 (stored as uint16 value).
+
+		toHalfFloat: function ( val ) {
+
+			// Source: http://gamedev.stackexchange.com/questions/17326/conversion-of-a-number-from-single-precision-floating-point-representation-to-a/17410#17410
+
+			/* This method is faster than the OpenEXR implementation (very often
+			* used, eg. in Ogre), with the additional benefit of rounding, inspired
+			* by James Tursa?s half-precision code. */
+
+			_floatView[ 0 ] = val;
+			const x = _int32View[ 0 ];
+
+			let bits = ( x >> 16 ) & 0x8000; /* Get the sign */
+			let m = ( x >> 12 ) & 0x07ff; /* Keep one extra bit for rounding */
+			const e = ( x >> 23 ) & 0xff; /* Using int is faster here */
+
+			/* If zero, or denormal, or exponent underflows too much for a denormal
+				* half, return signed zero. */
+			if ( e < 103 ) return bits;
+
+			/* If NaN, return NaN. If Inf or exponent overflow, return Inf. */
+			if ( e > 142 ) {
+
+				bits |= 0x7c00;
+				/* If exponent was 0xff and one mantissa bit was set, it means NaN,
+							* not Inf, so make sure we set one mantissa bit too. */
+				bits |= ( ( e == 255 ) ? 0 : 1 ) && ( x & 0x007fffff );
+				return bits;
+
+			}
+
+			/* If exponent underflows but not too much, return a denormal */
+			if ( e < 113 ) {
+
+				m |= 0x0800;
+				/* Extra rounding may overflow and set mantissa to 0 and exponent
+					* to 1, which is OK. */
+				bits |= ( m >> ( 114 - e ) ) + ( ( m >> ( 113 - e ) ) & 1 );
+				return bits;
+
+			}
+
+			bits |= ( ( e - 112 ) << 10 ) | ( m >> 1 );
+			/* Extra rounding. An overflow will set mantissa to 0 and increment
+				* the exponent, which is OK. */
+			bits += m & 1;
+			return bits;
+
+		}
+
+	};
+
+	const LOD_MIN = 4;
+	const LOD_MAX = 8;
+	const SIZE_MAX = Math.pow( 2, LOD_MAX );
+
+	// The standard deviations (radians) associated with the extra mips. These are
+	// chosen to approximate a Trowbridge-Reitz distribution function times the
+	// geometric shadowing function. These sigma values squared must match the
+	// variance #defines in cube_uv_reflection_fragment.glsl.js.
+	const EXTRA_LOD_SIGMA = [ 0.125, 0.215, 0.35, 0.446, 0.526, 0.582 ];
+
+	const TOTAL_LODS = LOD_MAX - LOD_MIN + 1 + EXTRA_LOD_SIGMA.length;
+
+	// The maximum length of the blur for loop. Smaller sigmas will use fewer
+	// samples and exit early, but not recompile the shader.
+	const MAX_SAMPLES = 20;
+
+	const ENCODINGS = {
+		[ LinearEncoding ]: 0,
+		[ sRGBEncoding ]: 1,
+		[ RGBEEncoding ]: 2,
+		[ RGBM7Encoding ]: 3,
+		[ RGBM16Encoding ]: 4,
+		[ RGBDEncoding ]: 5,
+		[ GammaEncoding ]: 6
+	};
+
 	const backgroundMaterial = new MeshBasicMaterial( {
 		side: BackSide,
 		depthWrite: false,
 		depthTest: false,
 	} );
-	new Mesh( new BoxGeometry(), backgroundMaterial );
+	const backgroundBox = new Mesh( new BoxGeometry(), backgroundMaterial );
+
+	const _flatCamera = /*@__PURE__*/ new OrthographicCamera();
+	const { _lodPlanes, _sizeLods, _sigmas } = /*@__PURE__*/ _createPlanes();
+	const _clearColor = /*@__PURE__*/ new Color();
+	let _oldTarget = null;
+
+	// Golden Ratio
+	const PHI = ( 1 + Math.sqrt( 5 ) ) / 2;
+	const INV_PHI = 1 / PHI;
+
+	// Vertices of a dodecahedron (except the opposites, which represent the
+	// same axis), used as axis directions evenly spread on a sphere.
+	const _axisDirections = [
+		/*@__PURE__*/ new Vector3( 1, 1, 1 ),
+		/*@__PURE__*/ new Vector3( - 1, 1, 1 ),
+		/*@__PURE__*/ new Vector3( 1, 1, - 1 ),
+		/*@__PURE__*/ new Vector3( - 1, 1, - 1 ),
+		/*@__PURE__*/ new Vector3( 0, PHI, INV_PHI ),
+		/*@__PURE__*/ new Vector3( 0, PHI, - INV_PHI ),
+		/*@__PURE__*/ new Vector3( INV_PHI, 0, PHI ),
+		/*@__PURE__*/ new Vector3( - INV_PHI, 0, PHI ),
+		/*@__PURE__*/ new Vector3( PHI, INV_PHI, 0 ),
+		/*@__PURE__*/ new Vector3( - PHI, INV_PHI, 0 ) ];
+
+	/**
+	 * This class generates a Prefiltered, Mipmapped Radiance Environment Map
+	 * (PMREM) from a cubeMap environment texture. This allows different levels of
+	 * blur to be quickly accessed based on material roughness. It is packed into a
+	 * special CubeUV format that allows us to perform custom interpolation so that
+	 * we can support nonlinear formats such as RGBE. Unlike a traditional mipmap
+	 * chain, it only goes down to the LOD_MIN level (above), and then creates extra
+	 * even more filtered 'mips' at the same LOD_MIN resolution, associated with
+	 * higher roughness levels. In this way we maintain resolution to smoothly
+	 * interpolate diffuse lighting while limiting sampling computation.
+	 */
+
+	function convertLinearToRGBE( color ) {
+
+		const maxComponent = Math.max( color.r, color.g, color.b );
+		const fExp = Math.min( Math.max( Math.ceil( Math.log2( maxComponent ) ), - 128.0 ), 127.0 );
+		color.multiplyScalar( Math.pow( 2.0, - fExp ) );
+
+		const alpha = ( fExp + 128.0 ) / 255.0;
+		return alpha;
+
+	}
+
+	class PMREMGenerator {
+
+		constructor( renderer ) {
+
+			this._renderer = renderer;
+			this._pingPongRenderTarget = null;
+
+			this._blurMaterial = _getBlurShader( MAX_SAMPLES );
+			this._equirectShader = null;
+			this._cubemapShader = null;
+
+			this._compileMaterial( this._blurMaterial );
+
+		}
+
+		/**
+		 * Generates a PMREM from a supplied Scene, which can be faster than using an
+		 * image if networking bandwidth is low. Optional sigma specifies a blur radius
+		 * in radians to be applied to the scene before PMREM generation. Optional near
+		 * and far planes ensure the scene is rendered in its entirety (the cubeCamera
+		 * is placed at the origin).
+		 */
+		fromScene( scene, sigma = 0, near = 0.1, far = 100 ) {
+
+			_oldTarget = this._renderer.getRenderTarget();
+			const cubeUVRenderTarget = this._allocateTargets();
+
+			this._sceneToCubeUV( scene, near, far, cubeUVRenderTarget );
+			if ( sigma > 0 ) {
+
+				this._blur( cubeUVRenderTarget, 0, 0, sigma );
+
+			}
+
+			this._applyPMREM( cubeUVRenderTarget );
+			this._cleanup( cubeUVRenderTarget );
+
+			return cubeUVRenderTarget;
+
+		}
+
+		/**
+		 * Generates a PMREM from an equirectangular texture, which can be either LDR
+		 * (RGBFormat) or HDR (RGBEFormat). The ideal input image size is 1k (1024 x 512),
+		 * as this matches best with the 256 x 256 cubemap output.
+		 */
+		fromEquirectangular( equirectangular ) {
+
+			return this._fromTexture( equirectangular );
+
+		}
+
+		/**
+		 * Generates a PMREM from an cubemap texture, which can be either LDR
+		 * (RGBFormat) or HDR (RGBEFormat). The ideal input cube size is 256 x 256,
+		 * as this matches best with the 256 x 256 cubemap output.
+		 */
+		fromCubemap( cubemap ) {
+
+			return this._fromTexture( cubemap );
+
+		}
+
+		/**
+		 * Pre-compiles the cubemap shader. You can get faster start-up by invoking this method during
+		 * your texture's network fetch for increased concurrency.
+		 */
+		compileCubemapShader() {
+
+			if ( this._cubemapShader === null ) {
+
+				this._cubemapShader = _getCubemapShader();
+				this._compileMaterial( this._cubemapShader );
+
+			}
+
+		}
+
+		/**
+		 * Pre-compiles the equirectangular shader. You can get faster start-up by invoking this method during
+		 * your texture's network fetch for increased concurrency.
+		 */
+		compileEquirectangularShader() {
+
+			if ( this._equirectShader === null ) {
+
+				this._equirectShader = _getEquirectShader();
+				this._compileMaterial( this._equirectShader );
+
+			}
+
+		}
+
+		/**
+		 * Disposes of the PMREMGenerator's internal memory. Note that PMREMGenerator is a static class,
+		 * so you should not need more than one PMREMGenerator object. If you do, calling dispose() on
+		 * one of them will cause any others to also become unusable.
+		 */
+		dispose() {
+
+			this._blurMaterial.dispose();
+
+			if ( this._cubemapShader !== null ) this._cubemapShader.dispose();
+			if ( this._equirectShader !== null ) this._equirectShader.dispose();
+
+			for ( let i = 0; i < _lodPlanes.length; i ++ ) {
+
+				_lodPlanes[ i ].dispose();
+
+			}
+
+		}
+
+		// private interface
+
+		_cleanup( outputTarget ) {
+
+			this._pingPongRenderTarget.dispose();
+			this._renderer.setRenderTarget( _oldTarget );
+			outputTarget.scissorTest = false;
+			_setViewport( outputTarget, 0, 0, outputTarget.width, outputTarget.height );
+
+		}
+
+		_fromTexture( texture ) {
+
+			_oldTarget = this._renderer.getRenderTarget();
+			const cubeUVRenderTarget = this._allocateTargets( texture );
+			this._textureToCubeUV( texture, cubeUVRenderTarget );
+			this._applyPMREM( cubeUVRenderTarget );
+			this._cleanup( cubeUVRenderTarget );
+
+			return cubeUVRenderTarget;
+
+		}
+
+		_allocateTargets( texture ) { // warning: null texture is valid
+
+			const params = {
+				magFilter: NearestFilter,
+				minFilter: NearestFilter,
+				generateMipmaps: false,
+				type: UnsignedByteType,
+				format: RGBEFormat,
+				encoding: _isLDR( texture ) ? texture.encoding : RGBEEncoding,
+				depthBuffer: false
+			};
+
+			const cubeUVRenderTarget = _createRenderTarget( params );
+			cubeUVRenderTarget.depthBuffer = texture ? false : true;
+			this._pingPongRenderTarget = _createRenderTarget( params );
+			return cubeUVRenderTarget;
+
+		}
+
+		_compileMaterial( material ) {
+
+			const tmpMesh = new Mesh( _lodPlanes[ 0 ], material );
+			this._renderer.compile( tmpMesh, _flatCamera );
+
+		}
+
+		_sceneToCubeUV( scene, near, far, cubeUVRenderTarget ) {
+
+			const fov = 90;
+			const aspect = 1;
+			const cubeCamera = new PerspectiveCamera( fov, aspect, near, far );
+			const upSign = [ 1, - 1, 1, 1, 1, 1 ];
+			const forwardSign = [ 1, 1, 1, - 1, - 1, - 1 ];
+			const renderer = this._renderer;
+
+			const originalAutoClear = renderer.autoClear;
+			const outputEncoding = renderer.outputEncoding;
+			const toneMapping = renderer.toneMapping;
+			renderer.getClearColor( _clearColor );
+
+			renderer.toneMapping = NoToneMapping;
+			renderer.outputEncoding = LinearEncoding;
+			renderer.autoClear = false;
+
+			let useSolidColor = false;
+			const background = scene.background;
+			if ( background ) {
+
+				if ( background.isColor ) {
+
+					backgroundMaterial.color.copy( background ).convertSRGBToLinear();
+					scene.background = null;
+
+					const alpha = convertLinearToRGBE( backgroundMaterial.color );
+					backgroundMaterial.opacity = alpha;
+					useSolidColor = true;
+
+				}
+
+			} else {
+
+				backgroundMaterial.color.copy( _clearColor ).convertSRGBToLinear();
+
+				const alpha = convertLinearToRGBE( backgroundMaterial.color );
+				backgroundMaterial.opacity = alpha;
+				useSolidColor = true;
+
+			}
+
+
+			for ( let i = 0; i < 6; i ++ ) {
+
+				const col = i % 3;
+				if ( col == 0 ) {
+
+					cubeCamera.up.set( 0, upSign[ i ], 0 );
+					cubeCamera.lookAt( forwardSign[ i ], 0, 0 );
+
+				} else if ( col == 1 ) {
+
+					cubeCamera.up.set( 0, 0, upSign[ i ] );
+					cubeCamera.lookAt( 0, forwardSign[ i ], 0 );
+
+				} else {
+
+					cubeCamera.up.set( 0, upSign[ i ], 0 );
+					cubeCamera.lookAt( 0, 0, forwardSign[ i ] );
+
+				}
+
+				_setViewport( cubeUVRenderTarget,
+					col * SIZE_MAX, i > 2 ? SIZE_MAX : 0, SIZE_MAX, SIZE_MAX );
+				renderer.setRenderTarget( cubeUVRenderTarget );
+
+				if ( useSolidColor ) {
+
+					renderer.render( backgroundBox, cubeCamera );
+
+				}
+
+				renderer.render( scene, cubeCamera );
+
+			}
+
+			renderer.toneMapping = toneMapping;
+			renderer.outputEncoding = outputEncoding;
+			renderer.autoClear = originalAutoClear;
+
+		}
+
+		_textureToCubeUV( texture, cubeUVRenderTarget ) {
+
+			const renderer = this._renderer;
+
+			if ( texture.isCubeTexture ) {
+
+				if ( this._cubemapShader == null ) {
+
+					this._cubemapShader = _getCubemapShader();
+
+				}
+
+			} else {
+
+				if ( this._equirectShader == null ) {
+
+					this._equirectShader = _getEquirectShader();
+
+				}
+
+			}
+
+			const material = texture.isCubeTexture ? this._cubemapShader : this._equirectShader;
+			const mesh = new Mesh( _lodPlanes[ 0 ], material );
+
+			const uniforms = material.uniforms;
+
+			uniforms[ 'envMap' ].value = texture;
+
+			if ( ! texture.isCubeTexture ) {
+
+				uniforms[ 'texelSize' ].value.set( 1.0 / texture.image.width, 1.0 / texture.image.height );
+
+			}
+
+			uniforms[ 'inputEncoding' ].value = ENCODINGS[ texture.encoding ];
+			uniforms[ 'outputEncoding' ].value = ENCODINGS[ cubeUVRenderTarget.texture.encoding ];
+
+			_setViewport( cubeUVRenderTarget, 0, 0, 3 * SIZE_MAX, 2 * SIZE_MAX );
+
+			renderer.setRenderTarget( cubeUVRenderTarget );
+			renderer.render( mesh, _flatCamera );
+
+		}
+
+		_applyPMREM( cubeUVRenderTarget ) {
+
+			const renderer = this._renderer;
+			const autoClear = renderer.autoClear;
+			renderer.autoClear = false;
+
+			for ( let i = 1; i < TOTAL_LODS; i ++ ) {
+
+				const sigma = Math.sqrt( _sigmas[ i ] * _sigmas[ i ] - _sigmas[ i - 1 ] * _sigmas[ i - 1 ] );
+
+				const poleAxis = _axisDirections[ ( i - 1 ) % _axisDirections.length ];
+
+				this._blur( cubeUVRenderTarget, i - 1, i, sigma, poleAxis );
+
+			}
+
+			renderer.autoClear = autoClear;
+
+		}
+
+		/**
+		 * This is a two-pass Gaussian blur for a cubemap. Normally this is done
+		 * vertically and horizontally, but this breaks down on a cube. Here we apply
+		 * the blur latitudinally (around the poles), and then longitudinally (towards
+		 * the poles) to approximate the orthogonally-separable blur. It is least
+		 * accurate at the poles, but still does a decent job.
+		 */
+		_blur( cubeUVRenderTarget, lodIn, lodOut, sigma, poleAxis ) {
+
+			const pingPongRenderTarget = this._pingPongRenderTarget;
+
+			this._halfBlur(
+				cubeUVRenderTarget,
+				pingPongRenderTarget,
+				lodIn,
+				lodOut,
+				sigma,
+				'latitudinal',
+				poleAxis );
+
+			this._halfBlur(
+				pingPongRenderTarget,
+				cubeUVRenderTarget,
+				lodOut,
+				lodOut,
+				sigma,
+				'longitudinal',
+				poleAxis );
+
+		}
+
+		_halfBlur( targetIn, targetOut, lodIn, lodOut, sigmaRadians, direction, poleAxis ) {
+
+			const renderer = this._renderer;
+			const blurMaterial = this._blurMaterial;
+
+			if ( direction !== 'latitudinal' && direction !== 'longitudinal' ) {
+
+				console.error(
+					'blur direction must be either latitudinal or longitudinal!' );
+
+			}
+
+			// Number of standard deviations at which to cut off the discrete approximation.
+			const STANDARD_DEVIATIONS = 3;
+
+			const blurMesh = new Mesh( _lodPlanes[ lodOut ], blurMaterial );
+			const blurUniforms = blurMaterial.uniforms;
+
+			const pixels = _sizeLods[ lodIn ] - 1;
+			const radiansPerPixel = isFinite( sigmaRadians ) ? Math.PI / ( 2 * pixels ) : 2 * Math.PI / ( 2 * MAX_SAMPLES - 1 );
+			const sigmaPixels = sigmaRadians / radiansPerPixel;
+			const samples = isFinite( sigmaRadians ) ? 1 + Math.floor( STANDARD_DEVIATIONS * sigmaPixels ) : MAX_SAMPLES;
+
+			if ( samples > MAX_SAMPLES ) {
+
+				console.warn( `sigmaRadians, ${
+				sigmaRadians}, is too large and will clip, as it requested ${
+				samples} samples when the maximum is set to ${MAX_SAMPLES}` );
+
+			}
+
+			const weights = [];
+			let sum = 0;
+
+			for ( let i = 0; i < MAX_SAMPLES; ++ i ) {
+
+				const x = i / sigmaPixels;
+				const weight = Math.exp( - x * x / 2 );
+				weights.push( weight );
+
+				if ( i == 0 ) {
+
+					sum += weight;
+
+				} else if ( i < samples ) {
+
+					sum += 2 * weight;
+
+				}
+
+			}
+
+			for ( let i = 0; i < weights.length; i ++ ) {
+
+				weights[ i ] = weights[ i ] / sum;
+
+			}
+
+			blurUniforms[ 'envMap' ].value = targetIn.texture;
+			blurUniforms[ 'samples' ].value = samples;
+			blurUniforms[ 'weights' ].value = weights;
+			blurUniforms[ 'latitudinal' ].value = direction === 'latitudinal';
+
+			if ( poleAxis ) {
+
+				blurUniforms[ 'poleAxis' ].value = poleAxis;
+
+			}
+
+			blurUniforms[ 'dTheta' ].value = radiansPerPixel;
+			blurUniforms[ 'mipInt' ].value = LOD_MAX - lodIn;
+			blurUniforms[ 'inputEncoding' ].value = ENCODINGS[ targetIn.texture.encoding ];
+			blurUniforms[ 'outputEncoding' ].value = ENCODINGS[ targetIn.texture.encoding ];
+
+			const outputSize = _sizeLods[ lodOut ];
+			const x = 3 * Math.max( 0, SIZE_MAX - 2 * outputSize );
+			const y = ( lodOut === 0 ? 0 : 2 * SIZE_MAX ) + 2 * outputSize * ( lodOut > LOD_MAX - LOD_MIN ? lodOut - LOD_MAX + LOD_MIN : 0 );
+
+			_setViewport( targetOut, x, y, 3 * outputSize, 2 * outputSize );
+			renderer.setRenderTarget( targetOut );
+			renderer.render( blurMesh, _flatCamera );
+
+		}
+
+	}
+
+	function _isLDR( texture ) {
+
+		if ( texture === undefined || texture.type !== UnsignedByteType ) return false;
+
+		return texture.encoding === LinearEncoding || texture.encoding === sRGBEncoding || texture.encoding === GammaEncoding;
+
+	}
+
+	function _createPlanes() {
+
+		const _lodPlanes = [];
+		const _sizeLods = [];
+		const _sigmas = [];
+
+		let lod = LOD_MAX;
+
+		for ( let i = 0; i < TOTAL_LODS; i ++ ) {
+
+			const sizeLod = Math.pow( 2, lod );
+			_sizeLods.push( sizeLod );
+			let sigma = 1.0 / sizeLod;
+
+			if ( i > LOD_MAX - LOD_MIN ) {
+
+				sigma = EXTRA_LOD_SIGMA[ i - LOD_MAX + LOD_MIN - 1 ];
+
+			} else if ( i == 0 ) {
+
+				sigma = 0;
+
+			}
+
+			_sigmas.push( sigma );
+
+			const texelSize = 1.0 / ( sizeLod - 1 );
+			const min = - texelSize / 2;
+			const max = 1 + texelSize / 2;
+			const uv1 = [ min, min, max, min, max, max, min, min, max, max, min, max ];
+
+			const cubeFaces = 6;
+			const vertices = 6;
+			const positionSize = 3;
+			const uvSize = 2;
+			const faceIndexSize = 1;
+
+			const position = new Float32Array( positionSize * vertices * cubeFaces );
+			const uv = new Float32Array( uvSize * vertices * cubeFaces );
+			const faceIndex = new Float32Array( faceIndexSize * vertices * cubeFaces );
+
+			for ( let face = 0; face < cubeFaces; face ++ ) {
+
+				const x = ( face % 3 ) * 2 / 3 - 1;
+				const y = face > 2 ? 0 : - 1;
+				const coordinates = [
+					x, y, 0,
+					x + 2 / 3, y, 0,
+					x + 2 / 3, y + 1, 0,
+					x, y, 0,
+					x + 2 / 3, y + 1, 0,
+					x, y + 1, 0
+				];
+				position.set( coordinates, positionSize * vertices * face );
+				uv.set( uv1, uvSize * vertices * face );
+				const fill = [ face, face, face, face, face, face ];
+				faceIndex.set( fill, faceIndexSize * vertices * face );
+
+			}
+
+			const planes = new BufferGeometry();
+			planes.setAttribute( 'position', new BufferAttribute( position, positionSize ) );
+			planes.setAttribute( 'uv', new BufferAttribute( uv, uvSize ) );
+			planes.setAttribute( 'faceIndex', new BufferAttribute( faceIndex, faceIndexSize ) );
+			_lodPlanes.push( planes );
+
+			if ( lod > LOD_MIN ) {
+
+				lod --;
+
+			}
+
+		}
+
+		return { _lodPlanes, _sizeLods, _sigmas };
+
+	}
+
+	function _createRenderTarget( params ) {
+
+		const cubeUVRenderTarget = new WebGLRenderTarget( 3 * SIZE_MAX, 3 * SIZE_MAX, params );
+		cubeUVRenderTarget.texture.mapping = CubeUVReflectionMapping;
+		cubeUVRenderTarget.texture.name = 'PMREM.cubeUv';
+		cubeUVRenderTarget.scissorTest = true;
+		return cubeUVRenderTarget;
+
+	}
+
+	function _setViewport( target, x, y, width, height ) {
+
+		target.viewport.set( x, y, width, height );
+		target.scissor.set( x, y, width, height );
+
+	}
+
+	function _getBlurShader( maxSamples ) {
+
+		const weights = new Float32Array( maxSamples );
+		const poleAxis = new Vector3( 0, 1, 0 );
+		const shaderMaterial = new RawShaderMaterial( {
+
+			name: 'SphericalGaussianBlur',
+
+			defines: { 'n': maxSamples },
+
+			uniforms: {
+				'envMap': { value: null },
+				'samples': { value: 1 },
+				'weights': { value: weights },
+				'latitudinal': { value: false },
+				'dTheta': { value: 0 },
+				'mipInt': { value: 0 },
+				'poleAxis': { value: poleAxis },
+				'inputEncoding': { value: ENCODINGS[ LinearEncoding ] },
+				'outputEncoding': { value: ENCODINGS[ LinearEncoding ] }
+			},
+
+			vertexShader: _getCommonVertexShader(),
+
+			fragmentShader: /* glsl */`
+
+			precision mediump float;
+			precision mediump int;
+
+			varying vec3 vOutputDirection;
+
+			uniform sampler2D envMap;
+			uniform int samples;
+			uniform float weights[ n ];
+			uniform bool latitudinal;
+			uniform float dTheta;
+			uniform float mipInt;
+			uniform vec3 poleAxis;
+
+			${ _getEncodings() }
+
+			#define ENVMAP_TYPE_CUBE_UV
+			#include <cube_uv_reflection_fragment>
+
+			vec3 getSample( float theta, vec3 axis ) {
+
+				float cosTheta = cos( theta );
+				// Rodrigues' axis-angle rotation
+				vec3 sampleDirection = vOutputDirection * cosTheta
+					+ cross( axis, vOutputDirection ) * sin( theta )
+					+ axis * dot( axis, vOutputDirection ) * ( 1.0 - cosTheta );
+
+				return bilinearCubeUV( envMap, sampleDirection, mipInt );
+
+			}
+
+			void main() {
+
+				vec3 axis = latitudinal ? poleAxis : cross( poleAxis, vOutputDirection );
+
+				if ( all( equal( axis, vec3( 0.0 ) ) ) ) {
+
+					axis = vec3( vOutputDirection.z, 0.0, - vOutputDirection.x );
+
+				}
+
+				axis = normalize( axis );
+
+				gl_FragColor = vec4( 0.0, 0.0, 0.0, 1.0 );
+				gl_FragColor.rgb += weights[ 0 ] * getSample( 0.0, axis );
+
+				for ( int i = 1; i < n; i++ ) {
+
+					if ( i >= samples ) {
+
+						break;
+
+					}
+
+					float theta = dTheta * float( i );
+					gl_FragColor.rgb += weights[ i ] * getSample( -1.0 * theta, axis );
+					gl_FragColor.rgb += weights[ i ] * getSample( theta, axis );
+
+				}
+
+				gl_FragColor = linearToOutputTexel( gl_FragColor );
+
+			}
+		`,
+
+			blending: NoBlending,
+			depthTest: false,
+			depthWrite: false
+
+		} );
+
+		return shaderMaterial;
+
+	}
+
+	function _getEquirectShader() {
+
+		const texelSize = new Vector2( 1, 1 );
+		const shaderMaterial = new RawShaderMaterial( {
+
+			name: 'EquirectangularToCubeUV',
+
+			uniforms: {
+				'envMap': { value: null },
+				'texelSize': { value: texelSize },
+				'inputEncoding': { value: ENCODINGS[ LinearEncoding ] },
+				'outputEncoding': { value: ENCODINGS[ LinearEncoding ] }
+			},
+
+			vertexShader: _getCommonVertexShader(),
+
+			fragmentShader: /* glsl */`
+
+			precision mediump float;
+			precision mediump int;
+
+			varying vec3 vOutputDirection;
+
+			uniform sampler2D envMap;
+			uniform vec2 texelSize;
+
+			${ _getEncodings() }
+
+			#include <common>
+
+			void main() {
+
+				gl_FragColor = vec4( 0.0, 0.0, 0.0, 1.0 );
+
+				vec3 outputDirection = normalize( vOutputDirection );
+				vec2 uv = equirectUv( outputDirection );
+
+				vec2 f = fract( uv / texelSize - 0.5 );
+				uv -= f * texelSize;
+				vec3 tl = envMapTexelToLinear( texture2D ( envMap, uv ) ).rgb;
+				uv.x += texelSize.x;
+				vec3 tr = envMapTexelToLinear( texture2D ( envMap, uv ) ).rgb;
+				uv.y += texelSize.y;
+				vec3 br = envMapTexelToLinear( texture2D ( envMap, uv ) ).rgb;
+				uv.x -= texelSize.x;
+				vec3 bl = envMapTexelToLinear( texture2D ( envMap, uv ) ).rgb;
+
+				vec3 tm = mix( tl, tr, f.x );
+				vec3 bm = mix( bl, br, f.x );
+				gl_FragColor.rgb = mix( tm, bm, f.y );
+
+				gl_FragColor = linearToOutputTexel( gl_FragColor );
+
+			}
+		`,
+
+			blending: NoBlending,
+			depthTest: false,
+			depthWrite: false
+
+		} );
+
+		return shaderMaterial;
+
+	}
+
+	function _getCubemapShader() {
+
+		const shaderMaterial = new RawShaderMaterial( {
+
+			name: 'CubemapToCubeUV',
+
+			uniforms: {
+				'envMap': { value: null },
+				'inputEncoding': { value: ENCODINGS[ LinearEncoding ] },
+				'outputEncoding': { value: ENCODINGS[ LinearEncoding ] }
+			},
+
+			vertexShader: _getCommonVertexShader(),
+
+			fragmentShader: /* glsl */`
+
+			precision mediump float;
+			precision mediump int;
+
+			varying vec3 vOutputDirection;
+
+			uniform samplerCube envMap;
+
+			${ _getEncodings() }
+
+			void main() {
+
+				gl_FragColor = vec4( 0.0, 0.0, 0.0, 1.0 );
+				gl_FragColor.rgb = envMapTexelToLinear( textureCube( envMap, vec3( - vOutputDirection.x, vOutputDirection.yz ) ) ).rgb;
+				gl_FragColor = linearToOutputTexel( gl_FragColor );
+
+			}
+		`,
+
+			blending: NoBlending,
+			depthTest: false,
+			depthWrite: false
+
+		} );
+
+		return shaderMaterial;
+
+	}
+
+	function _getCommonVertexShader() {
+
+		return /* glsl */`
+
+		precision mediump float;
+		precision mediump int;
+
+		attribute vec3 position;
+		attribute vec2 uv;
+		attribute float faceIndex;
+
+		varying vec3 vOutputDirection;
+
+		// RH coordinate system; PMREM face-indexing convention
+		vec3 getDirection( vec2 uv, float face ) {
+
+			uv = 2.0 * uv - 1.0;
+
+			vec3 direction = vec3( uv, 1.0 );
+
+			if ( face == 0.0 ) {
+
+				direction = direction.zyx; // ( 1, v, u ) pos x
+
+			} else if ( face == 1.0 ) {
+
+				direction = direction.xzy;
+				direction.xz *= -1.0; // ( -u, 1, -v ) pos y
+
+			} else if ( face == 2.0 ) {
+
+				direction.x *= -1.0; // ( -u, v, 1 ) pos z
+
+			} else if ( face == 3.0 ) {
+
+				direction = direction.zyx;
+				direction.xz *= -1.0; // ( -1, v, -u ) neg x
+
+			} else if ( face == 4.0 ) {
+
+				direction = direction.xzy;
+				direction.xy *= -1.0; // ( -u, -1, v ) neg y
+
+			} else if ( face == 5.0 ) {
+
+				direction.z *= -1.0; // ( u, v, -1 ) neg z
+
+			}
+
+			return direction;
+
+		}
+
+		void main() {
+
+			vOutputDirection = getDirection( uv, faceIndex );
+			gl_Position = vec4( position, 1.0 );
+
+		}
+	`;
+
+	}
+
+	function _getEncodings() {
+
+		return /* glsl */`
+
+		uniform int inputEncoding;
+		uniform int outputEncoding;
+
+		#include <encodings_pars_fragment>
+
+		vec4 inputTexelToLinear( vec4 value ) {
+
+			if ( inputEncoding == 0 ) {
+
+				return value;
+
+			} else if ( inputEncoding == 1 ) {
+
+				return sRGBToLinear( value );
+
+			} else if ( inputEncoding == 2 ) {
+
+				return RGBEToLinear( value );
+
+			} else if ( inputEncoding == 3 ) {
+
+				return RGBMToLinear( value, 7.0 );
+
+			} else if ( inputEncoding == 4 ) {
+
+				return RGBMToLinear( value, 16.0 );
+
+			} else if ( inputEncoding == 5 ) {
+
+				return RGBDToLinear( value, 256.0 );
+
+			} else {
+
+				return GammaToLinear( value, 2.2 );
+
+			}
+
+		}
+
+		vec4 linearToOutputTexel( vec4 value ) {
+
+			if ( outputEncoding == 0 ) {
+
+				return value;
+
+			} else if ( outputEncoding == 1 ) {
+
+				return LinearTosRGB( value );
+
+			} else if ( outputEncoding == 2 ) {
+
+				return LinearToRGBE( value );
+
+			} else if ( outputEncoding == 3 ) {
+
+				return LinearToRGBM( value, 7.0 );
+
+			} else if ( outputEncoding == 4 ) {
+
+				return LinearToRGBM( value, 16.0 );
+
+			} else if ( outputEncoding == 5 ) {
+
+				return LinearToRGBD( value, 256.0 );
+
+			} else {
+
+				return LinearToGamma( value, 2.2 );
+
+			}
+
+		}
+
+		vec4 envMapTexelToLinear( vec4 color ) {
+
+			return inputTexelToLinear( color );
+
+		}
+	`;
+
+	}
+
+	const LineStrip = 0;
+	const LinePieces = 1;
+	const NoColors = 0;
+	const FaceColors = 1;
+	const VertexColors = 2;
+
+	function MeshFaceMaterial( materials ) {
+
+		console.warn( 'THREE.MeshFaceMaterial has been removed. Use an Array instead.' );
+		return materials;
+
+	}
+
+	function MultiMaterial( materials = [] ) {
+
+		console.warn( 'THREE.MultiMaterial has been removed. Use an Array instead.' );
+		materials.isMultiMaterial = true;
+		materials.materials = materials;
+		materials.clone = function () {
+
+			return materials.slice();
+
+		};
+
+		return materials;
+
+	}
+
+	function PointCloud( geometry, material ) {
+
+		console.warn( 'THREE.PointCloud has been renamed to THREE.Points.' );
+		return new Points( geometry, material );
+
+	}
+
+	function Particle( material ) {
+
+		console.warn( 'THREE.Particle has been renamed to THREE.Sprite.' );
+		return new Sprite( material );
+
+	}
+
+	function ParticleSystem( geometry, material ) {
+
+		console.warn( 'THREE.ParticleSystem has been renamed to THREE.Points.' );
+		return new Points( geometry, material );
+
+	}
+
+	function PointCloudMaterial( parameters ) {
+
+		console.warn( 'THREE.PointCloudMaterial has been renamed to THREE.PointsMaterial.' );
+		return new PointsMaterial( parameters );
+
+	}
+
+	function ParticleBasicMaterial( parameters ) {
+
+		console.warn( 'THREE.ParticleBasicMaterial has been renamed to THREE.PointsMaterial.' );
+		return new PointsMaterial( parameters );
+
+	}
+
+	function ParticleSystemMaterial( parameters ) {
+
+		console.warn( 'THREE.ParticleSystemMaterial has been renamed to THREE.PointsMaterial.' );
+		return new PointsMaterial( parameters );
+
+	}
+
+	function Vertex( x, y, z ) {
+
+		console.warn( 'THREE.Vertex has been removed. Use THREE.Vector3 instead.' );
+		return new Vector3( x, y, z );
+
+	}
+
+	//
+
+	function DynamicBufferAttribute( array, itemSize ) {
+
+		console.warn( 'THREE.DynamicBufferAttribute has been removed. Use new THREE.BufferAttribute().setUsage( THREE.DynamicDrawUsage ) instead.' );
+		return new BufferAttribute( array, itemSize ).setUsage( DynamicDrawUsage );
+
+	}
+
+	function Int8Attribute( array, itemSize ) {
+
+		console.warn( 'THREE.Int8Attribute has been removed. Use new THREE.Int8BufferAttribute() instead.' );
+		return new Int8BufferAttribute( array, itemSize );
+
+	}
+
+	function Uint8Attribute( array, itemSize ) {
+
+		console.warn( 'THREE.Uint8Attribute has been removed. Use new THREE.Uint8BufferAttribute() instead.' );
+		return new Uint8BufferAttribute( array, itemSize );
+
+	}
+
+	function Uint8ClampedAttribute( array, itemSize ) {
+
+		console.warn( 'THREE.Uint8ClampedAttribute has been removed. Use new THREE.Uint8ClampedBufferAttribute() instead.' );
+		return new Uint8ClampedBufferAttribute( array, itemSize );
+
+	}
+
+	function Int16Attribute( array, itemSize ) {
+
+		console.warn( 'THREE.Int16Attribute has been removed. Use new THREE.Int16BufferAttribute() instead.' );
+		return new Int16BufferAttribute( array, itemSize );
+
+	}
+
+	function Uint16Attribute( array, itemSize ) {
+
+		console.warn( 'THREE.Uint16Attribute has been removed. Use new THREE.Uint16BufferAttribute() instead.' );
+		return new Uint16BufferAttribute( array, itemSize );
+
+	}
+
+	function Int32Attribute( array, itemSize ) {
+
+		console.warn( 'THREE.Int32Attribute has been removed. Use new THREE.Int32BufferAttribute() instead.' );
+		return new Int32BufferAttribute( array, itemSize );
+
+	}
+
+	function Uint32Attribute( array, itemSize ) {
+
+		console.warn( 'THREE.Uint32Attribute has been removed. Use new THREE.Uint32BufferAttribute() instead.' );
+		return new Uint32BufferAttribute( array, itemSize );
+
+	}
+
+	function Float32Attribute( array, itemSize ) {
+
+		console.warn( 'THREE.Float32Attribute has been removed. Use new THREE.Float32BufferAttribute() instead.' );
+		return new Float32BufferAttribute( array, itemSize );
+
+	}
+
+	function Float64Attribute( array, itemSize ) {
+
+		console.warn( 'THREE.Float64Attribute has been removed. Use new THREE.Float64BufferAttribute() instead.' );
+		return new Float64BufferAttribute( array, itemSize );
+
+	}
 
 	//
 
@@ -39522,6 +47030,48 @@
 
 	//
 
+	function AxisHelper( size ) {
+
+		console.warn( 'THREE.AxisHelper has been renamed to THREE.AxesHelper.' );
+		return new AxesHelper( size );
+
+	}
+
+	function BoundingBoxHelper( object, color ) {
+
+		console.warn( 'THREE.BoundingBoxHelper has been deprecated. Creating a THREE.BoxHelper instead.' );
+		return new BoxHelper( object, color );
+
+	}
+
+	function EdgesHelper( object, hex ) {
+
+		console.warn( 'THREE.EdgesHelper has been removed. Use THREE.EdgesGeometry instead.' );
+		return new LineSegments( new EdgesGeometry( object.geometry ), new LineBasicMaterial( { color: hex !== undefined ? hex : 0xffffff } ) );
+
+	}
+
+	GridHelper.prototype.setColors = function () {
+
+		console.error( 'THREE.GridHelper: setColors() has been deprecated, pass them in the constructor instead.' );
+
+	};
+
+	SkeletonHelper.prototype.update = function () {
+
+		console.error( 'THREE.SkeletonHelper: update() no longer needs to be called.' );
+
+	};
+
+	function WireframeHelper( object, hex ) {
+
+		console.warn( 'THREE.WireframeHelper has been removed. Use THREE.WireframeGeometry instead.' );
+		return new LineSegments( new WireframeGeometry( object.geometry ), new LineBasicMaterial( { color: hex !== undefined ? hex : 0xffffff } ) );
+
+	}
+
+	//
+
 	Object.assign( Loader.prototype, {
 
 		extractUrlBase: function ( url ) {
@@ -39548,6 +47098,20 @@
 		}
 
 	};
+
+	function XHRLoader( manager ) {
+
+		console.warn( 'THREE.XHRLoader has been renamed to THREE.FileLoader.' );
+		return new FileLoader( manager );
+
+	}
+
+	function BinaryTextureLoader( manager ) {
+
+		console.warn( 'THREE.BinaryTextureLoader has been renamed to THREE.DataTextureLoader.' );
+		return new DataTextureLoader( manager );
+
+	}
 
 	//
 
@@ -39628,6 +47192,13 @@
 
 		console.warn( 'THREE.Frustum: .setFromMatrix() has been renamed to .setFromProjectionMatrix().' );
 		return this.setFromProjectionMatrix( m );
+
+	};
+
+	Line3.prototype.center = function ( optionalTarget ) {
+
+		console.warn( 'THREE.Line3: .center() has been renamed to .getCenter().' );
+		return this.getCenter( optionalTarget );
 
 	};
 
@@ -40978,6 +48549,13 @@
 
 	} );
 
+	function WebGLRenderTargetCube( width, height, options ) {
+
+		console.warn( 'THREE.WebGLRenderTargetCube( width, height, options ) is now WebGLCubeRenderTarget( size, options ).' );
+		return new WebGLCubeRenderTarget( width, options );
+
+	}
+
 	//
 
 	Object.defineProperties( WebGLRenderTarget.prototype, {
@@ -41154,6 +48732,13 @@
 
 	} );
 
+	AudioAnalyser.prototype.getData = function () {
+
+		console.warn( 'THREE.AudioAnalyser: .getData() is now .getFrequencyData().' );
+		return this.getFrequencyData();
+
+	};
+
 	//
 
 	CubeCamera.prototype.updateCubeMap = function ( renderer, scene ) {
@@ -41214,6 +48799,54 @@
 
 	};
 
+	//
+
+	function CanvasRenderer() {
+
+		console.error( 'THREE.CanvasRenderer has been removed' );
+
+	}
+
+	//
+
+	function JSONLoader() {
+
+		console.error( 'THREE.JSONLoader has been removed.' );
+
+	}
+
+	//
+
+	const SceneUtils = {
+
+		createMultiMaterialObject: function ( /* geometry, materials */ ) {
+
+			console.error( 'THREE.SceneUtils has been moved to /examples/jsm/utils/SceneUtils.js' );
+
+		},
+
+		detach: function ( /* child, parent, scene */ ) {
+
+			console.error( 'THREE.SceneUtils has been moved to /examples/jsm/utils/SceneUtils.js' );
+
+		},
+
+		attach: function ( /* child, scene, parent */ ) {
+
+			console.error( 'THREE.SceneUtils has been moved to /examples/jsm/utils/SceneUtils.js' );
+
+		}
+
+	};
+
+	//
+
+	function LensFlare() {
+
+		console.error( 'THREE.LensFlare has been moved to /examples/jsm/objects/Lensflare.js' );
+
+	}
+
 	if ( typeof __THREE_DEVTOOLS__ !== 'undefined' ) {
 
 		/* eslint-disable no-undef */
@@ -41237,6 +48870,469 @@
 		}
 
 	}
+
+	var THREE = /*#__PURE__*/Object.freeze({
+		__proto__: null,
+		ACESFilmicToneMapping: ACESFilmicToneMapping,
+		AddEquation: AddEquation,
+		AddOperation: AddOperation,
+		AdditiveAnimationBlendMode: AdditiveAnimationBlendMode,
+		AdditiveBlending: AdditiveBlending,
+		AlphaFormat: AlphaFormat,
+		AlwaysDepth: AlwaysDepth,
+		AlwaysStencilFunc: AlwaysStencilFunc,
+		AmbientLight: AmbientLight,
+		AmbientLightProbe: AmbientLightProbe,
+		AnimationClip: AnimationClip,
+		AnimationLoader: AnimationLoader,
+		AnimationMixer: AnimationMixer,
+		AnimationObjectGroup: AnimationObjectGroup,
+		AnimationUtils: AnimationUtils,
+		ArcCurve: ArcCurve,
+		ArrayCamera: ArrayCamera,
+		ArrowHelper: ArrowHelper,
+		Audio: Audio,
+		AudioAnalyser: AudioAnalyser,
+		AudioContext: AudioContext,
+		AudioListener: AudioListener,
+		AudioLoader: AudioLoader,
+		AxesHelper: AxesHelper,
+		AxisHelper: AxisHelper,
+		BackSide: BackSide,
+		BasicDepthPacking: BasicDepthPacking,
+		BasicShadowMap: BasicShadowMap,
+		BinaryTextureLoader: BinaryTextureLoader,
+		Bone: Bone,
+		BooleanKeyframeTrack: BooleanKeyframeTrack,
+		BoundingBoxHelper: BoundingBoxHelper,
+		Box2: Box2,
+		Box3: Box3,
+		Box3Helper: Box3Helper,
+		BoxBufferGeometry: BoxGeometry,
+		BoxGeometry: BoxGeometry,
+		BoxHelper: BoxHelper,
+		BufferAttribute: BufferAttribute,
+		BufferGeometry: BufferGeometry,
+		BufferGeometryLoader: BufferGeometryLoader,
+		ByteType: ByteType,
+		Cache: Cache,
+		Camera: Camera,
+		CameraHelper: CameraHelper,
+		CanvasRenderer: CanvasRenderer,
+		CanvasTexture: CanvasTexture,
+		CatmullRomCurve3: CatmullRomCurve3,
+		CineonToneMapping: CineonToneMapping,
+		CircleBufferGeometry: CircleGeometry,
+		CircleGeometry: CircleGeometry,
+		ClampToEdgeWrapping: ClampToEdgeWrapping,
+		Clock: Clock,
+		Color: Color,
+		ColorKeyframeTrack: ColorKeyframeTrack,
+		CompressedTexture: CompressedTexture,
+		CompressedTextureLoader: CompressedTextureLoader,
+		ConeBufferGeometry: ConeGeometry,
+		ConeGeometry: ConeGeometry,
+		CubeCamera: CubeCamera,
+		CubeReflectionMapping: CubeReflectionMapping,
+		CubeRefractionMapping: CubeRefractionMapping,
+		CubeTexture: CubeTexture,
+		CubeTextureLoader: CubeTextureLoader,
+		CubeUVReflectionMapping: CubeUVReflectionMapping,
+		CubeUVRefractionMapping: CubeUVRefractionMapping,
+		CubicBezierCurve: CubicBezierCurve,
+		CubicBezierCurve3: CubicBezierCurve3,
+		CubicInterpolant: CubicInterpolant,
+		CullFaceBack: CullFaceBack,
+		CullFaceFront: CullFaceFront,
+		CullFaceFrontBack: CullFaceFrontBack,
+		CullFaceNone: CullFaceNone,
+		Curve: Curve,
+		CurvePath: CurvePath,
+		CustomBlending: CustomBlending,
+		CustomToneMapping: CustomToneMapping,
+		CylinderBufferGeometry: CylinderGeometry,
+		CylinderGeometry: CylinderGeometry,
+		Cylindrical: Cylindrical,
+		DataTexture: DataTexture,
+		DataTexture2DArray: DataTexture2DArray,
+		DataTexture3D: DataTexture3D,
+		DataTextureLoader: DataTextureLoader,
+		DataUtils: DataUtils,
+		DecrementStencilOp: DecrementStencilOp,
+		DecrementWrapStencilOp: DecrementWrapStencilOp,
+		DefaultLoadingManager: DefaultLoadingManager,
+		DepthFormat: DepthFormat,
+		DepthStencilFormat: DepthStencilFormat,
+		DepthTexture: DepthTexture,
+		DirectionalLight: DirectionalLight,
+		DirectionalLightHelper: DirectionalLightHelper,
+		DiscreteInterpolant: DiscreteInterpolant,
+		DodecahedronBufferGeometry: DodecahedronGeometry,
+		DodecahedronGeometry: DodecahedronGeometry,
+		DoubleSide: DoubleSide,
+		DstAlphaFactor: DstAlphaFactor,
+		DstColorFactor: DstColorFactor,
+		DynamicBufferAttribute: DynamicBufferAttribute,
+		DynamicCopyUsage: DynamicCopyUsage,
+		DynamicDrawUsage: DynamicDrawUsage,
+		DynamicReadUsage: DynamicReadUsage,
+		EdgesGeometry: EdgesGeometry,
+		EdgesHelper: EdgesHelper,
+		EllipseCurve: EllipseCurve,
+		EqualDepth: EqualDepth,
+		EqualStencilFunc: EqualStencilFunc,
+		EquirectangularReflectionMapping: EquirectangularReflectionMapping,
+		EquirectangularRefractionMapping: EquirectangularRefractionMapping,
+		Euler: Euler,
+		EventDispatcher: EventDispatcher,
+		ExtrudeBufferGeometry: ExtrudeGeometry,
+		ExtrudeGeometry: ExtrudeGeometry,
+		FaceColors: FaceColors,
+		FileLoader: FileLoader,
+		FlatShading: FlatShading,
+		Float16BufferAttribute: Float16BufferAttribute,
+		Float32Attribute: Float32Attribute,
+		Float32BufferAttribute: Float32BufferAttribute,
+		Float64Attribute: Float64Attribute,
+		Float64BufferAttribute: Float64BufferAttribute,
+		FloatType: FloatType,
+		Fog: Fog,
+		FogExp2: FogExp2,
+		Font: Font,
+		FontLoader: FontLoader,
+		FrontSide: FrontSide,
+		Frustum: Frustum,
+		GLBufferAttribute: GLBufferAttribute,
+		GLSL1: GLSL1,
+		GLSL3: GLSL3,
+		GammaEncoding: GammaEncoding,
+		GreaterDepth: GreaterDepth,
+		GreaterEqualDepth: GreaterEqualDepth,
+		GreaterEqualStencilFunc: GreaterEqualStencilFunc,
+		GreaterStencilFunc: GreaterStencilFunc,
+		GridHelper: GridHelper,
+		Group: Group,
+		HalfFloatType: HalfFloatType,
+		HemisphereLight: HemisphereLight,
+		HemisphereLightHelper: HemisphereLightHelper,
+		HemisphereLightProbe: HemisphereLightProbe,
+		IcosahedronBufferGeometry: IcosahedronGeometry,
+		IcosahedronGeometry: IcosahedronGeometry,
+		ImageBitmapLoader: ImageBitmapLoader,
+		ImageLoader: ImageLoader,
+		ImageUtils: ImageUtils,
+		ImmediateRenderObject: ImmediateRenderObject,
+		IncrementStencilOp: IncrementStencilOp,
+		IncrementWrapStencilOp: IncrementWrapStencilOp,
+		InstancedBufferAttribute: InstancedBufferAttribute,
+		InstancedBufferGeometry: InstancedBufferGeometry,
+		InstancedInterleavedBuffer: InstancedInterleavedBuffer,
+		InstancedMesh: InstancedMesh,
+		Int16Attribute: Int16Attribute,
+		Int16BufferAttribute: Int16BufferAttribute,
+		Int32Attribute: Int32Attribute,
+		Int32BufferAttribute: Int32BufferAttribute,
+		Int8Attribute: Int8Attribute,
+		Int8BufferAttribute: Int8BufferAttribute,
+		IntType: IntType,
+		InterleavedBuffer: InterleavedBuffer,
+		InterleavedBufferAttribute: InterleavedBufferAttribute,
+		Interpolant: Interpolant,
+		InterpolateDiscrete: InterpolateDiscrete,
+		InterpolateLinear: InterpolateLinear,
+		InterpolateSmooth: InterpolateSmooth,
+		InvertStencilOp: InvertStencilOp,
+		JSONLoader: JSONLoader,
+		KeepStencilOp: KeepStencilOp,
+		KeyframeTrack: KeyframeTrack,
+		LOD: LOD,
+		LatheBufferGeometry: LatheGeometry,
+		LatheGeometry: LatheGeometry,
+		Layers: Layers,
+		LensFlare: LensFlare,
+		LessDepth: LessDepth,
+		LessEqualDepth: LessEqualDepth,
+		LessEqualStencilFunc: LessEqualStencilFunc,
+		LessStencilFunc: LessStencilFunc,
+		Light: Light,
+		LightProbe: LightProbe,
+		Line: Line,
+		Line3: Line3,
+		LineBasicMaterial: LineBasicMaterial,
+		LineCurve: LineCurve,
+		LineCurve3: LineCurve3,
+		LineDashedMaterial: LineDashedMaterial,
+		LineLoop: LineLoop,
+		LinePieces: LinePieces,
+		LineSegments: LineSegments,
+		LineStrip: LineStrip,
+		LinearEncoding: LinearEncoding,
+		LinearFilter: LinearFilter,
+		LinearInterpolant: LinearInterpolant,
+		LinearMipMapLinearFilter: LinearMipMapLinearFilter,
+		LinearMipMapNearestFilter: LinearMipMapNearestFilter,
+		LinearMipmapLinearFilter: LinearMipmapLinearFilter,
+		LinearMipmapNearestFilter: LinearMipmapNearestFilter,
+		LinearToneMapping: LinearToneMapping,
+		Loader: Loader,
+		LoaderUtils: LoaderUtils,
+		LoadingManager: LoadingManager,
+		LogLuvEncoding: LogLuvEncoding,
+		LoopOnce: LoopOnce,
+		LoopPingPong: LoopPingPong,
+		LoopRepeat: LoopRepeat,
+		LuminanceAlphaFormat: LuminanceAlphaFormat,
+		LuminanceFormat: LuminanceFormat,
+		MOUSE: MOUSE,
+		Material: Material,
+		MaterialLoader: MaterialLoader,
+		Math: MathUtils,
+		MathUtils: MathUtils,
+		Matrix3: Matrix3,
+		Matrix4: Matrix4,
+		MaxEquation: MaxEquation,
+		Mesh: Mesh,
+		MeshBasicMaterial: MeshBasicMaterial,
+		MeshDepthMaterial: MeshDepthMaterial,
+		MeshDistanceMaterial: MeshDistanceMaterial,
+		MeshFaceMaterial: MeshFaceMaterial,
+		MeshLambertMaterial: MeshLambertMaterial,
+		MeshMatcapMaterial: MeshMatcapMaterial,
+		MeshNormalMaterial: MeshNormalMaterial,
+		MeshPhongMaterial: MeshPhongMaterial,
+		MeshPhysicalMaterial: MeshPhysicalMaterial,
+		MeshStandardMaterial: MeshStandardMaterial,
+		MeshToonMaterial: MeshToonMaterial,
+		MinEquation: MinEquation,
+		MirroredRepeatWrapping: MirroredRepeatWrapping,
+		MixOperation: MixOperation,
+		MultiMaterial: MultiMaterial,
+		MultiplyBlending: MultiplyBlending,
+		MultiplyOperation: MultiplyOperation,
+		NearestFilter: NearestFilter,
+		NearestMipMapLinearFilter: NearestMipMapLinearFilter,
+		NearestMipMapNearestFilter: NearestMipMapNearestFilter,
+		NearestMipmapLinearFilter: NearestMipmapLinearFilter,
+		NearestMipmapNearestFilter: NearestMipmapNearestFilter,
+		NeverDepth: NeverDepth,
+		NeverStencilFunc: NeverStencilFunc,
+		NoBlending: NoBlending,
+		NoColors: NoColors,
+		NoToneMapping: NoToneMapping,
+		NormalAnimationBlendMode: NormalAnimationBlendMode,
+		NormalBlending: NormalBlending,
+		NotEqualDepth: NotEqualDepth,
+		NotEqualStencilFunc: NotEqualStencilFunc,
+		NumberKeyframeTrack: NumberKeyframeTrack,
+		Object3D: Object3D,
+		ObjectLoader: ObjectLoader,
+		ObjectSpaceNormalMap: ObjectSpaceNormalMap,
+		OctahedronBufferGeometry: OctahedronGeometry,
+		OctahedronGeometry: OctahedronGeometry,
+		OneFactor: OneFactor,
+		OneMinusDstAlphaFactor: OneMinusDstAlphaFactor,
+		OneMinusDstColorFactor: OneMinusDstColorFactor,
+		OneMinusSrcAlphaFactor: OneMinusSrcAlphaFactor,
+		OneMinusSrcColorFactor: OneMinusSrcColorFactor,
+		OrthographicCamera: OrthographicCamera,
+		PCFShadowMap: PCFShadowMap,
+		PCFSoftShadowMap: PCFSoftShadowMap,
+		PMREMGenerator: PMREMGenerator,
+		ParametricBufferGeometry: ParametricGeometry,
+		ParametricGeometry: ParametricGeometry,
+		Particle: Particle,
+		ParticleBasicMaterial: ParticleBasicMaterial,
+		ParticleSystem: ParticleSystem,
+		ParticleSystemMaterial: ParticleSystemMaterial,
+		Path: Path,
+		PerspectiveCamera: PerspectiveCamera,
+		Plane: Plane,
+		PlaneBufferGeometry: PlaneGeometry,
+		PlaneGeometry: PlaneGeometry,
+		PlaneHelper: PlaneHelper,
+		PointCloud: PointCloud,
+		PointCloudMaterial: PointCloudMaterial,
+		PointLight: PointLight,
+		PointLightHelper: PointLightHelper,
+		Points: Points,
+		PointsMaterial: PointsMaterial,
+		PolarGridHelper: PolarGridHelper,
+		PolyhedronBufferGeometry: PolyhedronGeometry,
+		PolyhedronGeometry: PolyhedronGeometry,
+		PositionalAudio: PositionalAudio,
+		PropertyBinding: PropertyBinding,
+		PropertyMixer: PropertyMixer,
+		QuadraticBezierCurve: QuadraticBezierCurve,
+		QuadraticBezierCurve3: QuadraticBezierCurve3,
+		Quaternion: Quaternion,
+		QuaternionKeyframeTrack: QuaternionKeyframeTrack,
+		QuaternionLinearInterpolant: QuaternionLinearInterpolant,
+		REVISION: REVISION,
+		RGBADepthPacking: RGBADepthPacking,
+		RGBAFormat: RGBAFormat,
+		RGBAIntegerFormat: RGBAIntegerFormat,
+		RGBA_ASTC_10x10_Format: RGBA_ASTC_10x10_Format,
+		RGBA_ASTC_10x5_Format: RGBA_ASTC_10x5_Format,
+		RGBA_ASTC_10x6_Format: RGBA_ASTC_10x6_Format,
+		RGBA_ASTC_10x8_Format: RGBA_ASTC_10x8_Format,
+		RGBA_ASTC_12x10_Format: RGBA_ASTC_12x10_Format,
+		RGBA_ASTC_12x12_Format: RGBA_ASTC_12x12_Format,
+		RGBA_ASTC_4x4_Format: RGBA_ASTC_4x4_Format,
+		RGBA_ASTC_5x4_Format: RGBA_ASTC_5x4_Format,
+		RGBA_ASTC_5x5_Format: RGBA_ASTC_5x5_Format,
+		RGBA_ASTC_6x5_Format: RGBA_ASTC_6x5_Format,
+		RGBA_ASTC_6x6_Format: RGBA_ASTC_6x6_Format,
+		RGBA_ASTC_8x5_Format: RGBA_ASTC_8x5_Format,
+		RGBA_ASTC_8x6_Format: RGBA_ASTC_8x6_Format,
+		RGBA_ASTC_8x8_Format: RGBA_ASTC_8x8_Format,
+		RGBA_BPTC_Format: RGBA_BPTC_Format,
+		RGBA_ETC2_EAC_Format: RGBA_ETC2_EAC_Format,
+		RGBA_PVRTC_2BPPV1_Format: RGBA_PVRTC_2BPPV1_Format,
+		RGBA_PVRTC_4BPPV1_Format: RGBA_PVRTC_4BPPV1_Format,
+		RGBA_S3TC_DXT1_Format: RGBA_S3TC_DXT1_Format,
+		RGBA_S3TC_DXT3_Format: RGBA_S3TC_DXT3_Format,
+		RGBA_S3TC_DXT5_Format: RGBA_S3TC_DXT5_Format,
+		RGBDEncoding: RGBDEncoding,
+		RGBEEncoding: RGBEEncoding,
+		RGBEFormat: RGBEFormat,
+		RGBFormat: RGBFormat,
+		RGBIntegerFormat: RGBIntegerFormat,
+		RGBM16Encoding: RGBM16Encoding,
+		RGBM7Encoding: RGBM7Encoding,
+		RGB_ETC1_Format: RGB_ETC1_Format,
+		RGB_ETC2_Format: RGB_ETC2_Format,
+		RGB_PVRTC_2BPPV1_Format: RGB_PVRTC_2BPPV1_Format,
+		RGB_PVRTC_4BPPV1_Format: RGB_PVRTC_4BPPV1_Format,
+		RGB_S3TC_DXT1_Format: RGB_S3TC_DXT1_Format,
+		RGFormat: RGFormat,
+		RGIntegerFormat: RGIntegerFormat,
+		RawShaderMaterial: RawShaderMaterial,
+		Ray: Ray,
+		Raycaster: Raycaster,
+		RectAreaLight: RectAreaLight,
+		RedFormat: RedFormat,
+		RedIntegerFormat: RedIntegerFormat,
+		ReinhardToneMapping: ReinhardToneMapping,
+		RepeatWrapping: RepeatWrapping,
+		ReplaceStencilOp: ReplaceStencilOp,
+		ReverseSubtractEquation: ReverseSubtractEquation,
+		RingBufferGeometry: RingGeometry,
+		RingGeometry: RingGeometry,
+		SRGB8_ALPHA8_ASTC_10x10_Format: SRGB8_ALPHA8_ASTC_10x10_Format,
+		SRGB8_ALPHA8_ASTC_10x5_Format: SRGB8_ALPHA8_ASTC_10x5_Format,
+		SRGB8_ALPHA8_ASTC_10x6_Format: SRGB8_ALPHA8_ASTC_10x6_Format,
+		SRGB8_ALPHA8_ASTC_10x8_Format: SRGB8_ALPHA8_ASTC_10x8_Format,
+		SRGB8_ALPHA8_ASTC_12x10_Format: SRGB8_ALPHA8_ASTC_12x10_Format,
+		SRGB8_ALPHA8_ASTC_12x12_Format: SRGB8_ALPHA8_ASTC_12x12_Format,
+		SRGB8_ALPHA8_ASTC_4x4_Format: SRGB8_ALPHA8_ASTC_4x4_Format,
+		SRGB8_ALPHA8_ASTC_5x4_Format: SRGB8_ALPHA8_ASTC_5x4_Format,
+		SRGB8_ALPHA8_ASTC_5x5_Format: SRGB8_ALPHA8_ASTC_5x5_Format,
+		SRGB8_ALPHA8_ASTC_6x5_Format: SRGB8_ALPHA8_ASTC_6x5_Format,
+		SRGB8_ALPHA8_ASTC_6x6_Format: SRGB8_ALPHA8_ASTC_6x6_Format,
+		SRGB8_ALPHA8_ASTC_8x5_Format: SRGB8_ALPHA8_ASTC_8x5_Format,
+		SRGB8_ALPHA8_ASTC_8x6_Format: SRGB8_ALPHA8_ASTC_8x6_Format,
+		SRGB8_ALPHA8_ASTC_8x8_Format: SRGB8_ALPHA8_ASTC_8x8_Format,
+		Scene: Scene,
+		SceneUtils: SceneUtils,
+		ShaderChunk: ShaderChunk,
+		ShaderLib: ShaderLib,
+		ShaderMaterial: ShaderMaterial,
+		ShadowMaterial: ShadowMaterial,
+		Shape: Shape,
+		ShapeBufferGeometry: ShapeGeometry,
+		ShapeGeometry: ShapeGeometry,
+		ShapePath: ShapePath,
+		ShapeUtils: ShapeUtils,
+		ShortType: ShortType,
+		Skeleton: Skeleton,
+		SkeletonHelper: SkeletonHelper,
+		SkinnedMesh: SkinnedMesh,
+		SmoothShading: SmoothShading,
+		Sphere: Sphere,
+		SphereBufferGeometry: SphereGeometry,
+		SphereGeometry: SphereGeometry,
+		Spherical: Spherical,
+		SphericalHarmonics3: SphericalHarmonics3,
+		SplineCurve: SplineCurve,
+		SpotLight: SpotLight,
+		SpotLightHelper: SpotLightHelper,
+		Sprite: Sprite,
+		SpriteMaterial: SpriteMaterial,
+		SrcAlphaFactor: SrcAlphaFactor,
+		SrcAlphaSaturateFactor: SrcAlphaSaturateFactor,
+		SrcColorFactor: SrcColorFactor,
+		StaticCopyUsage: StaticCopyUsage,
+		StaticDrawUsage: StaticDrawUsage,
+		StaticReadUsage: StaticReadUsage,
+		StereoCamera: StereoCamera,
+		StreamCopyUsage: StreamCopyUsage,
+		StreamDrawUsage: StreamDrawUsage,
+		StreamReadUsage: StreamReadUsage,
+		StringKeyframeTrack: StringKeyframeTrack,
+		SubtractEquation: SubtractEquation,
+		SubtractiveBlending: SubtractiveBlending,
+		TOUCH: TOUCH,
+		TangentSpaceNormalMap: TangentSpaceNormalMap,
+		TetrahedronBufferGeometry: TetrahedronGeometry,
+		TetrahedronGeometry: TetrahedronGeometry,
+		TextBufferGeometry: TextGeometry,
+		TextGeometry: TextGeometry,
+		Texture: Texture,
+		TextureLoader: TextureLoader,
+		TorusBufferGeometry: TorusGeometry,
+		TorusGeometry: TorusGeometry,
+		TorusKnotBufferGeometry: TorusKnotGeometry,
+		TorusKnotGeometry: TorusKnotGeometry,
+		Triangle: Triangle,
+		TriangleFanDrawMode: TriangleFanDrawMode,
+		TriangleStripDrawMode: TriangleStripDrawMode,
+		TrianglesDrawMode: TrianglesDrawMode,
+		TubeBufferGeometry: TubeGeometry,
+		TubeGeometry: TubeGeometry,
+		UVMapping: UVMapping,
+		Uint16Attribute: Uint16Attribute,
+		Uint16BufferAttribute: Uint16BufferAttribute,
+		Uint32Attribute: Uint32Attribute,
+		Uint32BufferAttribute: Uint32BufferAttribute,
+		Uint8Attribute: Uint8Attribute,
+		Uint8BufferAttribute: Uint8BufferAttribute,
+		Uint8ClampedAttribute: Uint8ClampedAttribute,
+		Uint8ClampedBufferAttribute: Uint8ClampedBufferAttribute,
+		Uniform: Uniform,
+		UniformsLib: UniformsLib,
+		UniformsUtils: UniformsUtils,
+		UnsignedByteType: UnsignedByteType,
+		UnsignedInt248Type: UnsignedInt248Type,
+		UnsignedIntType: UnsignedIntType,
+		UnsignedShort4444Type: UnsignedShort4444Type,
+		UnsignedShort5551Type: UnsignedShort5551Type,
+		UnsignedShort565Type: UnsignedShort565Type,
+		UnsignedShortType: UnsignedShortType,
+		VSMShadowMap: VSMShadowMap,
+		Vector2: Vector2,
+		Vector3: Vector3,
+		Vector4: Vector4,
+		VectorKeyframeTrack: VectorKeyframeTrack,
+		Vertex: Vertex,
+		VertexColors: VertexColors,
+		VideoTexture: VideoTexture,
+		WebGL1Renderer: WebGL1Renderer,
+		WebGLCubeRenderTarget: WebGLCubeRenderTarget,
+		WebGLMultisampleRenderTarget: WebGLMultisampleRenderTarget,
+		WebGLRenderTarget: WebGLRenderTarget,
+		WebGLRenderTargetCube: WebGLRenderTargetCube,
+		WebGLRenderer: WebGLRenderer,
+		WebGLUtils: WebGLUtils,
+		WireframeGeometry: WireframeGeometry,
+		WireframeHelper: WireframeHelper,
+		WrapAroundEnding: WrapAroundEnding,
+		XHRLoader: XHRLoader,
+		ZeroCurvatureEnding: ZeroCurvatureEnding,
+		ZeroFactor: ZeroFactor,
+		ZeroSlopeEnding: ZeroSlopeEnding,
+		ZeroStencilOp: ZeroStencilOp,
+		sRGBEncoding: sRGBEncoding
+	});
 
 	var GLTFLoader = ( function () {
 
@@ -45487,6 +53583,109 @@
 	  });
 	});
 
+	/**
+	 * Text Extension
+	 *
+	 * Specification: https://github.com/takahirox/EXT_text
+	 *
+	 */
+	class GLTFTextExtension {
+	  constructor(parser, fontLoader, fontUrl, THREE) {
+	    this.name = 'EXT_text';
+	    this.parser = parser;
+	    this.THREE = THREE;
+	    this.fontLoader = fontLoader;
+	    this.fontUrl = fontUrl;
+	    this.fontPromise = null;
+	  }
+
+	  createNodeAttachment(nodeIndex) {
+	    const json = this.parser.json;
+	    const nodeDef = json.nodes[nodeIndex];
+	    if (!json.extensions || !json.extensions[this.name] ||
+	      !nodeDef.extensions || !nodeDef.extensions[this.name]) {
+	      return null;
+	    }
+	    const extensionDef = nodeDef.extensions[this.name];
+	    const textsDef = json.extensions[this.name];
+	    const textDef = textsDef[extensionDef.text];
+	    const textContent = textDef.text;
+	    const color = textDef.color || [0.5, 0.5, 0.5, 1.0];
+	    return this._loadFont().then(font => {
+	      const shapes = font.generateShapes(textContent);
+	      const geometry = new this.THREE.ShapeGeometry(shapes);
+	      return new this.THREE.Mesh(
+	        geometry,
+	        new this.THREE.MeshBasicMaterial({
+	          side: this.THREE.DoubleSide,
+	          color: new this.THREE.Color(color[0], color[1], color[2]),
+	          transparent: color[3] < 1.0,
+	          opacity: color[3]
+	        })
+	      );
+	    }).catch(error => {
+	      // @TODO: Properer error handling
+	      console.error(e);
+	      return this.THREE.Object3D();
+	    });
+	  }
+
+	  _loadFont() {
+	    if (this.fontPromise) { return this.fontPromise; }
+
+	    this.fontPromise = new Promise((resolve, reject) => {
+	      this.fontLoader.load(this.fontUrl, resolve, undefined, reject);
+	    });
+
+	    return this.fontPromise;
+	  }
+	}
+
+	/* global QUnit */
+
+	const assetPath$1 = '../examples/assets/gltf/BoomBox/glTF-text/BoomBox.gltf';
+	const fontPath = '../examples/assets/fonts/helvetiker_regular.typeface.json';
+
+	QUnit.module('EXT_test', () => {
+	  QUnit.module('GLTFTextExtension', () => {
+	    QUnit.test('register', assert => {
+	      const done = assert.async();
+	      new GLTFLoader()
+	        .register(parser => new GLTFTextExtension(parser, new FontLoader(), fontPath, THREE))
+	        .parse('{"asset": {"version": "2.0"}}', null, result => {
+	          assert.ok(true, 'can register');
+	          done();
+			}, error => {
+	          assert.ok(false, 'can register');
+	          done();
+	        });
+	    });
+	  });
+
+	  QUnit.module('GLTFTextExtension-webonly', () => {
+	    QUnit.test('parse', assert => {
+	      const done = assert.async();
+	      new GLTFLoader()
+	        .register(parser => new GLTFTextExtension(parser, new FontLoader(), fontPath, THREE))
+	        .load(assetPath$1, gltf => {
+	          assert.ok(true, 'can load');
+	          // @TODO: Properer check
+	          let hasShapeGeometry = false;
+	          gltf.scene.traverse(object => {
+	            if (object.isMesh && object.geometry instanceof ShapeGeometry) {
+	              hasShapeGeometry = true;
+	            }
+	          });
+	          assert.ok(hasShapeGeometry, 'can parse');
+	          done();
+			}, undefined, error => {
+	          assert.ok(false, 'can load');
+	          done();
+	        });
+		});
+	  });
+	});
+
 	var DDSLoader = function ( manager ) {
 
 		CompressedTextureLoader.call( this, manager );
@@ -45785,7 +53984,7 @@
 
 	/* global QUnit */
 
-	const assetPath$1 = '../examples/assets/gltf/BoomBox/glTF-dds/BoomBox.gltf';
+	const assetPath$2 = '../examples/assets/gltf/BoomBox/glTF-dds/BoomBox.gltf';
 
 	QUnit.module('MSFT_texture_dds', () => {
 	  QUnit.module('GLTFMaterialsVariantsExtension', () => {
@@ -45808,7 +54007,7 @@
 	      const done = assert.async();
 	      new GLTFLoader()
 	        .register(parser => new GLTFTextureDDSExtension(parser, new DDSLoader()))
-	        .load(assetPath$1, gltf => {
+	        .load(assetPath$2, gltf => {
 	          assert.ok(true, 'can load');
 
 	          const scene = gltf.scene;
