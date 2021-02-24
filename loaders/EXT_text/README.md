@@ -45,7 +45,7 @@ Pass the classes to `GLTFTextExtension` constructor as the fourth argument.
 
 `fontLoader` -- [Three.js `FontLoader`](https://threejs.org/docs/#api/en/loaders/FontLoader) instance
 
-`fontUrl` -- The url of font file passed to `FileLoader.load()`
+`fontUrl` -- The url of font file passed to `FileLoader.load()`. Refer to [this page](https://github.com/mrdoob/three.js/tree/dev/examples/fonts) for the font files.
 
 `THREE` -- Three.js dependencies the plugin needs. Either following style is expected to pass
 
