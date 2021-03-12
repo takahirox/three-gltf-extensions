@@ -7,11 +7,12 @@ import * as THREE from 'path_to_three.module.js';
 import {GLTFLoader} from 'path_to_GLTFLoader.js';
 import GLTFLodExtension from 'path_to_three-gltf-exensions/loaders/MSFT_lod/MSFT_lod.js';
 
-const onNewLodIsAdded = () => {
+// This callback is fired when a new level of LOD is added
+const onUpdate = () => {
   render();
 };
 const loader = new GLTFLoader();
-loader.register(parser => new GLTFTextureLodExtension(parser, onNewLodIsAdded, THREE));
+loader.register(parser => new GLTFTextureLodExtension(parser, onUpdate, THREE));
 loader.load(path_to_gltf_asset, gltf => {
   scene.add(gltf.scene);
   render();
@@ -22,6 +23,15 @@ loader.load(path_to_gltf_asset, gltf => {
 
 In progress
 
+## Features
+
+This plugin imports `MSFT_lod` as [Three.js LOD](https://threejs.org/docs/#api/en/objects/LOD).
+It starts to load all lavels in parallel, the lowest level loading should be completed first in general
+especially if data files are separated because of the smaller data size,
+and the plugin dynamically adds levels one by one when each one is ready.
+So that users can expect the better response time. And also they can expect better app runtime performance
+by swithing an object to lower quality one if it moves further.
+
 ## Compatible Three.js revision
 
 &gt;= r127dev + [takahirox/three.js@6abde5e](https://github.com/takahirox/three.js/commit/6abde5e86f042b146cdbbfca61d49c041c2c29a2)
@@ -31,3 +41,37 @@ In progress
 - [LOD](https://threejs.org/docs/#api/en/objects/LOD)
 
 Pass the class to `GLTFLodExtension` constructor as the third argument.
+
+## API
+
+### Constructor
+
+**GLTFLodExtension(parser: GLTFParser, onUpdate: function, THREE: Object)**
+
+`parser` -- `GLTFParser` instance which comes from `GLTFLoader.register()` callback
+
+`onUpdate` -- [optionial] a function is called when a new level of LOD is added
+
+`THREE` -- Three.js dependencies the plugin needs. Either following style is expected to pass
+
+```
+import * as THREE from 'path_to_three.module.js';
+
+loader.register(parser => new GLTFLodExtension(parser, onUpdate, THREE));
+```
+
+or
+
+```
+import {
+  LOD
+} from 'path_to_three.module.js';
+
+loader.register(parser => new GLTFLodExtension(parser, onUpdate, {
+  LOD
+}));
+```
+
+## Limitations
+
+- Currently if both node and material have LOD settings, the plugin may not correctly. [#41](https://github.com/takahirox/three-gltf-extensions/issues/41)
