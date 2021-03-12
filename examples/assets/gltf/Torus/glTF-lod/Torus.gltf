@@ -50,6 +50,13 @@
                         0
                     ]
                 }
+            },
+            "extras": {
+                "MSFT_screencoverage" : [
+                    0.5,
+                    0.2,
+                    0.01
+                ]
             }
         },
         {
@@ -124,6 +131,13 @@
                         0
                     ]
                 }
+            },
+            "extras": {
+                "MSFT_screencoverage" : [
+                    0.5,
+                    0.2,
+                    0.01
+                ]
             }
         },
         {
