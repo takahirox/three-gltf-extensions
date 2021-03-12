@@ -8,9 +8,8 @@
         {
             "name" : "Scene",
             "nodes" : [
-                0,
-                1,
-                2
+                2,
+                3
             ]
         }
     ],
@@ -24,14 +23,62 @@
             "name" : "Medium_LOD"
         },
         {
+            "mesh" : 3,
+            "name" : "High_LOD",
+            "matrix" : [
+                1,
+                0,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                0,
+                1,
+                0,
+                -0.4,
+                0,
+                0,
+                1
+            ],
+            "extensions" : {
+                "MSFT_lod" : {
+                    "ids" : [
+                        1,
+                        0
+                    ]
+                }
+            }
+        },
+        {
             "mesh" : 2,
-            "name" : "High_LOD"
+            "name" : "NO_LOD",
+            "matrix" : [
+                1,
+                0,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0.4,
+                0,
+                0,
+                1
+            ]
         }
     ],
     "materials" : [
         {
             "doubleSided" : true,
-            "name" : "Low_mat",
+            "name" : "Low_LOD_mat",
             "pbrMetallicRoughness" : {
                 "baseColorFactor" : [
                     0,
@@ -45,7 +92,7 @@
         },
         {
             "doubleSided" : true,
-            "name" : "Medium_mat",
+            "name" : "Medium_LOD_mat",
             "pbrMetallicRoughness" : {
                 "baseColorFactor" : [
                     1,
@@ -59,7 +106,7 @@
         },
         {
             "doubleSided" : true,
-            "name" : "High_mat",
+            "name" : "High_LOD_mat",
             "pbrMetallicRoughness" : {
                 "baseColorFactor" : [
                     1,
@@ -78,11 +125,25 @@
                     ]
                 }
             }
+        },
+        {
+            "doubleSided" : true,
+            "name" : "NO_LOD_mat",
+            "pbrMetallicRoughness" : {
+                "baseColorFactor" : [
+                    1,
+                    0,
+                    0,
+                    1
+                ],
+                "metallicFactor" : 0,
+                "roughnessFactor" : 0.5
+            }
         }
     ],
     "meshes" : [
         {
-            "name" : "Torus.001",
+            "name" : "Torus_Low_LOD",
             "primitives" : [
                 {
                     "attributes" : {
@@ -96,7 +157,7 @@
             ]
         },
         {
-            "name" : "Torus.002",
+            "name" : "Torus_Middle_LOD",
             "primitives" : [
                 {
                     "attributes" : {
@@ -110,7 +171,7 @@
             ]
         },
         {
-            "name" : "Torus.003",
+            "name" : "Torus_High_LOD",
             "primitives" : [
                 {
                     "attributes" : {
@@ -120,6 +181,20 @@
                     },
                     "indices" : 11,
                     "material" : 2
+                }
+            ]
+        },
+        {
+            "name" : "Torus",
+            "primitives" : [
+                {
+                    "attributes" : {
+                        "POSITION" : 8,
+                        "NORMAL" : 9,
+                        "TEXCOORD_0" : 10
+                    },
+                    "indices" : 11,
+                    "material" : 3
                 }
             ]
         }
