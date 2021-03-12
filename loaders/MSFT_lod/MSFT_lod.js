@@ -69,7 +69,9 @@ export default class GLTFLodExtension {
 
     const pending = [];
 
-    for (const nodeIndex of nodeIndices) {
+    for (let i = 0, il = nodeIndices.length; i < il; i++) {
+      const nodeIndex = nodeIndices[i];
+      const nodeLevel = nodeIndices.length - i - 1;
       pending.push(this._loadNodeMesh(nodeIndex).then(mesh => {
         // 
         const meshes = mesh.isGroup ? mesh.children : [mesh];
@@ -80,17 +82,17 @@ export default class GLTFLodExtension {
         for (const materialIndex of materialIndices) {
           if (this.materialMap.has(materialIndex)) {
             const materialPromises = this.materialMap.get(materialIndex);
-            for (let i = 0, il = materialPromises.length; i < il; i++) {
-              const materialPromise = materialPromises[i];
-              const level = materialPromises.length - i - 1;
+            for (let j = 0, jl = materialPromises.length; j < jl; j++) {
+              const materialPromise = materialPromises[j];
+              const materialLevel = materialPromises.length - j - 1;
               materialPending.push(materialPromise.then(material => {
                 const lodMesh = mesh.clone();
                 lodMesh.material = material;
-                lod.addLevel(lodMesh, this._calculateDistance(level));
+                lod.addLevel(lodMesh, this._calculateDistance(materialLevel));
               }));
             }
           } else {
-            lod.addLevel(mesh, this._calculateDistance());
+            lod.addLevel(mesh, this._calculateDistance(nodeLevel));
             materialPending.push(Promise.resolve());
           }
         }
