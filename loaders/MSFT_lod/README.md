@@ -50,7 +50,7 @@ Pass the class to `GLTFLodExtension` constructor as the third argument.
 
 `parser` -- `GLTFParser` instance which comes from `GLTFLoader.register()` callback
 
-`onUpdate` -- [optionial] a function is called when a new level of LOD is added
+`onUpdate` -- [optional] a function is called when a new level of LOD is added
 
 `THREE` -- Three.js dependencies the plugin needs. Either following style is expected to pass
 
