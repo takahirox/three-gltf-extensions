@@ -5,10 +5,10 @@
  *
  */
 export default class GLTFLodExtension {
-  constructor(parser, camera=null, THREE) {
+  constructor(parser, callback=null, THREE) {
     this.name = 'MSFT_lod';
     this.parser = parser;
-    this.camera = camera;
+    this.callback = callback;
     this.THREE = THREE;
     this.materialMap = new Map();
     this.processing = new Map();
@@ -23,76 +23,98 @@ export default class GLTFLodExtension {
       return null;
     }
 
+    // To prevent an infinite loop
     this.processing.set(materialIndex, true);
 
     const extensionDef = materialDef.extensions[this.name];
-    const pending = [];
+    const materialIndices = [materialIndex];
+    extensionDef.ids.forEach(id => materialIndices.push(id));
 
     // Low to high LOD to request the lower ones first
-    const materialIndices = [];
-    extensionDef.ids.forEach(id => materialIndices.unshift(id));
-    materialIndices.push(materialIndex);
+    materialIndices.reverse();
 
-    for (const index of materialIndices) {
-      pending.push(this.parser.getDependency('material', index));
-    }
+    const pending = materialIndices.map(index => this.parser.getDependency('material', index));
+
+    // To refer to LOD materials from createNodeMesh() later
     this.materialMap.set(materialIndex, pending);
 
     this.processing.delete(materialIndex);
 
-    // Return the lowest LOD material
+    // Return the lowest LOD material for the better response time
     return pending[0];
   }
 
   createNodeMesh(nodeIndex) {
     const json = this.parser.json;
-    const nodeDef = json.nodes[nodeIndex];
+    const rootNodeDef = json.nodes[nodeIndex];
 
-    const hasExtensionInNode = this._hasExtensionInNode(nodeDef);
-    const hasExtensionInMaterial = this._hasExtensionInMaterial(nodeDef);
+    const hasExtensionInNode = this._hasExtensionInNode(rootNodeDef);
+    const hasExtensionInMaterial = this._hasExtensionInMaterial(rootNodeDef);
 
     if (!hasExtensionInNode && !hasExtensionInMaterial) {
       return null;
     }
 
-    // Low to high LOD to request the lower ones first
-    const nodeIndices = [];
+    const nodeIndices = [nodeIndex];
 
     if (hasExtensionInNode) {
-      const extensionDef = nodeDef.extensions[this.name];
-      extensionDef.ids.forEach(id => nodeIndices.unshift(id));
+      const extensionDef = rootNodeDef.extensions[this.name];
+      extensionDef.ids.forEach(id => nodeIndices.push(id));
     }
 
-	nodeIndices.push(nodeIndex);
+    // Low to high LOD to request the lower ones first
+	nodeIndices.reverse();
 
     const lod = new this.THREE.LOD();
 
-    const pending = [];
+    // @TODO: User should be able to detect an event that a new LOD is added?
+
+    const meshPending = [];
 
     for (let i = 0, il = nodeIndices.length; i < il; i++) {
       const nodeIndex = nodeIndices[i];
+      const nodeDef = json.nodes[nodeIndex];
       const nodeLevel = nodeIndices.length - i - 1;
-      pending.push(this._loadNodeMesh(nodeIndex).then(mesh => {
-        // 
+
+      meshPending.push(this._loadMesh(nodeDef).then(mesh => {
+        // mesh is Mesh/Line/Points or Group
+        // @TODO: There can be a case that other plugins create other type objects?
+        //        And in that case how should we resolve?
         const meshes = mesh.isGroup ? mesh.children : [mesh];
-        const materialIndices = this._getMaterialIndices(json.nodes[nodeIndex]);
+        const meshDef = this.parser.json.meshes[nodeDef.mesh];
+        const materialIndices = meshDef.primitives.map(primitive => {
+          return primitive.material !== undefined ? primitive.material : -1;
+        });
 
         const materialPending = [];
-        // Assume meshes.length and materialIndices.length are same so far
-        for (const materialIndex of materialIndices) {
+        // Assume meshes.length and materialIndices.length are same so far.
+        // The lengths can be different if other plugins apply some changes.
+        // @TODO: In such a case how should we process correctly?
+        for (let j = 0, jl = Math.min(meshes.length, materialIndices.length); j < jl; j++) {
+          const mesh = meshes[j];
+          const materialIndex = materialIndices[j];
           if (this.materialMap.has(materialIndex)) {
             const materialPromises = this.materialMap.get(materialIndex);
-            for (let j = 0, jl = materialPromises.length; j < jl; j++) {
-              const materialPromise = materialPromises[j];
-              const materialLevel = materialPromises.length - j - 1;
+            const materialDef = json.materials[materialIndex];
+            // @TODO: Process correctly if LODs are defined both in node and material
+            for (let k = 0, kl = materialPromises.length; k < kl; k++) {
+              const materialPromise = materialPromises[k];
+              const materialLevel = materialPromises.length - k - 1;
               materialPending.push(materialPromise.then(material => {
                 const lodMesh = mesh.clone();
                 lodMesh.material = material;
-                lod.addLevel(lodMesh, this._calculateDistance(materialLevel));
+                this.parser.assignFinalMaterial(lodMesh);
+                lod.addLevel(lodMesh, this._calculateDistance(materialLevel, materialDef));
+                if (this.callback) {
+                  this.callback(lod, lodMesh);
+                }
               }));
             }
           } else {
-            lod.addLevel(mesh, this._calculateDistance(nodeLevel));
+            lod.addLevel(mesh, this._calculateDistance(nodeLevel, rootNodeDef));
+            if (this.callback) {
+              this.callback(lod, mesh);
+            }
             materialPending.push(Promise.resolve());
           }
         }
@@ -101,43 +123,28 @@ export default class GLTFLodExtension {
       }));
     }
 
-    return Promise.any(pending).then(_ => {
-      console.log(lod);
+    return Promise.any(meshPending).then(_ => {
       return lod;
     });
   }
 
-  async _loadNodeMesh(nodeIndex) {
-    const json = this.parser.json;
-    const nodeDef = json.nodes[nodeIndex];
-    const meshIndex = nodeDef.mesh;
-    const mesh = await this.parser.getDependency('mesh', meshIndex);
-    if (mesh.isMesh && nodeDef.weights) {
-      for (let i = 0, il = nodeDef.weights.length; i < il; i++) {
-        mesh.morphTargetInfluences[i] = nodeDef.weights[i];
-      }
+  async _loadMesh(nodeDef) {
+    // @TODO: How should we resolve the case that another mesh index is defined
+    // in node extension and it, not nodeDef.mesh, should be loaded?
+    // Maybe we should delegate to other plugins but how?
+    const mesh = await this.parser.getDependency('mesh', nodeDef.mesh);
+    if (nodeDef.weights) {
+      // mesh is Mesh or Group
+      mesh.traverse(obj => {
+        if (!obj.isMesh) {
+          return;
+        }
+        for (let i = 0, il = nodeDef.weights.length; i < il; i++) {
+          obj.morphTargetInfluences[i] = nodeDef.weights[i];
+        }
+      });
     }
     return mesh;
-  }
-
-  _getMeshIndices(nodeDef) {
-    if (this._hasExtensionInNode(nodeDef)) {
-      const json = this.parser.json;
-      const extensionDef = nodeDef.extensions[this.name];
-      const nodeDefs = extensionDef.ids.map(id => json.nodes[id]);
-      nodeDefs.unshift(nodeDef);
-      return nodeDefs.map(nodeDef => nodeDef.mesh);
-    } else {
-      return nodeDef.mesh !== undefined ? [nodeDef.mesh] : [];
-    }
-  }
-
-  _getMaterialIndices(nodeDef) {
-    const meshIndex = nodeDef.mesh;
-    const meshDef = this.parser.json.meshes[meshIndex];
-    return meshDef.primitives.map(primitive => {
-      return primitive.material !== undefined ? primitive.material : -1;
-    });
   }
 
   _hasExtensionInNode(nodeDef) {
@@ -146,14 +153,28 @@ export default class GLTFLodExtension {
     }
     const json = this.parser.json;
     const extensionDef = nodeDef.extensions[this.name];
-    const nodeDefs = extensionDef.ids.map(id => json.nodes[id]);
-    nodeDefs.unshift(nodeDef);
+    const nodeDefs = [nodeDef];
+    extensionDef.ids.forEach(id => nodeDefs.push(json.nodes[id]));
+
+    // We determine that node LOD is valid if all LOD nodes define mesh so far.
     return nodeDefs.filter(nodeDef => nodeDef.mesh === undefined).length === 0;
   }
 
   _hasExtensionInMaterial(nodeDef) {
     const json = this.parser.json;
-    const meshIndices = this._getMeshIndices(nodeDef);
+    const meshIndices = [];
+
+    if (this._hasExtensionInNode(nodeDef)) {
+      const extensionDef = nodeDef.extensions[this.name];
+      const nodeDefs = [nodeDef];
+      extensionDef.ids.forEach(id => nodeDefs.push(json.nodes[id]));
+      nodeDefs.forEach(nodeDef => meshIndices.push(nodeDef.mesh));
+    } else {
+      if (nodeDef.mesh !== undefined) {
+        meshIndices.push(nodeDef.mesh);
+      }
+	}
+
     for (const meshIndex of meshIndices) {
       const meshDef = json.meshes[meshIndex];
       for (const primitive of meshDef.primitives) {
@@ -170,8 +191,22 @@ export default class GLTFLodExtension {
   }
 
   // level: 0 is highest LOD
-  _calculateDistance(level) {
-    // @TODO: Fix  me
-    return level * 2;
+  _calculateDistance(level, def) {
+    if (level === 0) return 0;
+
+    const coverage = (def.extras && def.extras['MSFT_screencoverage'] &&
+      Array.isArray(def.extras['MSFT_screencoverage'])) ? def.extras['MSFT_screencoverage'] : [];
+    const levelNum = def.extensions[this.name].ids.length + 1;
+
+    // If coverage num doesn't match to LOD level num, we ignore coverage so far.
+    // Assuming coverage is in the range 1.0(near) - 0.0(far) @TODO: Is this assumption true?
+    // Ignoring the last coverage because I want to display the lowest LOD at the furtherest
+    // @TODO: Is that ok?
+    const c = levelNum === coverage.length ? coverage[level - 1] : (level / levelNum);
+
+    // @TODO: Improve
+    const near = 0.0;
+    const far = 100.0;
+    return Math.pow((1.0 - c), 4.0) * (far - near) + near;
   }
 }

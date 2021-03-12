@@ -7,8 +7,11 @@ import * as THREE from 'path_to_three.module.js';
 import {GLTFLoader} from 'path_to_GLTFLoader.js';
 import GLTFLodExtension from 'path_to_three-gltf-exensions/loaders/MSFT_lod/MSFT_lod.js';
 
+const onNewLodIsAdded = () => {
+  render();
+};
 const loader = new GLTFLoader();
-loader.register(parser => new GLTFTextureLodExtension(parser, camera, THREE));
+loader.register(parser => new GLTFTextureLodExtension(parser, onNewLodIsAdded, THREE));
 loader.load(path_to_gltf_asset, gltf => {
   scene.add(gltf.scene);
   render();
@@ -24,10 +27,6 @@ In progress
 &gt;= r127dev + [takahirox/three.js@6abde5e](https://github.com/takahirox/three.js/commit/6abde5e86f042b146cdbbfca61d49c041c2c29a2)
 
 ## Dependencies
-
-- [Three.js Camera](https://threejs.org/docs/#api/en/cameras/Camera)
-
-Pass `Camera` instance to `GLTFLodExtension` constructor as the second argument.
 
 - [LOD](https://threejs.org/docs/#api/en/objects/LOD)
 
