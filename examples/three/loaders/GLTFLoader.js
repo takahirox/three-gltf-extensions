@@ -293,6 +293,7 @@ var GLTFLoader = ( function () {
 
 				path: path || this.resourcePath || '',
 				crossOrigin: this.crossOrigin,
+				requestHeader: this.requestHeader,
 				manager: this.manager,
 				ktx2Loader: this.ktx2Loader,
 				meshoptDecoder: this.meshoptDecoder
@@ -664,7 +665,7 @@ var GLTFLoader = ( function () {
 				var scale = extension.clearcoatNormalTexture.scale;
 
 				// https://github.com/mrdoob/three.js/issues/11438#issuecomment-507003995
-				materialParams.clearcoatNormalScale = new Vector2( scale, -scale );
+				materialParams.clearcoatNormalScale = new Vector2( scale, - scale );
 
 			}
 
@@ -806,7 +807,14 @@ var GLTFLoader = ( function () {
 
 		var extension = textureDef.extensions[ name ];
 		var source = json.images[ extension.source ];
-		var loader = source.uri ? parser.options.manager.getHandler( source.uri ) : parser.textureLoader;
+
+		var loader = parser.textureLoader;
+		if ( source.uri ) {
+
+			var handler = parser.options.manager.getHandler( source.uri );
+			if ( handler !== null ) loader = handler;
+
+		}
 
 		return this.detectSupport().then( function ( isSupported ) {
 
@@ -1901,6 +1909,7 @@ var GLTFLoader = ( function () {
 		}
 
 		this.textureLoader.setCrossOrigin( this.options.crossOrigin );
+		this.textureLoader.setRequestHeader( this.options.requestHeader );
 
 		this.fileLoader = new FileLoader( this.options.manager );
 		this.fileLoader.setResponseType( 'arraybuffer' );
@@ -2420,29 +2429,17 @@ var GLTFLoader = ( function () {
 	 */
 	GLTFParser.prototype.loadTexture = function ( textureIndex ) {
 
-		var parser = this;
 		var json = this.json;
 		var options = this.options;
-
 		var textureDef = json.textures[ textureIndex ];
+		var source = json.images[ textureDef.source ];
 
-		var textureExtensions = textureDef.extensions || {};
-
-		var source;
-
-		source = json.images[ textureDef.source ];
-
-		var loader;
+		var loader = this.textureLoader;
 
 		if ( source.uri ) {
 
-			loader = options.manager.getHandler( source.uri );
-
-		}
-
-		if ( ! loader ) {
-
-			loader = this.textureLoader;
+			var handler = options.manager.getHandler( source.uri );
+			if ( handler !== null ) loader = handler;
 
 		}
 
@@ -2685,8 +2682,8 @@ var GLTFLoader = ( function () {
 					cachedMaterial.vertexTangents = true;
 
 					// https://github.com/mrdoob/three.js/issues/11438#issuecomment-507003995
-					if ( cachedMaterial.normalScale ) cachedMaterial.normalScale.y *= -1;
-					if ( cachedMaterial.clearcoatNormalScale ) cachedMaterial.clearcoatNormalScale.y *= -1;
+					if ( cachedMaterial.normalScale ) cachedMaterial.normalScale.y *= - 1;
+					if ( cachedMaterial.clearcoatNormalScale ) cachedMaterial.clearcoatNormalScale.y *= - 1;
 
 				}
 
@@ -2829,11 +2826,11 @@ var GLTFLoader = ( function () {
 			pending.push( parser.assignTexture( materialParams, 'normalMap', materialDef.normalTexture ) );
 
 			// https://github.com/mrdoob/three.js/issues/11438#issuecomment-507003995
-			materialParams.normalScale = new Vector2( 1, -1 );
+			materialParams.normalScale = new Vector2( 1, - 1 );
 
 			if ( materialDef.normalTexture.scale !== undefined ) {
 
-				materialParams.normalScale.set( materialDef.normalTexture.scale, -materialDef.normalTexture.scale );
+				materialParams.normalScale.set( materialDef.normalTexture.scale, - materialDef.normalTexture.scale );
 
 			}
 
@@ -3627,6 +3624,39 @@ var GLTFLoader = ( function () {
 
 	};
 
+	GLTFParser.prototype.createNodeMesh = function ( nodeIndex ) {
+
+		var json = this.json;
+		var parser = this;
+		var nodeDef = json.nodes[ nodeIndex ];
+
+		return parser.getDependency( 'mesh', nodeDef.mesh ).then( function ( mesh ) {
+
+			var node = parser._getNodeRef( parser.meshCache, nodeDef.mesh, mesh );
+
+			// if weights are provided on the node, override weights on the mesh.
+			if ( nodeDef.weights !== undefined ) {
+
+				node.traverse( function ( o ) {
+
+					if ( ! o.isMesh ) return;
+
+					for ( var i = 0, il = nodeDef.weights.length; i < il; i ++ ) {
+
+						o.morphTargetInfluences[ i ] = nodeDef.weights[ i ];
+
+					}
+
+				} );
+
+			}
+
+			return node;
+
+		} );
+
+	};
+
 	/**
 	 * Specification: https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#nodes-and-hierarchy
 	 * @param {number} nodeIndex
@@ -3649,28 +3679,9 @@ var GLTFLoader = ( function () {
 
 			if ( nodeDef.mesh !== undefined ) {
 
-				pending.push( parser.getDependency( 'mesh', nodeDef.mesh ).then( function ( mesh ) {
+				pending.push( parser._invokeOne( function ( ext ) {
 
-					var node = parser._getNodeRef( parser.meshCache, nodeDef.mesh, mesh );
-
-					// if weights are provided on the node, override weights on the mesh.
-					if ( nodeDef.weights !== undefined ) {
-
-						node.traverse( function ( o ) {
-
-							if ( ! o.isMesh ) return;
-
-							for ( var i = 0, il = nodeDef.weights.length; i < il; i ++ ) {
-
-								o.morphTargetInfluences[ i ] = nodeDef.weights[ i ];
-
-							}
-
-						} );
-
-					}
-
-					return node;
+					return ext.createNodeMesh && ext.createNodeMesh( nodeIndex );
 
 				} ) );
 
