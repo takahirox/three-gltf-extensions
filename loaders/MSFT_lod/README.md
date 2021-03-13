@@ -39,7 +39,7 @@ by swithing an object to lower quality one if it moves further.
 ## Dependencies
 
 - [LOD](https://threejs.org/docs/#api/en/objects/LOD)
-- [Object3D] (https://threejs.org/docs/#api/en/core/Object3D)
+- [Object3D](https://threejs.org/docs/#api/en/core/Object3D)
 
 Pass the class to `GLTFLodExtension` constructor as the third argument.
 
