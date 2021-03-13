@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Three.js glTF loader/exporter EXT_mesh_gpu_instancing extension</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <link type="text/css" rel="stylesheet" href="main.css">
+  </head>
+
+  <body>
+    <div id="info">
+      <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> - GLTFLoader + <a href="https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Vendor/EXT_mesh_gpu_instancing" target="_blank" rel="noopener">EXT_mesh_gpu_instancing</a> extension<br />
+      Teapod by <a href="https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Vendor/EXT_mesh_gpu_instancing/samples" target="_blank" rel="noopener">glTF repository</a><br />
+      <a href="https://hdrihaven.com/hdri/?h=royal_esplanade" target="_blank" rel="noopener">Royal Esplanade</a> by <a href="https://hdrihaven.com/" target="_blank" rel="noopener">HDRI Haven</a>
+    </div>
+
+    <script type="module">
+      import * as THREE from './three/three.module.js';
+
+      import {OrbitControls} from './three/controls/OrbitControls.js';
+      import {GLTFLoader} from './three/loaders/GLTFLoader.js';
+      import {RGBELoader} from './three/loaders/RGBELoader.js';
+
+      import GLTFInstancingExtension from '../loaders/EXT_mesh_gpu_instancing/EXT_mesh_gpu_instancing.js';
+
+      let camera, scene, renderer;
+
+      const init = () => {
+        const container = document.createElement('div');
+        document.body.appendChild(container);
+
+        camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.001, 1000);
+        camera.position.set(0, 30, 120);
+
+        scene = new THREE.Scene();
+
+        new RGBELoader()
+          .setDataType(THREE.UnsignedByteType)
+          .setPath('./assets/textures/equirectangular/')
+          .load('royal_esplanade_1k.hdr', texture => {
+            const envMap = pmremGenerator.fromEquirectangular(texture).texture;
+
+            scene.background = envMap;
+            scene.environment = envMap;
+
+            texture.dispose();
+            pmremGenerator.dispose();
+
+            render();
+
+            // model
+
+            const loader = new GLTFLoader().setPath('assets/gltf/Teapots/glTF-instancing/');
+            loader.register(parser => new GLTFInstancingExtension(parser, THREE));
+            loader.load('teapots_galore.gltf', gltf => {
+              gltf.scene.rotation.y = Math.PI;
+              scene.add(gltf.scene);
+              render();
+            });
+          });
+
+        renderer = new THREE.WebGLRenderer({antialias: true});
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1;
+        renderer.outputEncoding = THREE.sRGBEncoding;
+        container.appendChild(renderer.domElement);
+
+        const pmremGenerator = new THREE.PMREMGenerator(renderer);
+        pmremGenerator.compileEquirectangularShader();
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.addEventListener('change', render); // use if there is no animation loop
+        controls.update();
+
+        window.addEventListener('resize', onWindowResize);
+      };
+
+      const onWindowResize = () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        render();
+      };
+
+      //
+
+      const render = () => {
+        renderer.render(scene, camera);
+      };
+
+      init();
+      render();
+    </script>
+  </body>
+</html>
