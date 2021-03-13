@@ -34,7 +34,7 @@ Pass the class to `GLTFInstancingExtension` constructor as the second argument.
 
 ### Constructor
 
-**GLTFInstancingExtension(parser: GLTFParser, onUpdate: function, THREE: Object)**
+**GLTFInstancingExtension(parser: GLTFParser, THREE: Object)**
 
 `parser` -- `GLTFParser` instance which comes from `GLTFLoader.register()` callback
 
