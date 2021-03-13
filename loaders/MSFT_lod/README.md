@@ -34,7 +34,7 @@ by swithing an object to lower quality one if it moves further.
 
 ## Compatible Three.js revision
 
-&gt;= r127dev + [takahirox/three.js@6abde5e](https://github.com/takahirox/three.js/commit/6abde5e86f042b146cdbbfca61d49c041c2c29a2)
+&gt;= r127dev + [#21458](https://github.com/mrdoob/three.js/pull/21458)
 
 ## Dependencies
 
