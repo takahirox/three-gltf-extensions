@@ -67,8 +67,6 @@ export default class GLTFLodExtension {
 
     const lod = new this.THREE.LOD();
 
-    // @TODO: User should be able to detect an event that a new LOD is added?
-
     const meshPending = [];
 
     for (let i = 0, il = nodeIndices.length; i < il; i++) {
@@ -77,6 +75,14 @@ export default class GLTFLodExtension {
       const nodeLevel = nodeIndices.length - i - 1;
 
       meshPending.push(this._loadMesh(nodeDef).then(mesh => {
+        if (nodeDef.mesh === undefined) { // mesh is Object3D
+          lod.addLevel(mesh, this._calculateDistance(nodeLevel, rootNodeDef));
+          if (this.callback) {
+            this.callback(lod, mesh);
+          }
+          return;
+        }
+
         // mesh is Mesh/Line/Points or Group
         // @TODO: There can be a case that other plugins create other type objects?
         //        And in that case how should we resolve?
@@ -129,6 +135,10 @@ export default class GLTFLodExtension {
   }
 
   async _loadMesh(nodeDef) {
+    if (nodeDef.mesh === undefined) {
+      return new this.THREE.Object3D();
+    }
+
     // @TODO: How should we resolve the case that another mesh index is defined
     // in node extension and it, not nodeDef.mesh, should be loaded?
     // Maybe we should delegate to other plugins but how?
@@ -151,13 +161,11 @@ export default class GLTFLodExtension {
     if (!nodeDef.extensions || !nodeDef.extensions[this.name]) {
       return false;
     }
-    const json = this.parser.json;
-    const extensionDef = nodeDef.extensions[this.name];
-    const nodeDefs = [nodeDef];
-    extensionDef.ids.forEach(id => nodeDefs.push(json.nodes[id]));
+    const nodeDefs = nodeDef.extensions[this.name].ids.map(id => this.parser.json.nodes[id]);
+    nodeDefs.push(nodeDef);
 
-    // We determine that node LOD is valid if all LOD nodes define mesh so far.
-    return nodeDefs.filter(nodeDef => nodeDef.mesh === undefined).length === 0;
+    // We determine it's invalid as the extension if all node don't have mesh so far
+    return nodeDefs.filter(def => def.mesh !== undefined).length > 0;
   }
 
   _hasExtensionInMaterial(nodeDef) {
@@ -168,7 +176,7 @@ export default class GLTFLodExtension {
       const extensionDef = nodeDef.extensions[this.name];
       const nodeDefs = [nodeDef];
       extensionDef.ids.forEach(id => nodeDefs.push(json.nodes[id]));
-      nodeDefs.forEach(nodeDef => meshIndices.push(nodeDef.mesh));
+      nodeDefs.forEach(nodeDef => nodeDef.mesh !== undefined && meshIndices.push(nodeDef.mesh));
     } else {
       if (nodeDef.mesh !== undefined) {
         meshIndices.push(nodeDef.mesh);
