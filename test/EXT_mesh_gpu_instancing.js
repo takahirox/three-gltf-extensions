@@ -15,7 +15,7 @@ export default QUnit.module('EXT_mesh_gpu_instancing', () => {
         .parse('{"asset": {"version": "2.0"}}', null, result => {
           assert.ok(true, 'can register');
           done();
-		}, error => {
+        }, error => {
           assert.ok(false, 'can register');
           done();
         });
@@ -38,10 +38,10 @@ export default QUnit.module('EXT_mesh_gpu_instancing', () => {
           });
           assert.ok(foundInstancedMesh, 'InstancedMesh is created');
           done();
-		}, undefined, error => {
+        }, undefined, error => {
           assert.ok(false, 'can load');
           done();
         });
-	});
+    });
   });
 });

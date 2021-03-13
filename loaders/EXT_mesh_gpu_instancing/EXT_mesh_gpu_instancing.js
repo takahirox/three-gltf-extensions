@@ -73,7 +73,7 @@ export default class GLTFInstancingExtension {
 
       // Just in case
       this.THREE.Object3D.prototype.copy.call(instancedMesh, mesh);
-	  
+
       instancedMesh.frustumCulled = false;
       this.parser.assignFinalMaterial(instancedMesh);
       return instancedMesh;

@@ -63,7 +63,7 @@ export default class GLTFLodExtension {
     }
 
     // Low to high LOD to request the lower ones first
-	nodeIndices.reverse();
+    nodeIndices.reverse();
 
     const lod = new this.THREE.LOD();
 
@@ -182,7 +182,7 @@ export default class GLTFLodExtension {
       if (nodeDef.mesh !== undefined) {
         meshIndices.push(nodeDef.mesh);
       }
-	}
+    }
 
     for (const meshIndex of meshIndices) {
       const meshDef = json.meshes[meshIndex];
