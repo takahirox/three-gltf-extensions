@@ -143,9 +143,10 @@ export default class GLTFLodExtension {
     // in node extension and it, not nodeDef.mesh, should be loaded?
     // Maybe we should delegate to other plugins but how?
     const mesh = await this.parser.getDependency('mesh', nodeDef.mesh);
+    const node = this.parser._getNodeRef(this.parser.meshCache, nodeDef.mesh, mesh);
     if (nodeDef.weights) {
-      // mesh is Mesh or Group
-      mesh.traverse(obj => {
+      // node is Mesh or Group
+      node.traverse(obj => {
         if (!obj.isMesh) {
           return;
         }
@@ -154,7 +155,7 @@ export default class GLTFLodExtension {
         }
       });
     }
-    return mesh;
+    return node;
   }
 
   _hasExtensionInNode(nodeDef) {
