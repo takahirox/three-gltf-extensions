@@ -53597,6 +53597,133 @@
 	});
 
 	/**
+	 * GPU Instancing Extension
+	 *
+	 * Specification: https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Vendor/EXT_mesh_gpu_instancing
+	 *
+	 */
+	class GLTFInstancingExtension {
+	  constructor(parser, THREE) {
+	    this.name = 'EXT_mesh_gpu_instancing';
+	    this.parser = parser;
+	    this.THREE = THREE;
+	  }
+
+	  createNodeMesh(nodeIndex) {
+	    const json = this.parser.json;
+	    const nodeDef = json.nodes[nodeIndex];
+
+	    if (!nodeDef.extensions || !nodeDef.extensions[this.name] ||
+	      nodeDef.mesh === undefined) {
+	      return null;
+	    }
+
+	    const extensionDef = nodeDef.extensions[this.name];
+	    const attributesDef = extensionDef.attributes;
+
+	    // @TODO: Should we directly create InstancedMesh, not from regular Mesh?
+	    // @TODO: Can we support InstancedMesh + SkinnedMesh?
+	    const pending = [];
+	    pending.push(this.parser.createNodeMesh(nodeIndex));
+	    for (const key in attributesDef) {
+	      pending.push(this.parser.getDependency('accessor', attributesDef[key]).then(accessor => {
+	        return {key: key, attribute: accessor};
+	      }));
+	    }
+
+	    return Promise.all(pending).then(results => {
+	      const mesh = results[0];
+
+	      // @TODO: Fix me. Support Group (= glTF multiple mesh.primitives).
+	      if (!mesh.isMesh) {
+	        return mesh;
+	      }
+
+	      const accessors = results.slice(1);
+	      const count = accessors[0].attribute.count; // All attribute counts should be same
+	      // For Working
+	      const m = mesh.matrix.clone();
+	      const p = mesh.quaternion.clone();
+	      const q = mesh.quaternion.clone();
+	      const s = mesh.quaternion.clone();
+	      const instancedMesh = new this.THREE.InstancedMesh(mesh.geometry, mesh.material, count);
+	      for (let i = 0; i < count; i++) {
+	        p.set(0, 0, 0);
+	        q.set(0, 0, 0, 1);
+	        s.set(1, 1, 1);
+	        for (const accessor of accessors) {
+	          const attribute = accessor.attribute;
+	          switch(accessor.key) {
+	            case 'TRANSLATION':
+	              p.fromBufferAttribute(attribute, i);
+	              break;
+	            case 'ROTATION':
+	              q.fromBufferAttribute(attribute, i);
+	              break;
+	            case 'SCALE':
+	              s.fromBufferAttribute(attribute, i);
+	              break;
+	            // @TODO: Support _ID and others
+	          }
+	        }
+	        instancedMesh.setMatrixAt(i, m.compose(p, q, s));
+	      }
+
+	      // Just in case
+	      this.THREE.Object3D.prototype.copy.call(instancedMesh, mesh);
+		  
+	      instancedMesh.frustumCulled = false;
+	      this.parser.assignFinalMaterial(instancedMesh);
+	      return instancedMesh;
+	    });
+	  }
+	}
+
+	/* global QUnit */
+
+	const assetPath$1 = '../examples/assets/gltf/Teapots/glTF-instancing/teapots_galore.gltf';
+
+	QUnit.module('EXT_mesh_gpu_instancing', () => {
+	  QUnit.module('GLTFInstancingExtension', () => {
+	    QUnit.test('register', assert => {
+	      const done = assert.async();
+	      new GLTFLoader()
+	        .register(parser => new GLTFInstancingExtension(parser, THREE))
+	        .parse('{"asset": {"version": "2.0"}}', null, result => {
+	          assert.ok(true, 'can register');
+	          done();
+			}, error => {
+	          assert.ok(false, 'can register');
+	          done();
+	        });
+	    });
+	  });
+
+	  QUnit.module('GLTFInstancingExtension-webonly', () => {
+	    QUnit.test('parse', assert => {
+	      const done = assert.async();
+	      new GLTFLoader()
+	        .register(parser => new GLTFInstancingExtension(parser, THREE))
+	        .load(assetPath$1, gltf => {
+	          assert.ok(true, 'can load');
+	          // @TODO: More proper test
+	          let foundInstancedMesh = false;
+	          gltf.scene.traverse(obj => {
+	            if (obj.isInstancedMesh) {
+	              foundInstancedMesh = true;
+	            }
+	          });
+	          assert.ok(foundInstancedMesh, 'InstancedMesh is created');
+	          done();
+			}, undefined, error => {
+	          assert.ok(false, 'can load');
+	          done();
+	        });
+		});
+	  });
+	});
+
+	/**
 	 * Text Extension
 	 *
 	 * Specification: https://github.com/takahirox/EXT_text
@@ -53656,7 +53783,7 @@
 
 	/* global QUnit */
 
-	const assetPath$1 = '../examples/assets/gltf/BoomBox/glTF-text/BoomBox.gltf';
+	const assetPath$2 = '../examples/assets/gltf/BoomBox/glTF-text/BoomBox.gltf';
 	const fontPath = '../examples/assets/fonts/helvetiker_regular.typeface.json';
 
 	QUnit.module('EXT_test', () => {
@@ -53680,7 +53807,7 @@
 	      const done = assert.async();
 	      new GLTFLoader()
 	        .register(parser => new GLTFTextExtension(parser, new FontLoader(), fontPath, THREE))
-	        .load(assetPath$1, gltf => {
+	        .load(assetPath$2, gltf => {
 	          assert.ok(true, 'can load');
 	          // @TODO: Properer check
 	          let hasShapeGeometry = false;
@@ -53768,8 +53895,6 @@
 
 	    const lod = new this.THREE.LOD();
 
-	    // @TODO: User should be able to detect an event that a new LOD is added?
-
 	    const meshPending = [];
 
 	    for (let i = 0, il = nodeIndices.length; i < il; i++) {
@@ -53778,6 +53903,14 @@
 	      const nodeLevel = nodeIndices.length - i - 1;
 
 	      meshPending.push(this._loadMesh(nodeDef).then(mesh => {
+	        if (nodeDef.mesh === undefined) { // mesh is Object3D
+	          lod.addLevel(mesh, this._calculateDistance(nodeLevel, rootNodeDef));
+	          if (this.callback) {
+	            this.callback(lod, mesh);
+	          }
+	          return;
+	        }
+
 	        // mesh is Mesh/Line/Points or Group
 	        // @TODO: There can be a case that other plugins create other type objects?
 	        //        And in that case how should we resolve?
@@ -53830,13 +53963,18 @@
 	  }
 
 	  async _loadMesh(nodeDef) {
+	    if (nodeDef.mesh === undefined) {
+	      return new this.THREE.Object3D();
+	    }
+
 	    // @TODO: How should we resolve the case that another mesh index is defined
 	    // in node extension and it, not nodeDef.mesh, should be loaded?
 	    // Maybe we should delegate to other plugins but how?
 	    const mesh = await this.parser.getDependency('mesh', nodeDef.mesh);
+	    const node = this.parser._getNodeRef(this.parser.meshCache, nodeDef.mesh, mesh);
 	    if (nodeDef.weights) {
-	      // mesh is Mesh or Group
-	      mesh.traverse(obj => {
+	      // node is Mesh or Group
+	      node.traverse(obj => {
 	        if (!obj.isMesh) {
 	          return;
 	        }
@@ -53845,20 +53983,18 @@
 	        }
 	      });
 	    }
-	    return mesh;
+	    return node;
 	  }
 
 	  _hasExtensionInNode(nodeDef) {
 	    if (!nodeDef.extensions || !nodeDef.extensions[this.name]) {
 	      return false;
 	    }
-	    const json = this.parser.json;
-	    const extensionDef = nodeDef.extensions[this.name];
-	    const nodeDefs = [nodeDef];
-	    extensionDef.ids.forEach(id => nodeDefs.push(json.nodes[id]));
+	    const nodeDefs = nodeDef.extensions[this.name].ids.map(id => this.parser.json.nodes[id]);
+	    nodeDefs.push(nodeDef);
 
-	    // We determine that node LOD is valid if all LOD nodes define mesh so far.
-	    return nodeDefs.filter(nodeDef => nodeDef.mesh === undefined).length === 0;
+	    // We determine it's invalid as the extension if all node don't have mesh so far
+	    return nodeDefs.filter(def => def.mesh !== undefined).length > 0;
 	  }
 
 	  _hasExtensionInMaterial(nodeDef) {
@@ -53869,7 +54005,7 @@
 	      const extensionDef = nodeDef.extensions[this.name];
 	      const nodeDefs = [nodeDef];
 	      extensionDef.ids.forEach(id => nodeDefs.push(json.nodes[id]));
-	      nodeDefs.forEach(nodeDef => meshIndices.push(nodeDef.mesh));
+	      nodeDefs.forEach(nodeDef => nodeDef.mesh !== undefined && meshIndices.push(nodeDef.mesh));
 	    } else {
 	      if (nodeDef.mesh !== undefined) {
 	        meshIndices.push(nodeDef.mesh);
@@ -53914,7 +54050,7 @@
 
 	/* global QUnit */
 
-	const assetPath$2 = '../examples/assets/gltf/Torus/glTF-lod/Torus.gltf';
+	const assetPath$3 = '../examples/assets/gltf/Torus/glTF-lod/Torus.gltf';
 
 	QUnit.module('MSFT_lod', () => {
 	  QUnit.module('GLTFLodExtension', () => {
@@ -53937,7 +54073,7 @@
 	      const done = assert.async();
 	      new GLTFLoader()
 	        .register(parser => new GLTFLodExtension(parser, undefined, THREE))
-	        .load(assetPath$2, gltf => {
+	        .load(assetPath$3, gltf => {
 	          assert.ok(true, 'can load');
 	          // @TODO: More proper test
 	          let foundLod = false;
@@ -54258,7 +54394,7 @@
 
 	/* global QUnit */
 
-	const assetPath$3 = '../examples/assets/gltf/BoomBox/glTF-dds/BoomBox.gltf';
+	const assetPath$4 = '../examples/assets/gltf/BoomBox/glTF-dds/BoomBox.gltf';
 
 	QUnit.module('MSFT_texture_dds', () => {
 	  QUnit.module('GLTFMaterialsVariantsExtension', () => {
@@ -54281,7 +54417,7 @@
 	      const done = assert.async();
 	      new GLTFLoader()
 	        .register(parser => new GLTFTextureDDSExtension(parser, new DDSLoader()))
-	        .load(assetPath$3, gltf => {
+	        .load(assetPath$4, gltf => {
 	          assert.ok(true, 'can load');
 
 	          const scene = gltf.scene;
