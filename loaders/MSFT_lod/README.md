@@ -12,7 +12,7 @@ const onUpdate = () => {
   render();
 };
 const loader = new GLTFLoader();
-loader.register(parser => new GLTFTextureLodExtension(parser, onUpdate, THREE));
+loader.register(parser => new GLTFLodExtension(parser, onUpdate, THREE));
 loader.load(path_to_gltf_asset, gltf => {
   scene.add(gltf.scene);
   render();
