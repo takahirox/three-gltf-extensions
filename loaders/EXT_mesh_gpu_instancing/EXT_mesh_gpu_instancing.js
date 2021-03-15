@@ -45,9 +45,10 @@ export default class GLTFInstancingExtension {
       const count = accessors[0].attribute.count; // All attribute counts should be same
       // For Working
       const m = mesh.matrix.clone();
-      const p = mesh.quaternion.clone();
-      const q = mesh.quaternion.clone();
-      const s = mesh.quaternion.clone();
+      const p = mesh.position.clone().set(0, 0, 0);
+      const q = mesh.quaternion.clone().set(0, 0, 0, 1);
+      const s = mesh.scale.clone().set(1, 1, 1);
+
       const instancedMesh = new this.THREE.InstancedMesh(mesh.geometry, mesh.material, count);
       for (let i = 0; i < count; i++) {
         p.set(0, 0, 0);
