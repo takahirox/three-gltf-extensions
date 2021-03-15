@@ -26,10 +26,12 @@ export default class GLTFInstancingExtension {
     // @TODO: Should we directly create InstancedMesh, not from regular Mesh?
     // @TODO: Can we support InstancedMesh + SkinnedMesh?
     const pending = [];
+    const attributes = {};
     pending.push(this.parser.createNodeMesh(nodeIndex));
     for (const key in attributesDef) {
       pending.push(this.parser.getDependency('accessor', attributesDef[key]).then(accessor => {
-        return {key: key, attribute: accessor};
+        attributes[key] = accessor;
+        return attributes[key];
       }));
     }
 
@@ -41,33 +43,26 @@ export default class GLTFInstancingExtension {
         return mesh;
       }
 
-      const accessors = results.slice(1);
-      const count = accessors[0].attribute.count; // All attribute counts should be same
+      const count = results[1].count; // All attribute counts should be same
+
       // For Working
       const m = mesh.matrix.clone();
-      const p = mesh.quaternion.clone();
-      const q = mesh.quaternion.clone();
-      const s = mesh.quaternion.clone();
+      const p = mesh.position.clone().set(0, 0, 0);
+      const q = mesh.quaternion.clone().set(0, 0, 0, 1);
+      const s = mesh.scale.clone().set(1, 1, 1);
+
       const instancedMesh = new this.THREE.InstancedMesh(mesh.geometry, mesh.material, count);
       for (let i = 0; i < count; i++) {
-        p.set(0, 0, 0);
-        q.set(0, 0, 0, 1);
-        s.set(1, 1, 1);
-        for (const accessor of accessors) {
-          const attribute = accessor.attribute;
-          switch(accessor.key) {
-            case 'TRANSLATION':
-              p.fromBufferAttribute(attribute, i);
-              break;
-            case 'ROTATION':
-              q.fromBufferAttribute(attribute, i);
-              break;
-            case 'SCALE':
-              s.fromBufferAttribute(attribute, i);
-              break;
-            // @TODO: Support _ID and others
-          }
+        if (attributes.TRANSLATION) {
+          p.fromBufferAttribute(attributes.TRANSLATION, i);
         }
+        if (attributes.ROTATION) {
+          q.fromBufferAttribute(attributes.ROTATION, i);
+        }
+        if (attributes.SCALE) {
+          s.fromBufferAttribute(attributes.SCALE, i);
+        }
+        // @TODO: Support _ID and others
         instancedMesh.setMatrixAt(i, m.compose(p, q, s));
       }
 
