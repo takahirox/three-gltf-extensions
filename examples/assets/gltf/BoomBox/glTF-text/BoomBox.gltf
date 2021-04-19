@@ -229,17 +229,19 @@
     }
   ],
   "extensions": {
-    "EXT_text": [
-      {
-        "text": "Boom box",
-        "color": [
-          1.0,
-          1.0,
-          1.0,
-          1.0
-        ]
-      }
-    ]
+    "EXT_text": {
+      "texts": [
+        {
+          "text": "Boom box",
+          "color": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ]
+        }
+      ]
+    }
   },
   "extensionsUsed": [
     "EXT_text"

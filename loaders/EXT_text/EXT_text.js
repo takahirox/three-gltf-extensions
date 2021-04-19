@@ -22,7 +22,7 @@ export default class GLTFTextExtension {
       return null;
     }
     const extensionDef = nodeDef.extensions[this.name];
-    const textsDef = json.extensions[this.name];
+    const textsDef = json.extensions[this.name].texts;
     const textDef = textsDef[extensionDef.text];
     const textContent = textDef.text;
     const color = textDef.color || [0.5, 0.5, 0.5, 1.0];
