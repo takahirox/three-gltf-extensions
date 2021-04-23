@@ -54111,6 +54111,123 @@
 	});
 
 	/**
+	 * Video Texture Extension
+	 *
+	 * Specification: https://github.com/takahirox/EXT_texture_video
+	 *
+	 */
+
+	class GLTFTextExtension$1 {
+	  constructor(parser, THREE) {
+	    this.name = 'EXT_texture_video';
+	    this.parser = parser;
+	    this.THREE = THREE;
+
+	    this.WEBGL_FILTERS = {
+	      9728: THREE.NearestFilter,
+	      9729: THREE.LinearFilter,
+	      9984: THREE.NearestMipmapNearestFilter,
+	      9985: THREE.LinearMipmapNearestFilter,
+	      9986: THREE.NearestMipmapLinearFilter,
+	      9987: THREE.LinearMipmapLinearFilter
+	    };
+
+	    this.WEBGL_WRAPPINGS = {
+	      33071: THREE.ClampToEdgeWrapping,
+	      33648: THREE.MirroredRepeatWrapping,
+	      10497: THREE.RepeatWrapping
+	    };
+	  }
+
+	  loadTexture(textureIndex) {
+	    const json = this.parser.json;
+	    const textureDef = json.textures[textureIndex];
+	    if (!json.extensions || !json.extensions[this.name] ||
+	      !textureDef.extensions || !textureDef.extensions[this.name]) {
+	      return null;
+	    }
+	    const extensionDef = textureDef.extensions[this.name];
+	    const videosDef = json.extensions[this.name].videos;
+	    const videoDef = videosDef[extensionDef.source];
+	    const video = document.createElement('video');
+	    const samplersDef = json.samplers || [];
+	    const samplerDef = samplersDef[extensionDef.sampler] || {};
+	    return new Promise(resolve => {
+	      // @TODO: Support buffer view?
+	      video.src = (this.parser.options.path || '') + videoDef.uri;
+	      video.loop = true;
+	      video.muted = true;
+	      video.load();
+	      const onCanplaythrough = event => {
+	        video.removeEventListener('canplaythrough', onCanplaythrough);
+	        video.play();
+	        const texture = new this.THREE.VideoTexture(video);
+	        texture.flipY = false;
+	        texture.magFilter = this.WEBGL_FILTERS[samplerDef.magFilter] || this.THREE.LinearFilter;
+	        texture.minFilter = this.WEBGL_FILTERS[samplerDef.minFilter] || this.THREE.LinearFilter;
+	        texture.wrapS = this.WEBGL_WRAPPINGS[samplerDef.wrapS] || this.THREE.RepeatWrapping;
+	        texture.wrapT = this.WEBGL_WRAPPINGS[samplerDef.wrapT] || this.THREE.RepeatWrapping;
+	        resolve(texture);
+	      };
+	      video.addEventListener('canplaythrough', onCanplaythrough);
+	    });
+	  }
+	}
+
+	/* global QUnit */
+
+	const assetPath$3 = '../examples/assets/gltf/Box/glTF-texture-video/BoxTextured.gltf';
+
+	QUnit.module('EXT_texture_video', () => {
+	  QUnit.module('GLTFVideoTextureExtension', () => {
+	    QUnit.test('register', assert => {
+	      const done = assert.async();
+	      new GLTFLoader()
+	        .register(parser => new GLTFTextExtension$1(parser, THREE))
+	        .parse('{"asset": {"version": "2.0"}}', null, result => {
+	          assert.ok(true, 'can register');
+	          done();
+			}, error => {
+	          assert.ok(false, 'can register');
+	          done();
+	        });
+	    });
+	  });
+
+	  QUnit.module('GLTFVideoTextureExtension-webonly', () => {
+	    QUnit.test('parse', assert => {
+	      const done = assert.async();
+	      new GLTFLoader()
+	        .register(parser => new GLTFTextExtension$1(parser, THREE))
+	        .load(assetPath$3, gltf => {
+	          assert.ok(true, 'can load');
+	          // @TODO: Properer check
+	          let hasVideoTexture = false;
+	          gltf.scene.traverse(object => {
+	            if (!object.material) {
+	              return;
+	            }
+	            const materials = Array.isArray(object.material) ? object.material : [object.material];
+	            for (const material of materials) {
+	              for (const key in material) {
+	                const prop = material[key];
+	                if (prop && prop.isVideoTexture) {
+	                  hasVideoTexture = true;
+	                }
+	              }
+	            }
+	          });
+	          assert.ok(hasVideoTexture, 'can parse');
+	          done();
+			}, undefined, error => {
+	          assert.ok(false, 'can load');
+	          done();
+	        });
+		});
+	  });
+	});
+
+	/**
 	 * LOD Extension
 	 *
 	 * Specification: https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Vendor/MSFT_lod
@@ -54334,7 +54451,7 @@
 
 	/* global QUnit */
 
-	const assetPath$3 = '../examples/assets/gltf/Torus/glTF-lod/Torus.gltf';
+	const assetPath$4 = '../examples/assets/gltf/Torus/glTF-lod/Torus.gltf';
 
 	QUnit.module('MSFT_lod', () => {
 	  QUnit.module('GLTFLodExtension', () => {
@@ -54357,7 +54474,7 @@
 	      const done = assert.async();
 	      new GLTFLoader()
 	        .register(parser => new GLTFLodExtension(parser, undefined, THREE))
-	        .load(assetPath$3, gltf => {
+	        .load(assetPath$4, gltf => {
 	          assert.ok(true, 'can load');
 	          // @TODO: More proper test
 	          let foundLod = false;
@@ -54678,7 +54795,7 @@
 
 	/* global QUnit */
 
-	const assetPath$4 = '../examples/assets/gltf/BoomBox/glTF-dds/BoomBox.gltf';
+	const assetPath$5 = '../examples/assets/gltf/BoomBox/glTF-dds/BoomBox.gltf';
 
 	QUnit.module('MSFT_texture_dds', () => {
 	  QUnit.module('GLTFMaterialsVariantsExtension', () => {
@@ -54701,7 +54818,7 @@
 	      const done = assert.async();
 	      new GLTFLoader()
 	        .register(parser => new GLTFTextureDDSExtension(parser, new DDSLoader()))
-	        .load(assetPath$4, gltf => {
+	        .load(assetPath$5, gltf => {
 	          assert.ok(true, 'can load');
 
 	          const scene = gltf.scene;
