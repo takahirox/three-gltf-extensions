@@ -1,5 +1,6 @@
 import './KHR_materials_variants.js'
 import './EXT_mesh_gpu_instancing.js'
 import './EXT_text.js'
+import './EXT_texture_video.js'
 import './MSFT_lod.js'
 import './MSFT_texture_dds.js'
