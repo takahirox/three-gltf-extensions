@@ -54070,7 +54070,7 @@
 	const assetPath$2 = '../examples/assets/gltf/BoomBox/glTF-text/BoomBox.gltf';
 	const fontPath = '../examples/assets/fonts/helvetiker_regular.typeface.json';
 
-	QUnit.module('EXT_test', () => {
+	QUnit.module('EXT_text', () => {
 	  QUnit.module('GLTFTextExtension', () => {
 	    QUnit.test('register', assert => {
 	      const done = assert.async();
@@ -54079,7 +54079,7 @@
 	        .parse('{"asset": {"version": "2.0"}}', null, result => {
 	          assert.ok(true, 'can register');
 	          done();
-			}, error => {
+	        }, error => {
 	          assert.ok(false, 'can register');
 	          done();
 	        });
@@ -54102,11 +54102,11 @@
 	          });
 	          assert.ok(hasShapeGeometry, 'can parse');
 	          done();
-			}, undefined, error => {
+	        }, undefined, error => {
 	          assert.ok(false, 'can load');
 	          done();
 	        });
-		});
+	    });
 	  });
 	});
 
