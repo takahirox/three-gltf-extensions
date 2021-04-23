@@ -39,7 +39,7 @@ Pass the classes to `GLTFTextExtension` constructor as the fourth argument.
 
 ### Constructor
 
-**GLTFTextureExtension(parser: GLTFParser, fontLoader: FontLoader, fontUrl: string, THREE: Object)**
+**GLTFTextExtension(parser: GLTFParser, fontLoader: FontLoader, fontUrl: string, THREE: Object)**
 
 `parser` -- `GLTFParser` instance which comes from `GLTFLoader.register()` callback
 

@@ -7,7 +7,7 @@ import GLTFTextExtension from '../loaders/EXT_text/EXT_text.js';
 const assetPath = '../examples/assets/gltf/BoomBox/glTF-text/BoomBox.gltf';
 const fontPath = '../examples/assets/fonts/helvetiker_regular.typeface.json';
 
-export default QUnit.module('EXT_test', () => {
+export default QUnit.module('EXT_text', () => {
   QUnit.module('GLTFTextExtension', () => {
     QUnit.test('register', assert => {
       const done = assert.async();
@@ -16,7 +16,7 @@ export default QUnit.module('EXT_test', () => {
         .parse('{"asset": {"version": "2.0"}}', null, result => {
           assert.ok(true, 'can register');
           done();
-		}, error => {
+        }, error => {
           assert.ok(false, 'can register');
           done();
         });
@@ -39,10 +39,10 @@ export default QUnit.module('EXT_test', () => {
           });
           assert.ok(hasShapeGeometry, 'can parse');
           done();
-		}, undefined, error => {
+        }, undefined, error => {
           assert.ok(false, 'can load');
           done();
         });
-	});
+    });
   });
 });
