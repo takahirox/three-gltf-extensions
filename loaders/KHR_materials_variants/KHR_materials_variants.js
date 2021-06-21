@@ -135,25 +135,35 @@ export default class GLTFMaterialsVariantsExtension {
      * @param variantName {string|null}
      * @return {Promise}
      */
-    const switchMaterial = async (object, variantName) => {
+    const switchMaterial = async (object, variantName, onUpdate) => {
       if (!object.userData.originalMaterial) {
         object.userData.originalMaterial = object.material;
       }
 
+      const oldMaterial = object.material;
+      let gltfMaterialIndex = null;
+
       if (variantName === null || !object.userData.variantMaterials[variantName]) {
-        object.material = object.userData.originalMaterial; 
-        return;
+        object.material = object.userData.originalMaterial;
+        if (parser.associations.has(object.material)) {
+          gltfMaterialIndex = parser.associations.has(object.material).index;
+        }
+      } else {
+        const variantMaterialParam = object.userData.variantMaterials[variantName];
+
+        if (variantMaterialParam.material) {
+          object.material = variantMaterialParam.material;
+        } else {
+          gltfMaterialIndex = variantMaterialParam.gltfMaterialIndex;
+          object.material = await parser.getDependency('material', gltfMaterialIndex);
+          parser.assignFinalMaterial(object);
+          variantMaterialParam.material = object.material;
+        }
       }
 
-      if (object.userData.variantMaterials[variantName].material) {
-        object.material = object.userData.variantMaterials[variantName].material;
-        return;
+      if (onUpdate !== null) {
+        onUpdate(object, oldMaterial, gltfMaterialIndex);
       }
-
-      const materialIndex = object.userData.variantMaterials[variantName].gltfMaterialIndex;
-      object.material = await parser.getDependency('material', materialIndex);
-      parser.assignFinalMaterial(object);
-      object.userData.variantMaterials[variantName].material = object.material;
     };
 
     /**
@@ -187,12 +197,12 @@ export default class GLTFMaterialsVariantsExtension {
      * @param doTraverse {boolean} Default is true
      * @return {Promise}
      */
-    gltf.functions.selectVariant = (object, variantName, doTraverse = true) => {
+    gltf.functions.selectVariant = (object, variantName, doTraverse = true, onUpdate = null) => {
       const pending = [];
       if (doTraverse) {
-        object.traverse(o => compatibleObject(o) && pending.push(switchMaterial(o, variantName)));
+        object.traverse(o => compatibleObject(o) && pending.push(switchMaterial(o, variantName, onUpdate)));
       } else {
-        compatibleObject(object) && pending.push(switchMaterial(object, variantName));
+        compatibleObject(object) && pending.push(switchMaterial(object, variantName, onUpdate));
       }
       return Promise.all(pending);
     };

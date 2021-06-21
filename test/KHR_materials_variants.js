@@ -108,7 +108,17 @@ export default QUnit.module('KHR_materials_variants', () => {
           scene.traverse(object => object.isMesh &&
             object.userData.variantMaterials && objects.push(object));
 
-          await gltf.functions.selectVariant(scene, variants[0]);
+          // @TODO: Write more proper test
+          let onUpdateIsFired = false;
+          await gltf.functions.selectVariant(scene, variants[0], undefined,
+            (object, oldMaterial, gltfMaterialIndex) => {
+              assert.ok(!!object.isObject3D, 'onUpdate() object argument is correct');
+              assert.ok(!!oldMaterial.isMaterial, 'onUpdate() oldMaterial argument is correct');
+              assert.ok(gltfMaterialIndex === null || Number.isInteger(gltfMaterialIndex), 'onUpdate() gltfMaterialIndex argument is correct');
+              onUpdateIsFired = true;
+            }
+          );
+          assert.ok(onUpdateIsFired, 'onUpdate() is fired');
 
           assert.ok(objects.length ===
             objects.filter(o => o.userData.variantMaterials[variants[0]].material !== null).length,
