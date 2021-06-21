@@ -50,11 +50,13 @@ If glTF file includes `KHR_materials_variants` extension, the result returned by
 Variant material cache is saved in `selectVariant()` or `ensureLoadVariants()`.
 The cache is also used when exporting variant materials.
 
-**gltf.functions.selectVariant(object: THREE.Object3D, variantName: string | null, doTraverse = true: boolean): Promise**
+**gltf.functions.selectVariant(object: THREE.Object3D, variantName: string | null, doTraverse = true: boolean, onLoad = null: function | null): Promise**
 
 `selectVariant()` is a function to switch materials to the ones associated with `variantName`.
 Unless `doTraverse` is set to `false` the function traverses the children and applys the change to all the child objects, too.
 If a variant material associated with a passed variant name is undefined for a mesh or variant name is null, the function selects an original material.
+You can pass `onUpdate()` callback function whici is fired with Three.js object, old material, and gltf material index
+(`null` if the new material is not found in glTF file) when a material of an object is switched.
 The returned Promise will be resolved when all the selected materials are ready.
 
 **gltf.functions.ensureLoadVariants(object: THREE.Object3D, doTraverse = true: boolean): Promise**
