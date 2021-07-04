@@ -83,6 +83,10 @@ export default class GLTFExporterMaterialsVariantsExtension {
       .map(m => {return m.variants.sort((a, b) => a - b) && m})
       .sort((a, b) => a.material - b.material);
 
+    if (mappingsDef.length === 0) {
+      return;
+    }
+
     const originalMaterialIndex = compatibleMaterial(userData.originalMaterial)
       ? this.writer.processMaterial(userData.originalMaterial) : -1;
 

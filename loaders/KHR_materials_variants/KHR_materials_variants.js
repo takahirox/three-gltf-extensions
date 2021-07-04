@@ -131,7 +131,7 @@ export default class GLTFMaterialsVariantsExtension {
     gltf.functions = gltf.functions || {};
 
     /**
-     * @param object {THREE.Object3D}
+     * @param object {THREE.Mesh}
      * @param variantName {string|null}
      * @return {Promise}
      */
@@ -146,14 +146,18 @@ export default class GLTFMaterialsVariantsExtension {
       if (variantName === null || !object.userData.variantMaterials[variantName]) {
         object.material = object.userData.originalMaterial;
         if (parser.associations.has(object.material)) {
-          gltfMaterialIndex = parser.associations.has(object.material).index;
+          gltfMaterialIndex = parser.associations.get(object.material).index;
         }
       } else {
         const variantMaterialParam = object.userData.variantMaterials[variantName];
 
         if (variantMaterialParam.material) {
           object.material = variantMaterialParam.material;
+          if (variantMaterialParam.gltfMaterialIndex !== undefined) {
+            gltfMaterialIndex = variantMaterialParam.gltfMaterialIndex;
+          }
         } else {
+          // Assume the variant material is defined in glTF
           gltfMaterialIndex = variantMaterialParam.gltfMaterialIndex;
           object.material = await parser.getDependency('material', gltfMaterialIndex);
           parser.assignFinalMaterial(object);
@@ -167,7 +171,7 @@ export default class GLTFMaterialsVariantsExtension {
     };
 
     /**
-     * @param object {THREE.Object3D}
+     * @param object {THREE.Mesh}
      * @return {Promise}
      */
     const ensureLoadVariants = object => {
