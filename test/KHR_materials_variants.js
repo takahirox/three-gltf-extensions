@@ -181,6 +181,67 @@ export default QUnit.module('KHR_materials_variants', () => {
           done();
         });
     });
+
+    QUnit.test('clone', assert => {
+      const done = assert.async();
+
+      const traversePair = (obj1, obj2, callback) => {
+　　　　　　　　callback(obj1, obj2);
+        for (let i = 0; i < obj1.children.length; i ++) {
+          traversePair(obj1.children[i], obj2.children[i], callback);
+        }
+      };
+
+      new GLTFLoader()
+        .register(parser => new GLTFMaterialsVariantsExtension(parser))
+        .load(assetPath, async gltf => {
+          const variants = gltf.userData.variants;
+          const scene = gltf.scene;
+
+          await gltf.functions.ensureLoadVariants(scene);
+
+          const scene2 = scene.clone();
+          gltf.functions.copyVariantMaterials(scene2, scene);
+
+          let cloned = true;
+          let found = false;
+
+          traversePair(scene, scene2, (obj1, obj2) => {
+            if (obj1.userData.variantMaterials !== undefined ||
+              obj2.userData.variantMaterials !== undefined) {
+              if (obj1.userData.variantMaterials === undefined ||
+                obj2.userData.variantMaterials === undefined) {
+                cloned = false;
+              } else if (obj1.userData.variantMaterials === obj2.userData.variantMaterials) {
+                cloned = false;
+              } else {
+                found = true;
+                const keys = new Set();
+                for (const key in obj1.userData.variantMaterials) {
+                  keys.add(key);
+                }
+                for (const key in obj2.userData.variantMaterials) {
+                  keys.add(key);
+                }
+                for (const key of keys.values()) {
+                  if (obj1.userData.variantMaterials[key] !== obj2.userData.variantMaterials[key]) {
+                    cloned = false;
+                  }
+                }
+              }
+            }
+          });
+
+          assert.ok(cloned && found, 'variant materials are copied');
+
+          // @TODO: Test doTraverse option
+
+          done();
+        }, undefined, error => {
+          assert.ok(false, 'can load');
+          done();
+        });
+    });
   });
 
   QUnit.module('GLTFExporterMaterialsVariantsExtension-webonly', () => {

@@ -64,6 +64,37 @@ const compatibleObject = object => {
     object.userData.variantMaterials;
 };
 
+/**
+ * @param obj1 {THREE.Object3D}
+ * @param obj2 {THREE.Object3D}
+ * @param callback {function}
+ */
+const traversePair = (obj1, obj2, callback) => {
+  callback(obj1, obj2);
+  // Assume obj1 and obj2 have the same tree structure
+  for (let i = 0; i < obj1.children.length; i++) {
+    traversePair(obj1.children[i], obj2.children[i], callback);
+  }
+};
+
+// Variant materials and original material instances are stored under
+// object.userData.variantMaterials/originalMaterial.
+// Three.js Object3D.cppy/clone() doesn't copy/clone Three.js objects under
+// .userData so this function is a workaround.
+/**
+ * @param dst {THREE.Object3D}
+ * @param src {THREE.Object3D}
+ * @param callback {function}
+ */
+const copyVariantMaterials = (dst, src) => {
+  if (src.userData.variantMaterials !== undefined) {
+    dst.userData.variantMaterials = Object.assign({}, src.userData.variantMaterials);
+  }
+  if (src.userData.originalMaterial !== undefined) {
+    dst.userData.originalMaterial = src.userData.originalMaterial;
+  }
+};
+
 export default class GLTFMaterialsVariantsExtension {
   constructor(parser) {
     this.parser = parser;
@@ -224,6 +255,19 @@ export default class GLTFMaterialsVariantsExtension {
         compatibleObject(object) && pending.push(ensureLoadVariants(object));
       }
       return Promise.all(pending);
+    };
+
+    /**
+     * @param dst {THREE.Object3D}
+     * @param src {THREE.Object3D}
+     * @param doTraverse {boolean} Default is true
+     */
+    gltf.functions.copyVariantMaterials = (dst, src, doTraverse = true) => {
+      if (doTraverse) {
+        traversePair(dst, src, (dst, src) => copyVariantMaterials(dst, src));
+      } else {
+        copyVariantMaterials(dst, src);
+      }
     };
   }
 }
