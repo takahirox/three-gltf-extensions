@@ -65,6 +65,16 @@ The returned Promise will be resolved when all the selected materials are ready.
 Unless `doTraverse` is set to `false`, the function traverses the children and applys it to all the child objects, too.
 You are recommended to call this function before exporting objects with [GLTFExporter KHR_materials_variants plugin](../../exporters/KHR_materials_variants/#README.md)
 
+**gltf.functions.copyVariantMaterials(dst: THREE.Object3D, src: THREE.Object3D, doTraverse = true: boolean): void**
+
+Variant material instances are stored under `.userData` but Three.js `copy/clone()` doesn't copy/clone the Three.js objects　under `.userData`.
+Users need to copy/clone variant materials with this helper function like
+
+```
+const obj2 = obj1.clone();
+gltf.functions.copyVariantMaterials(obj2, obj1);
+```
+
 ## Side effects
 
 * `gltf.functions.selectVariant()` saves an original (core-spec) material as `mesh.userData.originalMaterial` for each Mesh
@@ -86,3 +96,5 @@ You can omit `.gltfMaterialIndex` property and `customVariantName` doesn't have 
 * `selectVariant()` doesn't have effect to meshes which are already removed from a scene
 * This plugin may not work if a glTF node has camera, light, or other extension objects in addition to mesh. This limitation may be removed if [this suggestion](https://github.com/mrdoob/three.js/pull/19359#issuecomment-774487100) is accepted.
 * `mesh.userData.variantMaterials` are not serialized by Three.js `toJSON()` method correctly because it doesn't support the serialization of Three.js objects under `.userData`.
+* Three.js `copy/clone()` doesn't copy/clone variant and original mateiral instances under `.userData`. You need to use `copyVariantMaterials()` helper function.
+* If you want to manually assign an active material, you also need to update the corresponding property in `.userData`.
