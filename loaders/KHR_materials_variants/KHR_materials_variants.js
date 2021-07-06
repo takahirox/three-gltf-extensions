@@ -16,7 +16,7 @@
  */
 const ensureUniqueNames = (variantNames) => {
   const uniqueNames = [];
-  const knownNames = {};
+  const knownNames = new Set();
 
   for (const name of variantNames) {
     let uniqueName = name;
@@ -24,10 +24,10 @@ const ensureUniqueNames = (variantNames) => {
     // @TODO: An easy solution.
     //        O(N^2) in the worst scenario where N is variantNames.length.
     //        Fix me if needed.
-    while (knownNames[uniqueName] !== undefined) {
+    while (knownNames.has(uniqueName)) {
       uniqueName = name + '.' + (++suffix);
     }
-    knownNames[uniqueName] = true;
+    knownNames.add(uniqueName);
     uniqueNames.push(uniqueName);
   }
 
