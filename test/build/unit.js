@@ -53512,7 +53512,7 @@
 	 */
 	const ensureUniqueNames = (variantNames) => {
 	  const uniqueNames = [];
-	  const knownNames = {};
+	  const knownNames = new Set();
 
 	  for (const name of variantNames) {
 	    let uniqueName = name;
@@ -53520,10 +53520,10 @@
 	    // @TODO: An easy solution.
 	    //        O(N^2) in the worst scenario where N is variantNames.length.
 	    //        Fix me if needed.
-	    while (knownNames[uniqueName] !== undefined) {
+	    while (knownNames.has(uniqueName)) {
 	      uniqueName = name + '.' + (++suffix);
 	    }
-	    knownNames[uniqueName] = true;
+	    knownNames.add(uniqueName);
 	    uniqueNames.push(uniqueName);
 	  }
 
@@ -53558,6 +53558,37 @@
 	  return object.material !== undefined && // easier than (!object.isMesh && !object.isLine && !object.isPoints)
 	    object.userData && // just in case
 	    object.userData.variantMaterials;
+	};
+
+	/**
+	 * @param obj1 {THREE.Object3D}
+	 * @param obj2 {THREE.Object3D}
+	 * @param callback {function}
+	 */
+	const traversePair = (obj1, obj2, callback) => {
+	  callback(obj1, obj2);
+	  // Assume obj1 and obj2 have the same tree structure
+	  for (let i = 0; i < obj1.children.length; i++) {
+	    traversePair(obj1.children[i], obj2.children[i], callback);
+	  }
+	};
+
+	// Variant materials and original material instances are stored under
+	// object.userData.variantMaterials/originalMaterial.
+	// Three.js Object3D.cppy/clone() doesn't copy/clone Three.js objects under
+	// .userData so this function is a workaround.
+	/**
+	 * @param dst {THREE.Object3D}
+	 * @param src {THREE.Object3D}
+	 * @param callback {function}
+	 */
+	const copyVariantMaterials = (dst, src) => {
+	  if (src.userData.variantMaterials !== undefined) {
+	    dst.userData.variantMaterials = Object.assign({}, src.userData.variantMaterials);
+	  }
+	  if (src.userData.originalMaterial !== undefined) {
+	    dst.userData.originalMaterial = src.userData.originalMaterial;
+	  }
 	};
 
 	class GLTFMaterialsVariantsExtension {
@@ -53720,6 +53751,19 @@
 	        compatibleObject(object) && pending.push(ensureLoadVariants(object));
 	      }
 	      return Promise.all(pending);
+	    };
+
+	    /**
+	     * @param dst {THREE.Object3D}
+	     * @param src {THREE.Object3D}
+	     * @param doTraverse {boolean} Default is true
+	     */
+	    gltf.functions.copyVariantMaterials = (dst, src, doTraverse = true) => {
+	      if (doTraverse) {
+	        traversePair(dst, src, (dst, src) => copyVariantMaterials(dst, src));
+	      } else {
+	        copyVariantMaterials(dst, src);
+	      }
 	    };
 	  }
 	}
@@ -53891,6 +53935,67 @@
 	          });
 
 	          assert.ok(loaded, 'Loaded');
+
+	          // @TODO: Test doTraverse option
+
+	          done();
+	        }, undefined, error => {
+	          assert.ok(false, 'can load');
+	          done();
+	        });
+	    });
+
+	    QUnit.test('clone', assert => {
+	      const done = assert.async();
+
+	      const traversePair = (obj1, obj2, callback) => {
+	　　　　　　　　callback(obj1, obj2);
+	        for (let i = 0; i < obj1.children.length; i ++) {
+	          traversePair(obj1.children[i], obj2.children[i], callback);
+	        }
+	      };
+
+	      new GLTFLoader()
+	        .register(parser => new GLTFMaterialsVariantsExtension(parser))
+	        .load(assetPath, async gltf => {
+	          gltf.userData.variants;
+	          const scene = gltf.scene;
+
+	          await gltf.functions.ensureLoadVariants(scene);
+
+	          const scene2 = scene.clone();
+	          gltf.functions.copyVariantMaterials(scene2, scene);
+
+	          let cloned = true;
+	          let found = false;
+
+	          traversePair(scene, scene2, (obj1, obj2) => {
+	            if (obj1.userData.variantMaterials !== undefined ||
+	              obj2.userData.variantMaterials !== undefined) {
+	              if (obj1.userData.variantMaterials === undefined ||
+	                obj2.userData.variantMaterials === undefined) {
+	                cloned = false;
+	              } else if (obj1.userData.variantMaterials === obj2.userData.variantMaterials) {
+	                cloned = false;
+	              } else {
+	                found = true;
+	                const keys = new Set();
+	                for (const key in obj1.userData.variantMaterials) {
+	                  keys.add(key);
+	                }
+	                for (const key in obj2.userData.variantMaterials) {
+	                  keys.add(key);
+	                }
+	                for (const key of keys.values()) {
+	                  if (obj1.userData.variantMaterials[key] !== obj2.userData.variantMaterials[key]) {
+	                    cloned = false;
+	                  }
+	                }
+	              }
+	            }
+	          });
+
+	          assert.ok(cloned && found, 'variant materials are copied');
 
 	          // @TODO: Test doTraverse option
 
