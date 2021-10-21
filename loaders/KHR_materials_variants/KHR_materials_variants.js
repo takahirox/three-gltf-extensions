@@ -119,39 +119,22 @@ export default class GLTFMaterialsVariantsExtension {
     for (const scene of gltf.scenes) {
       // Save the variants data under associated mesh.userData
       scene.traverse(object => {
-        // The following code can be simplified if parser.associations directly supports meshes.
         const association = parser.associations.get(object);
 
-        if (!association || association.type !== 'nodes') {
+        if (!association || association.meshes === undefined || association.primitives === undefined) {
           return;
         }
 
-        const nodeDef = json.nodes[association.index];
-        const meshIndex = nodeDef.mesh;
+        const meshDef = json.meshes[association.meshes];
+        const primitiveDef = meshDef.primitives[association.primitives];
+        const extensionsDef = primitiveDef.extensions;
 
-        if (meshIndex === undefined) {
+        if (!extensionsDef || !extensionsDef[this.name]) {
           return;
         }
 
-        // Two limitations:
-        // 1. The nodeDef shouldn't have any objects (camera, light, or nodeDef.extensions object)
-        //    other than nodeDef.mesh
-        // 2. Other plugins shouldn't change any scene graph hierarchy
-        // The following code can cause error if hitting the either or both limitations
-        // If parser.associations will directly supports meshes these limitations can be removed
-
-        const meshDef = json.meshes[meshIndex];
-        const primitivesDef = meshDef.primitives;
-        const meshes = object.isMesh ? [object] : object.children;
-
-        for (let i = 0; i < primitivesDef.length; i++) {
-          const primitiveDef = primitivesDef[i];
-          const extensionsDef = primitiveDef.extensions;
-          if (!extensionsDef || !extensionsDef[this.name]) {
-            continue;
-          }
-          meshes[i].userData.variantMaterials = mappingsArrayToTable(extensionsDef[this.name], variants);
-        }
+        // object should be Mesh
+        object.userData.variantMaterials = mappingsArrayToTable(extensionsDef[this.name], variants);
       });
     }
 

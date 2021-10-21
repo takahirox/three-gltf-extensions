@@ -1,6 +1,7 @@
 /* global QUnit */
 
 import * as THREE from '../examples/three/three.module.js';
+import {FontLoader} from '../examples/three/loaders/FontLoader.js';
 import {GLTFLoader} from '../examples/three/loaders/GLTFLoader.js';
 import GLTFTextExtension from '../loaders/EXT_text/EXT_text.js';
 
@@ -12,7 +13,7 @@ export default QUnit.module('EXT_text', () => {
     QUnit.test('register', assert => {
       const done = assert.async();
       new GLTFLoader()
-        .register(parser => new GLTFTextExtension(parser, new THREE.FontLoader(), fontPath, THREE))
+        .register(parser => new GLTFTextExtension(parser, new FontLoader(), fontPath, THREE))
         .parse('{"asset": {"version": "2.0"}}', null, result => {
           assert.ok(true, 'can register');
           done();
@@ -27,7 +28,7 @@ export default QUnit.module('EXT_text', () => {
     QUnit.test('parse', assert => {
       const done = assert.async();
       new GLTFLoader()
-        .register(parser => new GLTFTextExtension(parser, new THREE.FontLoader(), fontPath, THREE))
+        .register(parser => new GLTFTextExtension(parser, new FontLoader(), fontPath, THREE))
         .load(assetPath, gltf => {
           assert.ok(true, 'can load');
           // @TODO: Properer check
