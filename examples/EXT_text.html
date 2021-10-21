@@ -18,6 +18,7 @@
       import * as THREE from './three/three.module.js';
 
       import {OrbitControls} from './three/controls/OrbitControls.js';
+      import {FontLoader} from './three/loaders/FontLoader.js';
       import {GLTFLoader} from './three/loaders/GLTFLoader.js';
       import {RGBELoader} from './three/loaders/RGBELoader.js';
 
@@ -52,7 +53,7 @@
 
             const loader = new GLTFLoader().setPath('assets/gltf/BoomBox/glTF-text/');
             loader.register(parser => new GLTFTextExtension(
-              parser, new THREE.FontLoader(),
+              parser, new FontLoader(),
               'assets/fonts/helvetiker_regular.typeface.json', THREE));
             loader.load('BoomBox.gltf', gltf => {
               gltf.scene.rotation.y = Math.PI;

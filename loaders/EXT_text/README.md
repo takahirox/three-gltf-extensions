@@ -18,7 +18,7 @@ loader.load(path_to_gltf_asset, gltf => {
 
 ## Compatible Three.js revision
 
-&gt;= r126
+&gt;= r133
 
 ## Dependencies
 
