@@ -54999,7 +54999,6 @@
 	    // @TODO: Can we support InstancedMesh + SkinnedMesh?
 	    const pending = [];
 	    const attributes = {};
-	    pending.push(this.parser.createNodeMesh(nodeIndex));
 	    for (const key in attributesDef) {
 	      pending.push(this.parser.getDependency('accessor', attributesDef[key]).then(accessor => {
 	        attributes[key] = accessor;
@@ -55007,15 +55006,21 @@
 	      }));
 	    }
 
+	    if (pending.length < 1) {
+	      return null;
+	    }
+
+	    pending.push(this.parser.createNodeMesh(nodeIndex));
+
 	    return Promise.all(pending).then(results => {
-	      const mesh = results[0];
+	      const mesh = results.pop();
 
 	      // @TODO: Fix me. Support Group (= glTF multiple mesh.primitives).
 	      if (!mesh.isMesh) {
 	        return mesh;
 	      }
 
-	      const count = results[1].count; // All attribute counts should be same
+	      const count = results[0].count; // All attribute counts should be same
 
 	      // For Working
 	      const m = mesh.matrix.clone();
@@ -55034,8 +55039,16 @@
 	        if (attributes.SCALE) {
 	          s.fromBufferAttribute(attributes.SCALE, i);
 	        }
-	        // @TODO: Support _ID and others
 	        instancedMesh.setMatrixAt(i, m.compose(p, q, s));
+	      }
+
+	      // We store other attributes to mesh.geometry so far.
+	      for (const attributeName in attributes) {
+	        if (attributeName !== 'TRANSLATION' &&
+	          attributeName !== 'ROTATION' &&
+	          attributeName !== 'SCALE') {
+	          mesh.geometry.setAttribute(attributeName, attributes[attributeName]);
+	        }
 	      }
 
 	      // Just in case
