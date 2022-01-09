@@ -41,50 +41,63 @@ export default class GLTFInstancingExtension {
     pending.push(this.parser.createNodeMesh(nodeIndex));
 
     return Promise.all(pending).then(results => {
-      const mesh = results.pop();
-
-      // @TODO: Fix me. Support Group (= glTF multiple mesh.primitives).
-      if (!mesh.isMesh) {
-        return mesh;
-      }
-
+      const nodeObject = results.pop();
+      const meshes = nodeObject.isGroup ? nodeObject.children : [nodeObject];
       const count = results[0].count; // All attribute counts should be same
+      const instancedMeshes = [];
 
-      // For Working
-      const m = mesh.matrix.clone();
-      const p = mesh.position.clone().set(0, 0, 0);
-      const q = mesh.quaternion.clone().set(0, 0, 0, 1);
-      const s = mesh.scale.clone().set(1, 1, 1);
+      for (const mesh of meshes) {
+        // Temporal variables
+        const m = mesh.matrix.clone();
+        const p = mesh.position.clone().set(0, 0, 0);
+        const q = mesh.quaternion.clone().set(0, 0, 0, 1);
+        const s = mesh.scale.clone().set(1, 1, 1);
 
-      const instancedMesh = new this.THREE.InstancedMesh(mesh.geometry, mesh.material, count);
-      for (let i = 0; i < count; i++) {
-        if (attributes.TRANSLATION) {
-          p.fromBufferAttribute(attributes.TRANSLATION, i);
+        const instancedMesh = new this.THREE.InstancedMesh(mesh.geometry, mesh.material, count);
+        for (let i = 0; i < count; i++) {
+          if (attributes.TRANSLATION) {
+            p.fromBufferAttribute(attributes.TRANSLATION, i);
+          }
+          if (attributes.ROTATION) {
+            q.fromBufferAttribute(attributes.ROTATION, i);
+          }
+          if (attributes.SCALE) {
+            s.fromBufferAttribute(attributes.SCALE, i);
+          }
+
+          instancedMesh.setMatrixAt(i, m.compose(p, q, s));
         }
-        if (attributes.ROTATION) {
-          q.fromBufferAttribute(attributes.ROTATION, i);
+
+        // We store other attributes to mesh.geometry so far.
+        for (const attributeName in attributes) {
+          if (attributeName !== 'TRANSLATION' &&
+            attributeName !== 'ROTATION' &&
+            attributeName !== 'SCALE') {
+            mesh.geometry.setAttribute(attributeName, attributes[attributeName]);
+          }
         }
-        if (attributes.SCALE) {
-          s.fromBufferAttribute(attributes.SCALE, i);
-        }
-        instancedMesh.setMatrixAt(i, m.compose(p, q, s));
+
+        // Just in case
+        this.THREE.Object3D.prototype.copy.call(instancedMesh, mesh);
+
+        instancedMesh.frustumCulled = false;
+        this.parser.assignFinalMaterial(instancedMesh);
+
+        instancedMeshes.push(instancedMesh);
       }
 
-      // We store other attributes to mesh.geometry so far.
-      for (const attributeName in attributes) {
-        if (attributeName !== 'TRANSLATION' &&
-          attributeName !== 'ROTATION' &&
-          attributeName !== 'SCALE') {
-          mesh.geometry.setAttribute(attributeName, attributes[attributeName]);
+      if (nodeObject.isGroup) {
+        while (nodeObject.children.length > 0) {
+          nodeObject.remove(nodeObject.children[0]);
         }
+
+        for (const instancedMesh of instancedMeshes) {
+          nodeObject.add(instancedMesh);
+        }
+        return nodeObject;
       }
 
-      // Just in case
-      this.THREE.Object3D.prototype.copy.call(instancedMesh, mesh);
-
-      instancedMesh.frustumCulled = false;
-      this.parser.assignFinalMaterial(instancedMesh);
-      return instancedMesh;
+      return instancedMeshes[0];
     });
   }
 }
