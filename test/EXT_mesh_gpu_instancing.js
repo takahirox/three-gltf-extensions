@@ -43,5 +43,8 @@ export default QUnit.module('EXT_mesh_gpu_instancing', () => {
           done();
         });
     });
+
+    QUnit.todo('parse - multiple primitives', assert => {
+    });
   });
 });
