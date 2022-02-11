@@ -1,3 +1,8 @@
+import {
+  LOD,
+  Object3D
+} from 'three';
+
 /**
  * LOD Extension
  *
@@ -5,11 +10,10 @@
  *
  */
 export default class GLTFLodExtension {
-  constructor(parser, callback=null, THREE) {
+  constructor(parser, callback=null) {
     this.name = 'MSFT_lod';
     this.parser = parser;
     this.callback = callback;
-    this.THREE = THREE;
     this.materialMap = new Map();
     this.processing = new Map();
   }
@@ -65,7 +69,7 @@ export default class GLTFLodExtension {
     // Low to high LOD to request the lower ones first
     nodeIndices.reverse();
 
-    const lod = new this.THREE.LOD();
+    const lod = new LOD();
 
     const meshPending = [];
 
@@ -136,7 +140,7 @@ export default class GLTFLodExtension {
 
   async _loadMesh(nodeDef) {
     if (nodeDef.mesh === undefined) {
-      return new this.THREE.Object3D();
+      return new Object3D();
     }
 
     // @TODO: How should we resolve the case that another mesh index is defined

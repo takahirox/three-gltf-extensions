@@ -1,11 +1,11 @@
 /* global QUnit */
 
-import {GLTFLoader} from '../examples/three/loaders/GLTFLoader.js';
+import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
 import GLTFMaterialsVariantsExtension from '../loaders/KHR_materials_variants/KHR_materials_variants.js';
 import {
   Mesh,
   MeshStandardMaterial
-} from '../examples/three/three.module.js';
+} from 'three';
 
 const assetPath = '../examples/assets/gltf/MaterialsVariantsShoe/glTF/MaterialsVariantsShoe.gltf';
 

@@ -6,8 +6,13 @@
     "run": "npm run build && qunit -f !-webonly build/unit.js "
   },
   "devDependencies": {
+    "@rollup/plugin-node-resolve": "13.1.3",
     "qunit": "^2.14.0",
-    "rollup": "^2.39.0"
+    "rollup": "^2.67.1"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "three": "0.137.5",
+    "three-gltf-extensions": "file:.."
+  }
 }

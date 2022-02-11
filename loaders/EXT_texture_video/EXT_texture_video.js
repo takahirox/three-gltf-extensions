@@ -1,30 +1,41 @@
+import {
+  ClampToEdgeWrapping,
+  LinearFilter,
+  LinearMipmapLinearFilter,
+  LinearMipmapNearestFilter,
+  MirroredRepeatWrapping,
+  NearestFilter,
+  NearestMipmapNearestFilter,
+  NearestMipmapLinearFilter,
+  RepeatWrapping,
+  VideoTexture
+} from 'three';
+
+const WEBGL_FILTERS = {
+  9728: NearestFilter,
+  9729: LinearFilter,
+  9984: NearestMipmapNearestFilter,
+  9985: LinearMipmapNearestFilter,
+  9986: NearestMipmapLinearFilter,
+  9987: LinearMipmapLinearFilter
+};
+
+const WEBGL_WRAPPINGS = {
+  33071: ClampToEdgeWrapping,
+  33648: MirroredRepeatWrapping,
+  10497: RepeatWrapping
+};
+
 /**
  * Video Texture Extension
  *
  * Specification: https://github.com/takahirox/EXT_texture_video
  *
  */
-
 export default class GLTFTextExtension {
-  constructor(parser, THREE) {
+  constructor(parser) {
     this.name = 'EXT_texture_video';
     this.parser = parser;
-    this.THREE = THREE;
-
-    this.WEBGL_FILTERS = {
-      9728: THREE.NearestFilter,
-      9729: THREE.LinearFilter,
-      9984: THREE.NearestMipmapNearestFilter,
-      9985: THREE.LinearMipmapNearestFilter,
-      9986: THREE.NearestMipmapLinearFilter,
-      9987: THREE.LinearMipmapLinearFilter
-    };
-
-    this.WEBGL_WRAPPINGS = {
-      33071: THREE.ClampToEdgeWrapping,
-      33648: THREE.MirroredRepeatWrapping,
-      10497: THREE.RepeatWrapping
-    };
   }
 
   loadTexture(textureIndex) {
@@ -49,12 +60,12 @@ export default class GLTFTextExtension {
       const onCanplaythrough = event => {
         video.removeEventListener('canplaythrough', onCanplaythrough);
         video.play();
-        const texture = new this.THREE.VideoTexture(video);
+        const texture = new VideoTexture(video);
         texture.flipY = false;
-        texture.magFilter = this.WEBGL_FILTERS[samplerDef.magFilter] || this.THREE.LinearFilter;
-        texture.minFilter = this.WEBGL_FILTERS[samplerDef.minFilter] || this.THREE.LinearFilter;
-        texture.wrapS = this.WEBGL_WRAPPINGS[samplerDef.wrapS] || this.THREE.RepeatWrapping;
-        texture.wrapT = this.WEBGL_WRAPPINGS[samplerDef.wrapT] || this.THREE.RepeatWrapping;
+        texture.magFilter = WEBGL_FILTERS[samplerDef.magFilter] || LinearFilter;
+        texture.minFilter = WEBGL_FILTERS[samplerDef.minFilter] || LinearFilter;
+        texture.wrapS = WEBGL_WRAPPINGS[samplerDef.wrapS] || RepeatWrapping;
+        texture.wrapT = WEBGL_WRAPPINGS[samplerDef.wrapT] || RepeatWrapping;
         resolve(texture);
       };
       video.addEventListener('canplaythrough', onCanplaythrough);

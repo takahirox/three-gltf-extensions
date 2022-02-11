@@ -1,7 +1,6 @@
 /* global QUnit */
 
-import * as THREE from '../examples/three/three.module.js';
-import {GLTFLoader} from '../examples/three/loaders/GLTFLoader.js';
+import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
 import GLTFVideoTextureExtension from '../loaders/EXT_texture_video/EXT_texture_video.js';
 
 const assetPath = '../examples/assets/gltf/Box/glTF-texture-video/BoxTextured.gltf';
@@ -11,7 +10,7 @@ export default QUnit.module('EXT_texture_video', () => {
     QUnit.test('register', assert => {
       const done = assert.async();
       new GLTFLoader()
-        .register(parser => new GLTFVideoTextureExtension(parser, THREE))
+        .register(parser => new GLTFVideoTextureExtension(parser))
         .parse('{"asset": {"version": "2.0"}}', null, result => {
           assert.ok(true, 'can register');
           done();
@@ -26,7 +25,7 @@ export default QUnit.module('EXT_texture_video', () => {
     QUnit.test('parse', assert => {
       const done = assert.async();
       new GLTFLoader()
-        .register(parser => new GLTFVideoTextureExtension(parser, THREE))
+        .register(parser => new GLTFVideoTextureExtension(parser))
         .load(assetPath, gltf => {
           assert.ok(true, 'can load');
           // @TODO: Properer check

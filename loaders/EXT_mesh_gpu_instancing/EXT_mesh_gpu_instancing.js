@@ -1,3 +1,5 @@
+import {InstancedMesh, Object3D} from 'three';
+
 /**
  * GPU Instancing Extension
  *
@@ -5,10 +7,9 @@
  *
  */
 export default class GLTFInstancingExtension {
-  constructor(parser, THREE) {
+  constructor(parser) {
     this.name = 'EXT_mesh_gpu_instancing';
     this.parser = parser;
-    this.THREE = THREE;
   }
 
   createNodeMesh(nodeIndex) {
@@ -53,7 +54,7 @@ export default class GLTFInstancingExtension {
         const q = mesh.quaternion.clone().set(0, 0, 0, 1);
         const s = mesh.scale.clone().set(1, 1, 1);
 
-        const instancedMesh = new this.THREE.InstancedMesh(mesh.geometry, mesh.material, count);
+        const instancedMesh = new InstancedMesh(mesh.geometry, mesh.material, count);
         for (let i = 0; i < count; i++) {
           if (attributes.TRANSLATION) {
             p.fromBufferAttribute(attributes.TRANSLATION, i);
@@ -64,7 +65,6 @@ export default class GLTFInstancingExtension {
           if (attributes.SCALE) {
             s.fromBufferAttribute(attributes.SCALE, i);
           }
-
           instancedMesh.setMatrixAt(i, m.compose(p, q, s));
         }
 
@@ -78,7 +78,7 @@ export default class GLTFInstancingExtension {
         }
 
         // Just in case
-        this.THREE.Object3D.prototype.copy.call(instancedMesh, mesh);
+        Object3D.prototype.copy.call(instancedMesh, mesh);
 
         instancedMesh.frustumCulled = false;
         this.parser.assignFinalMaterial(instancedMesh);
