@@ -1,7 +1,6 @@
 /* global QUnit */
 
-import * as THREE from '../examples/three/three.module.js';
-import {GLTFLoader} from '../examples/three/loaders/GLTFLoader.js';
+import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
 import GLTFLodExtension from '../loaders/MSFT_lod/MSFT_lod.js';
 
 const assetPath = '../examples/assets/gltf/Torus/glTF-lod/Torus.gltf';
@@ -11,7 +10,7 @@ export default QUnit.module('MSFT_lod', () => {
     QUnit.test('register', assert => {
       const done = assert.async();
       new GLTFLoader()
-        .register(parser => new GLTFLodExtension(parser, undefined, THREE))
+        .register(parser => new GLTFLodExtension(parser, undefined))
         .parse('{"asset": {"version": "2.0"}}', null, result => {
           assert.ok(true, 'can register');
           done();
@@ -26,7 +25,7 @@ export default QUnit.module('MSFT_lod', () => {
     QUnit.test('parse', assert => {
       const done = assert.async();
       new GLTFLoader()
-        .register(parser => new GLTFLodExtension(parser, undefined, THREE))
+        .register(parser => new GLTFLodExtension(parser, undefined))
         .load(assetPath, gltf => {
           assert.ok(true, 'can load');
           // @TODO: More proper test

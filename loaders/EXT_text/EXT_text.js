@@ -1,3 +1,12 @@
+import {
+  Color,
+  DoubleSide,
+  Mesh,
+  MeshBasicMaterial,
+  Object3D,
+  ShapeGeometry
+} from 'three';
+
 /**
  * Text Extension
  *
@@ -5,10 +14,9 @@
  *
  */
 export default class GLTFTextExtension {
-  constructor(parser, fontLoader, fontUrl, THREE) {
+  constructor(parser, fontLoader, fontUrl) {
     this.name = 'EXT_text';
     this.parser = parser;
-    this.THREE = THREE;
     this.fontLoader = fontLoader;
     this.fontUrl = fontUrl;
     this.fontPromise = null;
@@ -28,20 +36,20 @@ export default class GLTFTextExtension {
     const color = textDef.color || [0.5, 0.5, 0.5, 1.0];
     return this._loadFont().then(font => {
       const shapes = font.generateShapes(textContent);
-      const geometry = new this.THREE.ShapeGeometry(shapes);
-      return new this.THREE.Mesh(
+      const geometry = new ShapeGeometry(shapes);
+      return new Mesh(
         geometry,
-        new this.THREE.MeshBasicMaterial({
-          side: this.THREE.DoubleSide,
-          color: new this.THREE.Color(color[0], color[1], color[2]),
+        new MeshBasicMaterial({
+          side: DoubleSide,
+          color: new Color(color[0], color[1], color[2]),
           transparent: color[3] < 1.0,
           opacity: color[3]
         })
       );
     }).catch(error => {
       // @TODO: Properer error handling
-      console.error(e);
-      return this.THREE.Object3D();
+      console.error(error);
+      return Object3D();
     });
   }
 

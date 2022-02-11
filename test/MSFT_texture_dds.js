@@ -1,7 +1,7 @@
 /* global QUnit */
 
-import {GLTFLoader} from '../examples/three/loaders/GLTFLoader.js';
-import {DDSLoader} from '../examples/three/loaders/DDSLoader.js';
+import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
+import {DDSLoader} from 'three/examples/jsm/loaders/DDSLoader.js';
 import GLTFTextureDDSExtension from '../loaders/MSFT_texture_dds/MSFT_texture_dds.js';
 
 const assetPath = '../examples/assets/gltf/BoomBox/glTF-dds/BoomBox.gltf';
