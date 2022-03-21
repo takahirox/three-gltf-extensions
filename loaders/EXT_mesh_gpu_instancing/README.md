@@ -3,12 +3,11 @@
 ## How to use
 
 ```javascript
-import * as THREE from 'path_to_three.module.js';
 import {GLTFLoader} from 'path_to_GLTFLoader.js';
 import GLTFInstancingExtension from 'path_to_three-gltf-exensions/loaders/EXT_mesh_gpu_instancing/EXT_mesh_gpu_instancing.js';
 
 const loader = new GLTFLoader();
-loader.register(parser => new GLTFInstancingExtension(parser, THREE));
+loader.register(parser => new GLTFInstancingExtension(parser));
 loader.load(path_to_gltf_asset, gltf => {
   scene.add(gltf.scene);
   render();
@@ -23,42 +22,13 @@ In progress
 
 &gt;= r128dev
 
-## Dependencies
-
-- [InstancedMesh](https://threejs.org/docs/#api/en/objects/InstancedMesh)
-- [Object3D](https://threejs.org/docs/#api/en/core/Object3D)
-
-Pass the class to `GLTFInstancingExtension` constructor as the second argument.
-
 ## API
 
 ### Constructor
 
-**GLTFInstancingExtension(parser: GLTFParser, THREE: Object)**
+**GLTFInstancingExtension(parser: GLTFParser)**
 
 `parser` -- `GLTFParser` instance which comes from `GLTFLoader.register()` callback
-
-`THREE` -- Three.js dependencies the plugin needs. Either following style is expected to pass
-
-```
-import * as THREE from 'path_to_three.module.js';
-
-loader.register(parser => new GLTFInstancingExtension(parser, THREE));
-```
-
-or
-
-```
-import {
-  InstancedMesh,
-  Object3D
-} from 'path_to_three.module.js';
-
-loader.register(parser => new GLTFInstancingExtension(parser, {
-  InstancedMesh,
-  Object3D
-}));
-```
 
 ## Limitations
 
