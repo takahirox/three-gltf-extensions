@@ -62,5 +62,4 @@ loader.register(parser => new GLTFInstancingExtension(parser, {
 
 ## Limitations
 
-- No [glTF multiple mesh primitives](https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#meshprimitives-white_check_mark) support yet
 - No [Three.js SkinnedMesh](https://threejs.org/docs/#api/en/objects/SkinnedMesh) support (yet)
