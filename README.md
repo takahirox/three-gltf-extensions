@@ -23,7 +23,7 @@ This project provides you Three.js glTF loader/extension plugins even for such e
 ## Supported glTF extensions
 
 * [KHR_materials_variants](https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Khronos/KHR_materials_variants)
-* [EXT_mesh_gpu_instancing](https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Vendor/EXT_mesh_gpu_instancing) (Loader only, in progress)
+* [EXT_mesh_gpu_instancing](https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Vendor/EXT_mesh_gpu_instancing)
 * [EXT_text](https://github.com/takahirox/EXT_text) (Loader only)
 * [EXT_texture_video](https://github.com/takahirox/EXT_texture_video) (Loader only)
 * [MSFT_lod](https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Vendor/MSFT_lod) (Loader only, in progress)
