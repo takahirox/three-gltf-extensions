@@ -5,10 +5,10 @@
 ```javascript
 import * as THREE from 'path_to_three.module.js';
 import {GLTFExporter} from 'path_to_GLTFExporter.js';
-import GLTFMeshGPUInstancingExtension from 'path_to_three-gltf-extensions/exporters/EXT_mesh_gpu_instancing/EXT_mesh_gpu_instancing_exporter.js';
+import GLTFExporterMeshGPUInstancingExtension from 'path_to_three-gltf-extensions/exporters/EXT_mesh_gpu_instancing/EXT_mesh_gpu_instancing_exporter.js';
 
 const exporter = new GLTFExporter();
-exporter.register(writer => new GLTFMeshGPUInstancingExtension(writer));
+exporter.register(writer => new GLTFExporterMeshGPUInstancingExtension(writer));
 
 exporter.parse(scene, result => {
   ...
@@ -27,3 +27,4 @@ decomposes the instancing matrices and exports them as `EXT_mesh_gpu_instancing`
 ## Limitations
 
 * Only pos(3), rot(4), scale(3) matrices (4x4 transform matrices) are supported.
+* Colors are not supported yet.
