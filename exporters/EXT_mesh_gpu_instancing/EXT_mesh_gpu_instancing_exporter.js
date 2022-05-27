@@ -1,67 +1,67 @@
+import {
+  BufferAttribute,
+  Matrix4,
+  Vector3,
+  Quaternion
+} from 'three';
+
 /**
  * Mesh GPU Instancing extension
  *
  * Specification: https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Vendor/EXT_mesh_gpu_instancing
  */
+export default class GLTFExporterMeshGPUInstancingExtension {
+  constructor(writer) {
+    this.writer = writer;
+    this.name = 'EXT_mesh_gpu_instancing';
+  }
 
- import {
-	BufferAttribute,
-	Matrix4,
-	Vector3,
-	Quaternion,
-} from 'three';
+  writeNode(node, nodeDef) {
+    if (node.isInstancedMesh !== true) {
+      return;
+    }
 
- export default class GLTFMeshGPUInstancingExtension {
+    const count = node.count;
+    const matrix = new Matrix4();
+    const positions = new Float32Array(count * 3);
+    const quaternions = new Float32Array(count * 4);
+    const scales = new Float32Array(count * 3);
 
-	constructor( writer ) {
+    const p = new Vector3();
+    const q = new Quaternion();
+    const s = new Vector3();
 
-		this.writer = writer;
-		this.name = 'EXT_mesh_gpu_instancing';
+    for (let i = 0; i < count; i++) {
+      node.getMatrixAt(i, matrix);
+      matrix.decompose(p, q, s);
 
-	}
+      positions[i * 3] = p.x;
+      positions[i * 3 + 1] = p.y;
+      positions[i * 3 + 2] = p.z;
 
-	writeNode( node, nodeDef ) {
+      quaternions[i * 4] = q.x;
+      quaternions[i * 4 + 1] = q.y;
+      quaternions[i * 4 + 2] = q.z;
+      quaternions[i * 4 + 3] = q.w;
 
-		if(node.constructor.name !== "InstancedMesh") return;
+      scales[i * 3] = s.x;
+      scales[i * 3 + 1] = s.y;
+      scales[i * 3 + 2] = s.z;
+    }
 
-		const writer = this.writer;
-		const extensionsUsed = writer.extensionsUsed;
-		const extensionDef = {};
-		
-		nodeDef.extensions = nodeDef.extensions || {};
-		nodeDef.extensions[ this.name ] = extensionDef;
+    const writer = this.writer;
+    const extensionDef = {};
 
-		let mat = new Matrix4();
-		const pos0 = new Array();
-		const rot0 = new Array();
-		const scl0 = new Array();
+    // @TODO: Export attributes only if the values are not default values?
+    // @TODO: Support colors
+    extensionDef.attributes = {
+      TRANSLATION: writer.processAccessor(new BufferAttribute(positions, 3)),
+      ROTATION: writer.processAccessor(new BufferAttribute(quaternions, 4)),
+      SCALE: writer.processAccessor(new BufferAttribute(scales, 3)),
+    };
 
-		for(let i = 0; i < node.count; i++)
-		{
-			node.getMatrixAt(i, mat);
-			
-			let p = new Vector3();
-			let r = new Quaternion();
-			let s = new Vector3();
-
-			mat.decompose(p,r,s);
-			
-			pos0.push(p.x,p.y,p.z);
-			rot0.push(r.x,r.y,r.z,r.w);
-			scl0.push(s.x,s.y,s.z);
-		};
-
-		const pos = new Float32Array(pos0);
-		const rot = new Float32Array(rot0);
-		const scl = new Float32Array(scl0);
-
-		extensionDef.attributes = {
-			"TRANSLATION" : writer.processAccessor( new BufferAttribute( pos, 3 ) ),
-			"ROTATION" : writer.processAccessor( new BufferAttribute( rot, 4 ) ),
-			"SCALE" : writer.processAccessor( new BufferAttribute( scl, 3 ) ),
-		};
-
-		extensionsUsed[ this.name ] = true;
-
-	}
+    nodeDef.extensions = nodeDef.extensions || {};
+    nodeDef.extensions[this.name] = extensionDef;
+    writer.extensionsUsed[this.name] = true;
+  }
 }
