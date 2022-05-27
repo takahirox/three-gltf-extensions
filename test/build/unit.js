@@ -91107,7 +91107,7 @@
 	 * Specification: https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Vendor/EXT_mesh_gpu_instancing
 	 *
 	 */
-	class GLTFInstancingExtension {
+	class GLTFMeshGpuInstancingExtension {
 	  constructor(parser) {
 	    this.name = 'EXT_mesh_gpu_instancing';
 	    this.parser = parser;
@@ -91208,11 +91208,11 @@
 	const assetPath$4 = '../examples/assets/gltf/Teapots/glTF-instancing/teapots_galore.gltf';
 
 	QUnit.module('EXT_mesh_gpu_instancing', () => {
-	  QUnit.module('GLTFInstancingExtension', () => {
+	  QUnit.module('GLTFMeshGpuInstancingExtension', () => {
 	    QUnit.test('register', assert => {
 	      const done = assert.async();
 	      new GLTFLoader()
-	        .register(parser => new GLTFInstancingExtension(parser))
+	        .register(parser => new GLTFMeshGpuInstancingExtension(parser))
 	        .parse('{"asset": {"version": "2.0"}}', null, result => {
 	          assert.ok(true, 'can register');
 	          done();
@@ -91223,11 +91223,11 @@
 	    });
 	  });
 
-	  QUnit.module('GLTFInstancingExtension-webonly', () => {
+	  QUnit.module('GLTFMeshGpuInstancingExtension-webonly', () => {
 	    QUnit.test('parse', assert => {
 	      const done = assert.async();
 	      new GLTFLoader()
-	        .register(parser => new GLTFInstancingExtension(parser))
+	        .register(parser => new GLTFMeshGpuInstancingExtension(parser))
 	        .load(assetPath$4, gltf => {
 	          assert.ok(true, 'can load');
 	          // @TODO: More proper test
@@ -91246,6 +91246,12 @@
 	    });
 
 	    QUnit.todo('parse - multiple primitives', assert => {
+	    });
+	  });
+
+	  QUnit.module('GLTFExporterMeshGpuInstancingExtension-webonly', () => {
+	    QUnit.todo('export', assert => {
+	      assert.ok(false);
 	    });
 	  });
 	});
