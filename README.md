@@ -39,7 +39,15 @@ Depends on the plguins. Refer to each plugin's readme.
 
 ```javascript
 // Import Three.js
-import * as THREE from 'path_to_three.module.js';
+<script type="importmap">
+{
+  "imports": {
+    "three": "path_to_three.module.js"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
 import {GLTFLoader} from 'path_to_GLTFLoader.js';
 
 // Import three-gltf-extensions loader plugins
@@ -51,6 +59,7 @@ loader.register(parser => new GLTFFooExtension(parser));
 loader.load(path_to_gltf_asset, gltf => {
   ...
 });
+</script>
 ```
 
 
@@ -58,7 +67,15 @@ loader.load(path_to_gltf_asset, gltf => {
 
 ```javascript
 // Import Three.js
-import * as THREE from 'path_to_three.module.js';
+<script type="importmap">
+{
+  "imports": {
+    "three": "path_to_three.module.js"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
 import {GLTFExporter} from 'path_to_GLTFExporter.js';
 
 // Import three-gltf-extensions exporter plugins
@@ -70,6 +87,7 @@ exporter.register(writer => new GLTFExporterFooExtension(writer));
 exporter.parse(scene, result => {
   ...
 });
+</script>
 ```
 
 Refer to each plugin's README for more detail.

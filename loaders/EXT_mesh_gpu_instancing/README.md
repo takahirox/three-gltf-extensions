@@ -3,6 +3,15 @@
 ## How to use
 
 ```javascript
+<script type="importmap">
+{
+  "imports": {
+    "three": "path_to_three.module.js"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
 import {GLTFLoader} from 'path_to_GLTFLoader.js';
 import GLTFMeshGpuInstancingExtension from 'path_to_three-gltf-exensions/loaders/EXT_mesh_gpu_instancing/EXT_mesh_gpu_instancing.js';
 
@@ -12,6 +21,7 @@ loader.load(path_to_gltf_asset, gltf => {
   scene.add(gltf.scene);
   render();
 });
+</script>
 ```
 
 ## Status

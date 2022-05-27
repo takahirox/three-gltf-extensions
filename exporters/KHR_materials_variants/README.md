@@ -3,17 +3,25 @@
 ## How to use
 
 ```javascript
-import * as THREE from 'path_to_three.module.js';
+<script type="importmap">
+{
+  "imports": {
+    "three": "path_to_three.module.js"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
 import {GLTFExporter} from 'path_to_GLTFExporter.js';
 import GLTFExporterMaterialsVariantsExtension from 'path_to_three-gltf-extensions/exporters/KHR_materials_variants/KHR_materials_variants_exporter.js';
 
 const exporter = new GLTFExporter();
 exporter.register(writer => new GLTFExporterMaterialsVariantsExtension(writer));
-
 gltf.functions.ensureLoadVariants(scene); // Refer to "ensureLoadVariants()" in the KHR_materials_variants GLTFLoader plugin README
 exporter.parse(scene, result => {
   ...
 });
+</script>
 ```
 
 ## Compatible Three.js revision

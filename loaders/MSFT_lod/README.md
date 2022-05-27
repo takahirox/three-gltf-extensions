@@ -3,7 +3,15 @@
 ## How to use
 
 ```javascript
-import * as THREE from 'path_to_three.module.js';
+<script type="importmap">
+{
+  "imports": {
+    "three": "path_to_three.module.js"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
 import {GLTFLoader} from 'path_to_GLTFLoader.js';
 import GLTFLodExtension from 'path_to_three-gltf-exensions/loaders/MSFT_lod/MSFT_lod.js';
 
@@ -12,11 +20,12 @@ const onUpdate = () => {
   render();
 };
 const loader = new GLTFLoader();
-loader.register(parser => new GLTFLodExtension(parser, onUpdate, THREE));
+loader.register(parser => new GLTFLodExtension(parser, onUpdate));
 loader.load(path_to_gltf_asset, gltf => {
   scene.add(gltf.scene);
   render();
 });
+</script>
 ```
 
 ## Status
@@ -36,44 +45,15 @@ by swithing an object to lower quality one if it moves further.
 
 &gt;= r128dev
 
-## Dependencies
-
-- [LOD](https://threejs.org/docs/#api/en/objects/LOD)
-- [Object3D](https://threejs.org/docs/#api/en/core/Object3D)
-
-Pass the class to `GLTFLodExtension` constructor as the third argument.
-
 ## API
 
 ### Constructor
 
-**GLTFLodExtension(parser: GLTFParser, onUpdate: function, THREE: Object)**
+**GLTFLodExtension(parser: GLTFParser, onUpdate: function)**
 
 `parser` -- `GLTFParser` instance which comes from `GLTFLoader.register()` callback
 
 `onUpdate` -- [optional] a function is called when a new level of LOD is added
-
-`THREE` -- Three.js dependencies the plugin needs. Either following style is expected to pass
-
-```
-import * as THREE from 'path_to_three.module.js';
-
-loader.register(parser => new GLTFLodExtension(parser, onUpdate, THREE));
-```
-
-or
-
-```
-import {
-  LOD,
-  Object3D
-} from 'path_to_three.module.js';
-
-loader.register(parser => new GLTFLodExtension(parser, onUpdate, {
-  LOD,
-  Object3D
-}));
-```
 
 ## Limitations
 

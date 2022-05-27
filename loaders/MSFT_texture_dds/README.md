@@ -3,7 +3,15 @@
 ## How to use
 
 ```javascript
-import * as THREE from 'path_to_three.module.js';
+<script type="importmap">
+{
+  "imports": {
+    "three": "path_to_three.module.js"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
 import {GLTFLoader} from 'path_to_GLTFLoader.js';
 import {DDSLoader} from 'path_to_DDSLoader.js';
 import GLTFTextureDDSExtension from 'path_to_three-gltf-exensions/loaders/MSFT_texture_dds/MSFT_texture_dds.js';
@@ -14,6 +22,7 @@ loader.load(path_to_gltf_asset, gltf => {
   scene.add(gltf.scene);
   render();
 });
+</script>
 ```
 
 ## Compatible Three.js revision

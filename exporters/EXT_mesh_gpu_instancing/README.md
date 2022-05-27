@@ -3,16 +3,24 @@
 ## How to use
 
 ```javascript
-import * as THREE from 'path_to_three.module.js';
+<script type="importmap">
+{
+  "imports": {
+    "three": "path_to_three.module.js"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
 import {GLTFExporter} from 'path_to_GLTFExporter.js';
 import GLTFExporterMeshGPUInstancingExtension from 'path_to_three-gltf-extensions/exporters/EXT_mesh_gpu_instancing/EXT_mesh_gpu_instancing_exporter.js';
 
 const exporter = new GLTFExporter();
 exporter.register(writer => new GLTFExporterMeshGPUInstancingExtension(writer));
-
 exporter.parse(scene, result => {
   ...
 });
+</script>
 ```
 
 ## Compatible Three.js revision
