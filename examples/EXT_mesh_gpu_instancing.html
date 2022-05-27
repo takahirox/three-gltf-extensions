@@ -9,7 +9,7 @@
 
   <body>
     <div id="info">
-      <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> - GLTFLoader + <a href="https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Vendor/EXT_mesh_gpu_instancing" target="_blank" rel="noopener">EXT_mesh_gpu_instancing</a> extension<br />
+      <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> - GLTFLoader/Exporter + <a href="https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Vendor/EXT_mesh_gpu_instancing" target="_blank" rel="noopener">EXT_mesh_gpu_instancing</a> extension<br />
       Teapod by <a href="https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Vendor/EXT_mesh_gpu_instancing/samples" target="_blank" rel="noopener">glTF repository</a><br />
       <a href="https://hdrihaven.com/hdri/?h=royal_esplanade" target="_blank" rel="noopener">Royal Esplanade</a> by <a href="https://hdrihaven.com/" target="_blank" rel="noopener">HDRI Haven</a>
     </div>
@@ -28,9 +28,13 @@
 
       import {OrbitControls} from 'https://unpkg.com/three@0.137.5/examples/jsm/controls/OrbitControls.js';
       import {GLTFLoader} from 'https://unpkg.com/three@0.137.5/examples/jsm/loaders/GLTFLoader.js';
+      import {GLTFExporter} from 'https://unpkg.com/three@0.137.5/examples/jsm/exporters/GLTFExporter.js';
       import {RGBELoader} from 'https://unpkg.com/three@0.137.5/examples/jsm//loaders/RGBELoader.js';
 
       import GLTFInstancingExtension from '../loaders/EXT_mesh_gpu_instancing/EXT_mesh_gpu_instancing.js';
+      import GLTFExporterMeshGPUInstancingExtension from '../exporters/EXT_mesh_gpu_instancing/EXT_mesh_gpu_instancing_exporter.js';
+
+      import {saveArrayBuffer} from './utils/save.js';
 
       let camera, scene, renderer;
 
@@ -58,14 +62,49 @@
 
             // model
 
-            const loader = new GLTFLoader().setPath('assets/gltf/Teapots/glTF-instancing/');
+            const loader = new GLTFLoader().setPath('./assets/gltf/Teapots/glTF-instancing/');
             loader.register(parser => new GLTFInstancingExtension(parser, THREE));
             loader.load('teapots_galore.gltf', gltf => {
+              initExporter(gltf);
+
               gltf.scene.rotation.y = Math.PI;
               scene.add(gltf.scene);
               render();
             });
           });
+
+        const initExporter = gltf => {
+          const exporter = new GLTFExporter();
+          exporter.register(writer => new GLTFExporterMeshGPUInstancingExtension(writer));
+
+          const saveButton = document.createElement('button');
+          saveButton.innerText = 'Save glb';
+          saveButton.addEventListener('click', () => {
+            saveButton.disabled = true;
+            exporter.parse(scene, result => {
+              saveArrayBuffer(result, 'scene.glb');
+              saveButton.disabled = false;
+            }, undefined, {binary: true});
+          });
+
+          const dumpButton = document.createElement('button');
+          dumpButton.innerText = 'Dump to console';
+          dumpButton.addEventListener('click', () => {
+            dumpButton.disabled = true;
+            exporter.parse(scene, result => {
+              console.log(result);
+              dumpButton.disabled = false;
+            });
+          });
+
+          const buttons = document.createElement('div');
+          buttons.style.position = 'fixed';
+          buttons.style.bottom = 0;
+
+          buttons.appendChild(saveButton);
+          buttons.appendChild(dumpButton);
+          container.appendChild(buttons);
+        };
 
         renderer = new THREE.WebGLRenderer({antialias: true});
         renderer.setPixelRatio(window.devicePixelRatio);
