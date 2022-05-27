@@ -4,10 +4,10 @@
 
 ```javascript
 import {GLTFLoader} from 'path_to_GLTFLoader.js';
-import GLTFInstancingExtension from 'path_to_three-gltf-exensions/loaders/EXT_mesh_gpu_instancing/EXT_mesh_gpu_instancing.js';
+import GLTFMeshGpuInstancingExtension from 'path_to_three-gltf-exensions/loaders/EXT_mesh_gpu_instancing/EXT_mesh_gpu_instancing.js';
 
 const loader = new GLTFLoader();
-loader.register(parser => new GLTFInstancingExtension(parser));
+loader.register(parser => new GLTFMeshGpuInstancingExtension(parser));
 loader.load(path_to_gltf_asset, gltf => {
   scene.add(gltf.scene);
   render();
