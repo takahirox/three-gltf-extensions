@@ -6,7 +6,7 @@ import {InstancedMesh, Object3D} from 'three';
  * Specification: https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Vendor/EXT_mesh_gpu_instancing
  *
  */
-export default class GLTFInstancingExtension {
+export default class GLTFMeshGpuInstancingExtension {
   constructor(parser) {
     this.name = 'EXT_mesh_gpu_instancing';
     this.parser = parser;
