@@ -59,7 +59,9 @@
             // model
 
             const loader = new GLTFLoader().setPath('assets/gltf/Torus/glTF-lod/');
-            loader.register(parser => new GLTFLodExtension(parser, () => { render(); }, THREE));
+            loader.register(parser => new GLTFLodExtension(parser, {
+              onUpdate: () => { render(); }
+            }));
             loader.load('Torus.gltf', gltf => {
               gltf.scene.rotation.y = Math.PI;
               scene.add(gltf.scene);
