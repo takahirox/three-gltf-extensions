@@ -58,15 +58,17 @@
 
             // model
 
-            const loader = new GLTFLoader().setPath('assets/gltf/Torus/glTF-lod/');
-            loader.register(parser => new GLTFLodExtension(parser, {
-              onUpdate: () => { render(); }
-            }));
-            loader.load('Torus.gltf', gltf => {
-              gltf.scene.rotation.y = Math.PI;
-              scene.add(gltf.scene);
-              render();
-            });
+            const loader = new GLTFLoader()
+              .setPath('assets/gltf/Torus/glTF-lod/')
+              .register(parser => new GLTFLodExtension(parser, {
+                loadingMode: 'progressive',
+                onUpdate: () => { render(); }
+              }))
+              .load('Torus.gltf', gltf => {
+                gltf.scene.rotation.y = Math.PI;
+                scene.add(gltf.scene);
+                render();
+              });
           });
 
         renderer = new THREE.WebGLRenderer({antialias: true});
