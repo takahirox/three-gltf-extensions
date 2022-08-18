@@ -3,6 +3,44 @@ import {
   Object3D
 } from 'three';
 
+const LOADING_MODES = {
+  All: 'all', // Default
+  Any: 'any',
+  Progressive: 'progressive'
+};
+
+const removeLevel = (lod, obj) => {
+  const levels = lod.levels;
+  let readIndex = 0;
+  let writeIndex = 0;
+  for (readIndex = 0; readIndex < levels.length; readIndex++) {
+    if (levels[readIndex].object !== obj) {
+      levels[writeIndex++] = levels[readIndex];
+    }
+  }
+  if (writeIndex < readIndex) {
+    levels.length = writeIndex;
+    lod.remove(obj);
+  }
+};
+
+const loadScreenCoverages = (def) => {
+  const extras = def.extras;
+
+  if (!extras) {
+    return [];
+  }
+
+  const screenCoverages = extras['MSFT_screencoverage'];
+
+  // extra field is free structure so validate more carefully
+  if (!screenCoverages || !Array.isArray(screenCoverages)) {
+    return [];
+  }
+
+  return screenCoverages;
+};
+
 /**
  * LOD Extension
  *
@@ -13,75 +51,54 @@ export default class GLTFLodExtension {
     this.name = 'MSFT_lod';
     this.parser = parser;
     this.options = options;
-    this.materialMap = new Map();
-    // Save material indices being processed to prevent an infinite loop
-    this.processing = new Map();
   }
 
-  _hasExtensionInNode(nodeDef) {
-    if (!nodeDef.extensions || !nodeDef.extensions[this.name]) {
-      return false;
+  _hasLODMaterial(meshIndex) {
+    const parser = this.parser;
+    const json = parser.json;
+    const meshDef = json.meshes[meshIndex];
+
+    // Ignore LOD + multiple primitives so far because
+    // it might be a bit too complicated.
+    // @TODO: Fix me
+    if (meshDef.primitives.length > 1) {
+      return null;
     }
 
-    const extensionDef = nodeDef.extensions[this.name];
-    const nodeDefs = extensionDef.ids.map(id => this.parser.json.nodes[id]);
-    nodeDefs.push(nodeDef);
-
-    // We determine that it's invalid as the extension if all the nodes don't have mesh so far
-    return nodeDefs.filter(def => def.mesh !== undefined).length > 0;
-  }
-
-  _hasExtensionInMaterial(nodeDef) {
-    const json = this.parser.json;
-    const meshIndices = [];
-
-    // Collect mesh indices of this node and the LOD nodes.
-    if (nodeDef.mesh !== undefined) {
-      meshIndices.push(nodeDef.mesh);
-    }
-
-    if (this._hasExtensionInNode(nodeDef)) {
-      nodeDef.extensions[this.name].ids
-        .filter(id => json.nodes[id].mesh !== undefined)
-        .forEach(id => meshIndices.push(json.nodes[id].mesh));
-    }
-
-    // Check if any mesh.primitive refers to material having the extension
-    for (const meshIndex of meshIndices) {
-      const meshDef = json.meshes[meshIndex];
-      for (const primitive of meshDef.primitives) {
-        if (primitive.material === undefined) {
-          continue;
-        }
-        const materialDef = json.materials[primitive.material];
-        if (materialDef.extensions && materialDef.extensions[this.name]) {
-          return true;
-        }
+    for (const primitiveDef of meshDef.primitives) {
+      if (primitiveDef.material === undefined) {
+        continue;
+      }
+      const materialDef = json.materials[primitiveDef.material];
+      if (materialDef.extensions && materialDef.extensions[this.name]) {
+        return true;
       }
     }
     return false;
   }
 
-  _loadScreenCoverages(def) {
-    const extras = def.extras;
+  _hasLODMaterialInNode(nodeIndex) {
+    const parser = this.parser;
+    const json = parser.json;
+    const nodeDef = json.nodes[nodeIndex];
 
-    if (!extras) {
-      return [];
+    const nodeIndices = (nodeDef.extensions && nodeDef.extensions[this.name])
+      ? nodeDef.extensions[this.name].ids.slice() : [];
+    nodeIndices.unshift(nodeIndex);
+
+    for (const nodeIndex of nodeIndices) {
+      if (json.nodes[nodeIndex].mesh !== undefined &&
+        this._hasLODMaterial(json.nodes[nodeIndex].mesh)) { 
+        return true;
+      }
     }
 
-    const screenCoverages = extras['MSFT_screencoverage'];
-
-    // extra field is free structure so validate more carefully
-    if (!screenCoverages || !Array.isArray(screenCoverages)) {
-      return [];
-    }
-
-    return screenCoverages;
+    return false;
   }
 
   // level: 0 is the highest level
   _calculateDistance(level, def) {
-    const coverages = this._loadScreenCoverages(def);
+    const coverages = loadScreenCoverages(def);
 
     // Use the distance set by users if calculateDistance callback is set
     if (this.options.calculateDistance) {
@@ -104,162 +121,180 @@ export default class GLTFLodExtension {
     return Math.pow((1.0 - c), 4.0) * (far - near) + near;
   }
 
-  async _loadMesh(nodeDef) {
-    if (nodeDef.mesh === undefined) {
-      return new Object3D();
-    }
-
-    const parser = this.parser;
-
-    // @TODO: Fix me. Private methods of the parser shouldn't be accessible.
-    const mesh = parser._getNodeRef(
-      this.parser.meshCache,
-      nodeDef.mesh,
-      // @TODO: How can we resolve the case that another mesh index is defined
-      // in another node extension and it should be loaded instead?
-      // Maybe we should delegate to other plugins but how?
-      await this.parser.getDependency('mesh', nodeDef.mesh)
-    );
-
-    // @TODO: Write comment why we need this
-    if (nodeDef.weights) {
-      // mesh is Mesh or Group
-      mesh.traverse(obj => {
-        if (!obj.isMesh) {
-          return;
-        }
-        for (let i = 0, il = nodeDef.weights.length; i < il; i++) {
-          obj.morphTargetInfluences[i] = nodeDef.weights[i];
-        }
-      });
-    }
-
-    return mesh;
-  }
-
-  loadMaterial(materialIndex) {
-    const parser = this.parser;
-    const json = parser.json;
-    const materialDef = json.materials[materialIndex];
-
-    if (!materialDef.extensions || !materialDef.extensions[this.name] ||
-      this.processing.has(materialIndex)) {
+  // For LOD in materials
+  loadMesh(meshIndex) {
+    if (!this._hasLODMaterial(meshIndex)) {
       return null;
     }
 
-    // To prevent an infinite loop
-    this.processing.set(materialIndex, true);
+    const parser = this.parser;
+    const json = parser.json;
+    const meshDef = json.meshes[meshIndex];
 
+    const primitiveDef = meshDef.primitives[0];
+    const materialIndex = primitiveDef.material;
+    const materialDef = json.materials[materialIndex];
     const extensionDef = materialDef.extensions[this.name];
 
-    const materialIndices = [materialIndex];
-    extensionDef.ids.forEach(id => materialIndices.push(id));
-
-    const pending = [];
-    // Reverse order is to request materials load from low to high levels
-    for (let i = materialIndices.length - 1; i >= 0; i--) {
-      pending.push(parser.getDependency('material', materialIndices[i]));
-    }
-
-    // To refer to LOD materials from createNodeMesh() later
-    this.materialMap.set(materialIndex, pending);
-
-    this.processing.delete(materialIndex);
-
-    // Return the lowest level for the better response time
-    return pending[0];
-  }
-
-  createNodeMesh(rootNodeIndex) {
-    const parser = this.parser;
-    const json = parser.json;
-    const rootNodeDef = json.nodes[rootNodeIndex];
-
-    const hasExtensionInNode = this._hasExtensionInNode(rootNodeDef);
-    const hasExtensionInMaterial = this._hasExtensionInMaterial(rootNodeDef);
-
-    if (!hasExtensionInNode && !hasExtensionInMaterial) {
-      return null;
-    }
-
-    // Assume LODs are defined in either node or material so far.
-    // It may work weirdly if the both define LODs.
-    // @TODO: Fix me.
-    //        Refer to https://github.com/KhronosGroup/glTF/issues/1952
-
-    const nodeIndices = [rootNodeIndex];
-    if (hasExtensionInNode) {
-      rootNodeDef.extensions[this.name].ids.forEach(id => nodeIndices.push(id));
+    const meshIndices = [meshIndex];
+    // Very hacky solution.
+    // Clone the mesh def, replace the material index with a lower level one,
+    // add to json.meshes.
+    // @TODO: Fix me. Polluting json is a bad idea.
+    for (const materialIndex of extensionDef.ids) {
+      const clonedMeshDef = Object.assign({}, meshDef);
+      clonedMeshDef.primitives = [Object.assign({}, clonedMeshDef.primitives[0])];
+      clonedMeshDef.primitives[0].material = materialIndex;
+      meshIndices.push(json.meshes.push(clonedMeshDef) - 1);
     }
 
     const lod = new LOD();
-    const meshPending = [];
 
-    // Reverse order is to request meshes load from low to high levels
-    for (let i = nodeIndices.length - 1; i >= 0; i--) {
-      const nodeIndex = nodeIndices[i];
-      const nodeDef = json.nodes[nodeIndex];
+    if (this.options.loadingMode === LOADING_MODES.Progressive) {
+      const firstLoadLevel = meshIndices.length - 1;
+      return parser.loadMesh(meshIndices[firstLoadLevel]).then(mesh => {
+        lod.addLevel(mesh, this._calculateDistance(firstLoadLevel, materialDef));
 
-      meshPending.push(this._loadMesh(nodeDef).then(mesh => {
-        // mesh is Object3D
-        if (nodeDef.mesh === undefined) {
-          lod.addLevel(mesh, this._calculateDistance(i, rootNodeDef));
+        for (let level = meshIndices.length - 2; level >= 0; level--) {
+          const clonedMesh = mesh.clone();
+          const currentOnBeforeRender = clonedMesh.onBeforeRender;
+          clonedMesh.onBeforeRender = () => {
+            parser.loadMesh(meshIndices[level]).then(mesh => {
+              removeLevel(lod, clonedMesh);
+              lod.addLevel(mesh, this._calculateDistance(level, materialDef));
+              if (this.options.onUpdate) {
+                this.options.onUpdate(lod, mesh, level);
+              }
+            });
+            clonedMesh.onBeforeRender = currentOnBeforeRender;
+          };
+          lod.addLevel(clonedMesh, this._calculateDistance(level, materialDef));
+        }
+
+        if (this.options.onUpdate) {
+          this.options.onUpdate(lod, mesh, firstLoadLevel);
+        }
+
+        return lod;
+      });
+    } else {
+      const pending = [];
+
+      for (let level = meshIndices.length - 1; level >= 0; level--) {
+        pending.push(parser.loadMesh(meshIndices[level]).then(mesh => {
+          lod.addLevel(mesh, this._calculateDistance(level, materialDef));
           if (this.options.onUpdate) {
-            this.options.onUpdate(lod, mesh, i);
+            this.options.onUpdate(lod, mesh, level);
           }
-          return;
-        }
+        }));
+      }
 
-        // mesh is Mesh/Line/Points or Group
-        // @TODO: There can be a case that other plugins create other type objects?
-        //        And in that case how should we resolve?
-        const meshes = mesh.isGroup ? mesh.children : [mesh];
-        const meshDef = parser.json.meshes[nodeDef.mesh];
-        const materialPending = [];
+      return (this.options.loadingMode === LOADING_MODES.Any
+        ? Promise.any(pending)
+        : Promise.all(pending)
+      ).then(() => lod);
+    }
+  }
 
-        // Assume mesh.primitives.length, meshes.length and materialIndices.length are
-        // the same so far. The lengths can be different if other plugins apply some changes.
-        // @TODO: In such a case how should we process correctly?
-        for (let j = 0, jl = meshes.length; j < jl; j++) {
-          const mesh = meshes[j];
-          const materialIndex = meshDef.primitives[j].material !== undefined
-            ? meshDef.primitives[j].material
-            : -1;
+  // For LOD in nodes
+  createNodeMesh(nodeIndex) {
+    const parser = this.parser;
+    const json = parser.json;
+    const nodeDef = json.nodes[nodeIndex];
 
-          if (this.materialMap.has(materialIndex)) {
-            // This mesh refers to a material having LODs so
-            // make mesh clones for the levels and add them to LOD object
-            const materialPromises = this.materialMap.get(materialIndex);
-            const materialDef = json.materials[materialIndex];
-            for (let k = 0, kl = materialPromises.length; k < kl; k++) {
-              // material promises order is from low to high
-              const materialLevel = kl - k - 1;
-              materialPending.push(materialPromises[k].then(material => {
-                const lodMesh = mesh.clone();
-                lodMesh.material = material;
-                parser.assignFinalMaterial(lodMesh);
-                lod.addLevel(lodMesh, this._calculateDistance(materialLevel, materialDef));
-                if (this.options.onUpdate) {
-                  this.options.onUpdate(lod, lodMesh, materialLevel);
-                }
-              }));
-            }
-          } else {
-            // This mesh doesn't refer to a material having LODs so just add it
-            lod.addLevel(mesh, this._calculateDistance(i, rootNodeDef));
-            if (this.options.onUpdate) {
-              this.options.onUpdate(lod, mesh, i);
-            }
-            materialPending.push(Promise.resolve());
-          }
-        }
-
-        return Promise.any(materialPending);
-      }));
+    if (!nodeDef.extensions || !nodeDef.extensions[this.name]) {
+      return null;
     }
 
-    return Promise.any(meshPending).then(_ => {
-      return lod;
-    });
+    // If LODs are defined in both nodes and materials,
+    // ignore the ones in the nodes and use the ones in the materials.
+    // @TODO: Process correctly
+    // Refer to https://github.com/KhronosGroup/glTF/issues/1952
+    if (this._hasLODMaterialInNode(nodeIndex)) {
+      return null;
+    }
+
+    const extensionDef = nodeDef.extensions[this.name];
+
+    // Node indices from high to low levels
+    const nodeIndices = extensionDef.ids.slice();
+    nodeIndices.unshift(nodeIndex);
+
+    const lod = new LOD();
+
+    for (let level = 0; level < nodeIndices.length; level++) {
+      const nodeDef = json.nodes[nodeIndices[level]];
+      if (nodeDef.mesh === undefined) {
+        lod.addLevel(new Object3D(), this._calculateDistance(level, nodeDef));
+      }
+    }
+
+    if (this.options.loadingMode === LOADING_MODES.Progressive) {
+      let firstLoadLevel = null;
+      for (let level = nodeIndices.length - 1; level >= 0; level--) {
+        if (json.nodes[nodeIndices[level]].mesh !== undefined) {
+          firstLoadLevel = level;
+          break;
+        }
+      }
+
+      if (firstLoadLevel === null) {
+        return Promise.resolve(lod);
+      }
+
+      return parser.createNodeMesh(nodeIndices[firstLoadLevel]).then(mesh => {
+        lod.addLevel(mesh, this._calculateDistance(firstLoadLevel, nodeDef));
+
+        for (let level = 0; level < nodeIndices.length; level++) {
+          if (json.nodes[nodeIndices[level]].mesh === undefined) {
+            continue;
+          }
+
+          const clonedMesh = mesh.clone();
+          const currentOnBeforeRender = clonedMesh.onBeforeRender;
+          clonedMesh.onBeforeRender = () => {
+            parser.createNodeMesh(nodeIndices[level]).then(mesh => {
+              removeLevel(lod, clonedMesh);
+              lod.addLevel(mesh, this._calculateDistance(level, nodeDef));
+              if (this.options.onUpdate) {
+                this.options.onUpdate(lod, mesh, level);
+              }
+            });
+            clonedMesh.onBeforeRender = currentOnBeforeRender;
+          };
+          lod.addLevel(clonedMesh, this._calculateDistance(level, nodeDef));
+        }
+
+        if (this.options.onUpdate) {
+          this.options.onUpdate(lod, mesh, firstLoadLevel);
+        }
+
+        return lod;
+      });
+    } else {
+      const pending = [];
+
+      for (let level = nodeIndices.length - 1; level >= 0; level--) {
+        if (json.nodes[nodeIndices[level]].mesh === undefined) {
+          continue;
+        }
+
+        pending.push(parser.createNodeMesh(nodeIndices[level]).then(mesh => {
+          lod.addLevel(mesh, this._calculateDistance(level, nodeDef));
+          if (this.options.onUpdate) {
+            this.options.onUpdate(lod, mesh, level);
+          }
+        }));
+      }
+
+      if (pending.length === 0) {
+        return Promise.resolve(lod);
+      }
+
+      return (this.options.loadingMode === LOADING_MODES.Any
+        ? Promise.any(pending)
+        : Promise.all(pending)
+      ).then(() => lod);
+    }
   }
 }
