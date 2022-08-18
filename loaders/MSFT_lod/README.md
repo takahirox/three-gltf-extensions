@@ -17,6 +17,7 @@ import GLTFLodExtension from 'path_to_three-gltf-exensions/loaders/MSFT_lod/MSFT
 
 const loader = new GLTFLoader();
 loader.register(parser => new GLTFLodExtension(parser, {
+  loadingMode: 'progressive',
   // This callback is fired when a new level of LOD is added
   onUpdate: (lod, mesh, level) => { render(); }
 }));
@@ -34,11 +35,12 @@ In progress
 ## Features
 
 This plugin imports `MSFT_lod` as [Three.js LOD](https://threejs.org/docs/#api/en/objects/LOD).
-It starts to load all the levels in parallel, the lowest level loading should be completed first in general
-especially if data files are separated because of the smaller data size,
-and the plugin dynamically adds levels one by one when each one is ready.
-So that users can expect the better response time. And also they can expect better app runtime performance
-by swithing an object to lower quality one if it moves further.
+
+The plugin supports progressively loading that first loads the lowest level and then loads the
+other levels on demand.
+
+With LOD, response time can be shorter with the progressive loading. And application runtime
+performance can be improved by swithing an object to lower quality one if it moves further.
 
 ## Compatible Three.js revision
 
@@ -52,10 +54,14 @@ by swithing an object to lower quality one if it moves further.
 
 `parser` -- `GLTFParser` instance which comes from `GLTFLoader.register()` callback
 
-`onUpdate` -- [optional] a callback function called when a new level of LOD is added with
-the parameters `Three.js LOD` object, an added `Three.js Mesh` object, and the `level` integer.
+`options` -- [optional]
 
-`calculateDistance` -- [optional] a callback function right before when a new level of LOD
+* `loadingMode` -- [optional] How internal promises are resolved. `all`: All levels are ready,
+`any`: Any of the levels is ready, `progressive`: First load only the lowest level and progressively
+load the others on demand. Default is `all`.
+* `onUpdate` -- [optional] a callback function called when a new level of LOD is added with
+the parameters `Three.js LOD` object, an added `Three.js Mesh` object, and the `level` integer.
+* `calculateDistance` -- [optional] a callback function right before when a new level of LOD
 is added with the parameters the `level` ingeter and
 (`gltfDef.extras.MSFT_screencoverage`)[https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Vendor/MSFT_lod].
 The callback function is expected to return float `distance` value used for
@@ -63,4 +69,5 @@ The callback function is expected to return float `distance` value used for
 
 ## Limitations
 
-- Currently if both node and material have LOD settings, the plugin may not work correctly. [#41](https://github.com/takahirox/three-gltf-extensions/issues/41)
+- If both node and material have LOD settings, the plugin uses the material one and ignore the other so far. [#41](https://github.com/takahirox/three-gltf-extensions/issues/41)
+- Ignore material LOD if mesh has multiple primitives
