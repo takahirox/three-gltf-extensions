@@ -19,7 +19,7 @@ const loader = new GLTFLoader();
 loader.register(parser => new GLTFLodExtension(parser, {
   loadingMode: 'progressive',
   // This callback is fired when a new level of LOD is added
-  onUpdate: (lod, mesh, level) => { render(); }
+  onUpdate: (lod, mesh, level, lowestLevel) => { render(); }
 }));
 loader.load(path_to_gltf_asset, gltf => {
   scene.add(gltf.scene);
@@ -56,18 +56,33 @@ performance can be improved by swithing an object to lower quality one if it mov
 
 `options` -- [optional]
 
-* `loadingMode` -- [optional] How internal promises are resolved. `all`: All levels are ready,
-`any`: Any of the levels is ready, `progressive`: First load only the lowest level and progressively
-load the others on demand. Default is `all`.
-* `onUpdate` -- [optional] a callback function called when a new level of LOD is added with
-the parameters `Three.js LOD` object, an added `Three.js Mesh` object, and the `level` integer.
-* `calculateDistance` -- [optional] a callback function right before when a new level of LOD
-is added with the parameters the `level` ingeter and
-(`gltfDef.extras.MSFT_screencoverage`)[https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Vendor/MSFT_lod].
-The callback function is expected to return float `distance` value used for
-[Three.js LOD.addLevel](https://threejs.org/docs/#api/en/objects/LOD.addLevel).
+* `loadingMode` -- [optional] indicates how assets in a gltf file are loaded and when `onLoad` callback
+is fired by `GLTFLoader`.
+  * `'all'`: All levels are ready. Default
+  * `'any'`: Any of the levels is ready
+  * `'progressive'`: First load only the lowest level and progressively load the others on demand
+* `onLoadMesh(lod, mesh, level, lowestLevel) - THREE.Object3D` -- [optional] a callback function called before a
+new level `Three.js Mesh` object is added to the `Three.js LOD` object.
+This hook is for customizing the `Mesh` object and is expected to return a `Three.js Object3D` object added
+to the `Three.js LOD` object.
+  * `lod`: `THREE.LOD`
+  * `mesh`: `THREE.Mesh`
+  * `level`: `integer`
+  * `lowestLevel`: `integer`
+* `onUpdate(lod, mesh, level, lowestLevel)` -- [optional] a callback function called when a new level of LOD is added.
+  * `lod`: `THREE.LOD`
+  * `mesh`: `THREE.Mesh`
+  * `level`: `integer`
+  * `lowestLevel`: `integer`
+* `calculateDistance(level, lowestLevel, coverages) - number` -- [optional] a callback function fired right before
+a new level of LOD is added. This hooks if for setting up distance used for [Three.js LOD.addLevel](https://threejs.org/docs/#api/en/objects/LOD.addLevel) and expected to return number `distance` value.
+  * `level`: `integer`
+  * `lowestLevel`: `integer`
+  * `coverages`: `Array`
 
 ## Limitations
 
 - If both node and material have LOD settings, the plugin uses the material one and ignore the other so far. [#41](https://github.com/takahirox/three-gltf-extensions/issues/41)
 - Ignore material LOD if mesh has multiple primitives
+- `any` and `progressive` loading mode are not guaranteed that they work properly if `Three.js LOD` and associated objects
+are manipulated (eg. copy, clone) before loading completion.
