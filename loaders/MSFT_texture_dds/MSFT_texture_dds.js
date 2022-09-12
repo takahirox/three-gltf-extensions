@@ -18,7 +18,6 @@ export default class GLTFTextureDDSExtension {
       return null;
     }
     const extensionDef = textureDef.extensions[this.name];
-    const source = json.images[extensionDef.source];
-    return this.parser.loadTextureImage(textureIndex, source, this.ddsLoader);
+    return this.parser.loadTextureImage(textureIndex, extensionDef.source, this.ddsLoader);
   }
 }
