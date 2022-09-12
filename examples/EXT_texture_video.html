@@ -58,7 +58,7 @@
             // model
 
             const loader = new GLTFLoader().setPath('assets/gltf/Box/glTF-texture-video/');
-            loader.register(parser => new GLTFVideoTextureExtension(parser, THREE));
+            loader.register(parser => new GLTFVideoTextureExtension(parser));
             loader.load('BoxTextured.gltf', gltf => {
               gltf.scene.rotation.y = Math.PI;
               scene.add(gltf.scene);
