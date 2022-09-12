@@ -29,7 +29,7 @@
       import {OrbitControls} from 'https://unpkg.com/three@0.137.5/examples/jsm/controls/OrbitControls.js';
       import {GLTFLoader} from 'https://unpkg.com/three@0.137.5/examples/jsm/loaders/GLTFLoader.js';
       import {GLTFExporter} from 'https://unpkg.com/three@0.137.5/examples/jsm/exporters/GLTFExporter.js';
-      import {RGBELoader} from 'https://unpkg.com/three@0.137.5/examples/jsm//loaders/RGBELoader.js';
+      import {RGBELoader} from 'https://unpkg.com/three@0.137.5/examples/jsm/loaders/RGBELoader.js';
 
       import GLTFInstancingExtension from '../loaders/EXT_mesh_gpu_instancing/EXT_mesh_gpu_instancing.js';
       import GLTFExporterMeshGPUInstancingExtension from '../exporters/EXT_mesh_gpu_instancing/EXT_mesh_gpu_instancing_exporter.js';
@@ -63,7 +63,7 @@
             // model
 
             const loader = new GLTFLoader().setPath('./assets/gltf/Teapots/glTF-instancing/');
-            loader.register(parser => new GLTFInstancingExtension(parser, THREE));
+            loader.register(parser => new GLTFInstancingExtension(parser));
             loader.load('teapots_galore.gltf', gltf => {
               initExporter(gltf);
 
