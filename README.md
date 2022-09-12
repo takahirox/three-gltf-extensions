@@ -125,4 +125,4 @@ Note that the unit tests which rely on Web don't run. I recommend to run the uni
 
 ## Customize the plugins in your side
 
-As written above, some extensions are not great fit to Three.js API or structure. So the plugins for them may have some limitations. If they don't cover your use case, please fork the repository and customize in your side.
+As written above, some extensions are not great fit to Three.js API or structure. So the plugins for them may have some limitations. If they don't cover your use case, please fork the repository and customize on your end.
