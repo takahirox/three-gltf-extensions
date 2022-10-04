@@ -68592,18 +68592,14 @@
 
 	    if (level === 0) return 0;
 
-	    const levelNum = def.extensions[this.name].ids.length + 1;
+	    const levelsLength = def.extensions[this.name].ids.length + 1;
 
-	    // If coverage num doesn't match to LOD level num, we ignore coverage so far.
-	    // Assuming coverage is in the range 1.0(near) - 0.0(far) @TODO: Is this assumption true?
-	    // Ignoring the last coverage because I want to display the lowest LOD at the furtherest
-	    // @TODO: Is that ok?
-	    const c = levelNum === coverages.length ? coverages[level - 1] : (level / levelNum);
+	    // 1.0 / Math.pow(2, level * 2) is just a number that seems to be heuristically good so far.
+	    const c = levelsLength === coverages.length ? coverages[level - 1] : 1.0 / Math.pow(2, level * 2);
 
-	    // @TODO: Improve
-	    const near = 0.0;
-	    const far = 100.0;
-	    return Math.pow((1.0 - c), 4.0) * (far - near) + near;
+	    // This is just an easy approximation. If users want more accurate value, they are expected
+	    // to use calculateDistance hook.
+	    return 1.0 / c;
 	  }
 
 	  _assignOnBeforeRender(meshPending, clonedMesh, level, lowestLevel, def) {
