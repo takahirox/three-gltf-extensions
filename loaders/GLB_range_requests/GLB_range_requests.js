@@ -39,7 +39,8 @@ export default class GLBRangeRequests {
   }
 
   static load(url, loader, onLoad, onProgress, onError, fileLoader = null) {
-    GLBRangeRequests.loadContent((loader.path || '') + url, fileLoader)
+    url = (loader.path || '') + url;
+    GLBRangeRequests.loadContent(url, fileLoader)
       .then(content => {
         let resourcePath;
         if (loader.resourcePath !== '') {
@@ -132,10 +133,9 @@ export default class GLBRangeRequests {
     }
 
     const fileLoader = parser.fileLoader;
-    const options = parser.options;
     const length = bufferViewDef.byteLength || 0;
     const offset = bufferViewDef.byteOffset || 0;
 
-    return loadPartially(fileLoader, LoaderUtils.resolveURL(this.url, options.path), this.binChunkOffset + offset, length);
+    return loadPartially(fileLoader, this.url, this.binChunkOffset + offset, length);
   }
 }
