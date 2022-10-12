@@ -23,45 +23,58 @@ const BINARY_HEADER_MAGIC_LENGTH = 4;
 const BINARY_HEADER_LENGTH = 12;
 const BINARY_CHUNK_TYPES = {JSON: 0x4E4F534A, BIN: 0x004E4942};
 
-const isGLB = (buffer) => {
+export const isGLB = (buffer) => {
   return LoaderUtils.decodeText(buffer.slice(0, BINARY_HEADER_MAGIC_LENGTH)) === BINARY_HEADER_MAGIC;
 };
 
-const isGLBFile = (fileLoader, url) => {
-  return loadPartially(fileLoader, url, 0, BINARY_HEADER_MAGIC_LENGTH).then(isGLB);
+export const isRangeRequestSupportedGLBFile = async (url, fileLoader) => {
+  try {
+    const buffer = await loadPartially(fileLoader, url, 0, BINARY_HEADER_MAGIC_LENGTH);
+    return isGLB(buffer);
+  } catch (e) {
+    return false;
+  }
 };
 
 export default class GLBRangeRequests {
   constructor(parser, url, binChunkOffset) {
+    this.name = 'GLB_range_requests';
     this.parser = parser;
     this.url = url;
     this.binChunkOffset = binChunkOffset;
   }
 
   static load(url, loader, onLoad, onProgress, onError, fileLoader = null) {
-    url = (loader.path || '') + url;
-    GLBRangeRequests.loadContent(url, fileLoader)
-      .then(content => {
-        let resourcePath;
-        if (loader.resourcePath !== '') {
-          resourcePath = loader.resourcePath;
-        } else if (loader.path !== '') {
-          resourcePath = loader.path;
-        } else {
-          resourcePath = LoaderUtils.extractUrlBase(url);
-        }
+    if (fileLoader === null) {
+      fileLoader = new FileLoader().setResponseType('arraybuffer');
+    }
 
-        loader
-          .register(parser => new GLBRangeRequests(
-            parser,
-            url,
-            content.binChunkOffset
-          ))
-          .parse(content.jsonContent, resourcePath, onLoad, onError);
-      })
-      .catch(() => {
+    url = (loader.path || '') + url;
+
+    isRangeRequestSupportedGLBFile(url, fileLoader).then(supported => {
+      if (supported) {
+        GLBRangeRequests.loadContent(url, fileLoader).then(content => {
+          let resourcePath;
+          if (loader.resourcePath !== '') {
+            resourcePath = loader.resourcePath;
+          } else if (loader.path !== '') {
+            resourcePath = loader.path;
+          } else {
+            resourcePath = LoaderUtils.extractUrlBase(url);
+          }
+
+          loader
+            .register(parser => new GLBRangeRequests(
+              parser,
+              url,
+              content.binChunkOffset
+            ))
+            .parse(content.jsonContent, resourcePath, onLoad, onError);
+        }).catch(onError);
+      } else {
         loader.load(url, onLoad, onProgress, onError);
-      });
+      }
+    }).catch(onError);
   }
 
   static async loadContent(url, fileLoader = null) {
