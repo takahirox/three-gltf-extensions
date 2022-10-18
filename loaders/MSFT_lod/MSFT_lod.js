@@ -288,6 +288,9 @@ export default class GLTFLodExtension {
         }
 
         pending.push(parser.createNodeMesh(nodeIndices[level]).then(mesh => {
+          if (this.options.onLoadMesh) {
+            mesh = this.options.onLoadMesh(lod, mesh, firstLoadLevel, lowestLevel);
+          }
           lod.addLevel(mesh, this._calculateDistance(level, lowestLevel, nodeDef));
           if (this.options.onUpdate) {
             this.options.onUpdate(lod, mesh, level, lowestLevel);
