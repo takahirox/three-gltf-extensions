@@ -10,6 +10,8 @@ const loadPartially = (fileLoader, url, offset, length) => {
       {Range: `bytes=${offset}-${offset + length - 1}`},
       currentRequestHeader
     ));
+    // Note: If server doesn't support HTTP range requests
+    //       reject callback is fired.
     fileLoader.load(url, resolve, undefined, reject);
     fileLoader.setRequestHeader(currentRequestHeader);
   });
@@ -19,22 +21,8 @@ const loadPartially = (fileLoader, url, offset, length) => {
 // Specification: https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#glb-file-format-specification
 
 const BINARY_HEADER_MAGIC = 'glTF';
-const BINARY_HEADER_MAGIC_LENGTH = 4;
 const BINARY_HEADER_LENGTH = 12;
 const BINARY_CHUNK_TYPES = {JSON: 0x4E4F534A, BIN: 0x004E4942};
-
-export const isGLB = (buffer) => {
-  return LoaderUtils.decodeText(buffer.slice(0, BINARY_HEADER_MAGIC_LENGTH)) === BINARY_HEADER_MAGIC;
-};
-
-export const isRangeRequestSupportedGLBFile = async (url, fileLoader) => {
-  try {
-    const buffer = await loadPartially(fileLoader, url, 0, BINARY_HEADER_MAGIC_LENGTH);
-    return isGLB(buffer);
-  } catch (e) {
-    return false;
-  }
-};
 
 export default class GLBRangeRequests {
   constructor(parser, url, binChunkOffset) {
@@ -45,36 +33,33 @@ export default class GLBRangeRequests {
   }
 
   static load(url, loader, onLoad, onProgress, onError, fileLoader = null) {
-    if (fileLoader === null) {
-      fileLoader = new FileLoader().setResponseType('arraybuffer');
-    }
-
-    url = (loader.path || '') + url;
-
-    isRangeRequestSupportedGLBFile(url, fileLoader).then(supported => {
-      if (supported) {
-        GLBRangeRequests.loadContent(url, fileLoader).then(content => {
-          let resourcePath;
-          if (loader.resourcePath !== '') {
-            resourcePath = loader.resourcePath;
-          } else if (loader.path !== '') {
-            resourcePath = loader.path;
-          } else {
-            resourcePath = LoaderUtils.extractUrlBase(url);
-          }
-
-          loader
-            .register(parser => new GLBRangeRequests(
-              parser,
-              url,
-              content.binChunkOffset
-            ))
-            .parse(content.jsonContent, resourcePath, onLoad, onError);
-        }).catch(onError);
+    const assetUrl = (loader.path || '') + url;
+    GLBRangeRequests.loadContent(assetUrl, fileLoader).then(content => {
+      let resourcePath;
+      if (loader.resourcePath !== '') {
+        resourcePath = loader.resourcePath;
+      } else if (loader.path !== '') {
+        resourcePath = loader.path;
       } else {
-        loader.load(url, onLoad, onProgress, onError);
+        resourcePath = LoaderUtils.extractUrlBase(assetUrl);
       }
-    }).catch(onError);
+
+      loader
+        .register(parser => new GLBRangeRequests(
+          parser,
+          assetUrl,
+          content.binChunkOffset
+        ))
+        .parse(content.jsonContent, resourcePath, onLoad, onError);
+    }).catch(() => {
+      // Perhaps rejected due to the either one
+      // 1. The asset is not GLB (but glTF)
+      // 2. Server may not support HTTP range requests
+      // 3. The asset includes EXT_meshopt_compression extension that the
+      //    this plugin can't handle
+      // so load in the regular way as fallback.
+      loader.load(url, onLoad, onProgress, onError);
+    });
   }
 
   static async loadContent(url, fileLoader = null) {
@@ -89,6 +74,10 @@ export default class GLBRangeRequests {
       version: view.getUint32(4, true),
       length: view.getUint32(8, true)
     };
+
+    if (header.magic !== BINARY_HEADER_MAGIC) {
+      return Promise.reject(new Error('GLBRangeRequests: The file is not GLB.'));
+    }
 
     if (header.version < 2.0) {
       return Promise.reject(new Error('GLBRangeRequests: Legacy binary file detected.'));
