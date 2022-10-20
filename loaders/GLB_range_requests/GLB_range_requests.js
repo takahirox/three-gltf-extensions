@@ -51,23 +51,29 @@ export default class GLBRangeRequests {
           content.binChunkOffset
         ))
         .parse(content.jsonContent, resourcePath, onLoad, onError);
-    }).catch(() => {
+    }).catch((error) => {
       // Perhaps rejected due to the either one
       // 1. The asset is not GLB (but glTF)
       // 2. Server may not support HTTP range requests
       // 3. The asset includes EXT_meshopt_compression extension that the
       //    this plugin can't handle
       // so load in the regular way as fallback.
+      // @TODO: Check the error reason and don't run the fallback loading
+      //        if the error reason is others?
+
+      // console.log(error);
       loader.load(url, onLoad, onProgress, onError);
     });
   }
 
+  // Note: Rejects if server doesn't support HTTP range requests
   static async loadContent(url, fileLoader = null) {
     if (fileLoader === null) {
       fileLoader = new FileLoader().setResponseType('arraybuffer');
     }
 
-    const buffer = await loadPartially(fileLoader, url, 0, BINARY_HEADER_LENGTH);
+    // Load the GLB header and the first chunk info
+    const buffer = await loadPartially(fileLoader, url, 0, BINARY_HEADER_LENGTH + 8);
     const view = new DataView(buffer);
     const header = {
       magic: LoaderUtils.decodeText(new Uint8Array(buffer.slice(0, 4))),
@@ -83,27 +89,37 @@ export default class GLBRangeRequests {
       return Promise.reject(new Error('GLBRangeRequests: Legacy binary file detected.'));
     }
 
+    const firstChunkLength = view.getUint32(12, true);
+    const firstChunkType = view.getUint32(16, true);
+
     const result = {
       jsonContent: null,
       binChunkOffset: null
     };
 
-    let offset = BINARY_HEADER_LENGTH;
+    let offset = BINARY_HEADER_LENGTH + 8;
 
-    while (offset < header.length) {
-      const buffer = await loadPartially(fileLoader, url, offset, 8);
-      const view = new DataView(buffer);
-      const length = view.getUint32(0, true);
-      const type = view.getUint32(4, true);
-      offset += 8;
+    if (firstChunkType === BINARY_CHUNK_TYPES.JSON) {
+      result.jsonContent = await loadPartially(fileLoader, url, offset, firstChunkLength);
+    } else if (firstChunkType === BINARY_CHUNK_TYPES.BIN) {
+      result.binChunkOffset = offset;
+    }
 
-      if (type === BINARY_CHUNK_TYPES.JSON) {
-        result.jsonContent = await loadPartially(fileLoader, url, offset, length);
-      } else if (type === BINARY_CHUNK_TYPES.BIN) {
-        result.binChunkOffset = offset;
+    offset += firstChunkLength;
+
+    // The number of json chunks must be 1. The number of bin chunks must be 0 or 1.
+    // So, if the second chunk exists the second chunk can be guessed from the first
+    // chunk type.
+    // Note: Assuming the GLB format is valid
+    if (offset < header.length) {
+      if (result.jsonContent === null) {
+        const buffer = await loadPartially(fileLoader, url, offset, 4);
+        const view = new DataView(buffer);
+        const length = view.getUint32(0, true);
+        result.jsonContent = await loadPartially(fileLoader, url, offset + 8, length);
+      } else {
+        result.binChunkOffset = offset + 8;
       }
-
-      offset += length;
     }
 
     if (result.jsonContent.extensionsUsed &&
