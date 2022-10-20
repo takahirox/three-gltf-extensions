@@ -117,10 +117,6 @@ export default class GLBRangeRequests {
       offset += length;
     }
 
-    if (result.binChunkOffset === null) {
-      return Promise.reject(new Error('GLBRangeRequests: No BIN chunk so progressive glb loading is not needed.'));
-    }
-
     if (result.jsonContent.extensionsUsed &&
         result.jsonContent.extensionsUsed.indexOf('EXT_meshopt_compression') >= 0) {
       return Promise.reject(new Error('GLBRangeRequests: currently no EXT_meshopt_compression extension support.'));
