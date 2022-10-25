@@ -61,7 +61,7 @@ export default class GLBRangeRequests {
       // @TODO: Check the error reason and don't run the fallback loading
       //        if the error reason is others?
 
-      // console.log(error);
+      //console.error(error);
       loader.load(url, onLoad, onProgress, onError);
     });
   }
@@ -73,7 +73,7 @@ export default class GLBRangeRequests {
     }
 
     // Load the GLB header and the first chunk info
-    const buffer = await loadPartially(fileLoader, url, 0, BINARY_HEADER_LENGTH + 8);
+    const buffer = await loadPartially(fileLoader, url, 0, BINARY_HEADER_LENGTH + 4);
     const view = new DataView(buffer);
     const header = {
       magic: LoaderUtils.decodeText(new Uint8Array(buffer.slice(0, 4))),
@@ -90,40 +90,29 @@ export default class GLBRangeRequests {
     }
 
     const firstChunkLength = view.getUint32(12, true);
-    const firstChunkType = view.getUint32(16, true);
+    let offset = BINARY_HEADER_LENGTH + 8;
+
+    // The json chunk is required and must be the first chunk.
+    // The bin chunk is optional and must be the second chunk if exists.
+    // The number of json chunks must be 1. The number of bin chunks must be 0 or 1.
+    // Specification: https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#chunks
+    // Note: Assuming the GLB format is valid
 
     const result = {
       jsonContent: null,
       binChunkOffset: null
     };
 
-    let offset = BINARY_HEADER_LENGTH + 8;
-
-    if (firstChunkType === BINARY_CHUNK_TYPES.JSON) {
-      result.jsonContent = await loadPartially(fileLoader, url, offset, firstChunkLength);
-    } else if (firstChunkType === BINARY_CHUNK_TYPES.BIN) {
-      result.binChunkOffset = offset;
-    }
-
+    result.jsonContent = await loadPartially(fileLoader, url, offset, firstChunkLength);
     offset += firstChunkLength;
 
-    // The number of json chunks must be 1. The number of bin chunks must be 0 or 1.
-    // So, if the second chunk exists the second chunk can be guessed from the first
-    // chunk type.
-    // Note: Assuming the GLB format is valid
     if (offset < header.length) {
-      if (result.jsonContent === null) {
-        const buffer = await loadPartially(fileLoader, url, offset, 4);
-        const view = new DataView(buffer);
-        const length = view.getUint32(0, true);
-        result.jsonContent = await loadPartially(fileLoader, url, offset + 8, length);
-      } else {
-        result.binChunkOffset = offset + 8;
-      }
+      result.binChunkOffset = offset + 8;
     }
 
     if (result.jsonContent.extensionsUsed &&
         result.jsonContent.extensionsUsed.indexOf('EXT_meshopt_compression') >= 0) {
+      // @TODO: Resolve this problem.
       return Promise.reject(new Error('GLBRangeRequests: currently no EXT_meshopt_compression extension support.'));
     }
 
