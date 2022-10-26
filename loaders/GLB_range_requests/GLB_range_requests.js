@@ -17,6 +17,39 @@ const loadPartially = (fileLoader, url, offset, length) => {
   });
 };
 
+// Based on the code in FileLoader
+// Used if server doesn't support HTTP range requests.
+const loadArrayBufferFromResponse = (response, onProgress) => {
+  const reader = response.body.getReader();
+  const contentLength = response.headers.get('Content-Length');
+  const total = contentLength ? parseInt(contentLength) : 0;
+  const lengthComputable = total !== 0;
+  let loaded = 0;
+
+  // periodically read data into the new stream tracking while download progress
+  return new Response(
+    new ReadableStream({
+      start(controller) {
+        readData();
+        function readData() {
+          reader.read().then(({done, value}) => {
+            if (done) {
+              controller.close();
+            } else {
+              loaded += value.byteLength;
+              const event = new ProgressEvent('progress', {lengthComputable, loaded, total});
+              if (onProgress) onProgress(event);
+              controller.enqueue(value);
+              readData();
+            }
+          });
+        }
+      }
+    })
+  ).arrayBuffer();
+};
+
+
 // GLB File Format handlers
 // Specification: https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#glb-file-format-specification
 
@@ -34,16 +67,16 @@ export default class GLBRangeRequests {
 
   static load(url, loader, onLoad, onProgress, onError, fileLoader = null) {
     const assetUrl = (loader.path || '') + url;
-    GLBRangeRequests.loadContent(assetUrl, fileLoader).then(content => {
-      let resourcePath;
-      if (loader.resourcePath !== '') {
-        resourcePath = loader.resourcePath;
-      } else if (loader.path !== '') {
-        resourcePath = loader.path;
-      } else {
-        resourcePath = LoaderUtils.extractUrlBase(assetUrl);
-      }
+    let resourcePath;
+    if (loader.resourcePath !== '') {
+      resourcePath = loader.resourcePath;
+    } else if (loader.path !== '') {
+      resourcePath = loader.path;
+    } else {
+      resourcePath = LoaderUtils.extractUrlBase(assetUrl);
+    }
 
+    GLBRangeRequests.loadContent(assetUrl, fileLoader).then(content => {
       loader
         .register(parser => new GLBRangeRequests(
           parser,
@@ -52,10 +85,21 @@ export default class GLBRangeRequests {
         ))
         .parse(content.jsonContent, resourcePath, onLoad, onError);
     }).catch((error) => {
+      // If server doesn't support range requests.
+      // Response has full range content.
+      // Parse with the full range content as fallback.
+      if (error.response && error.response.status === 200) {
+        loadArrayBufferFromResponse(error.response, onProgress).then(buffer => {
+          loader.parse(buffer, resourcePath, onLoad, onError);
+        }).catch(error => {
+          if (onError) onError(error);
+        });
+        return;
+      }
+
       // Perhaps rejected due to the either one
       // 1. The asset is not GLB (but glTF)
-      // 2. Server may not support HTTP range requests
-      // 3. The asset includes EXT_meshopt_compression extension that the
+      // 2. The asset includes EXT_meshopt_compression extension that the
       //    this plugin can't handle
       // so load in the regular way as fallback.
       // @TODO: Check the error reason and don't run the fallback loading
