@@ -117,13 +117,13 @@ export default class GLTFLodExtension {
     return 1.0 / c;
   }
 
-  _assignOnBeforeRender(meshPending, clonedMesh, level, lowestLevel, def) {
+  _assignOnBeforeRender(functionName, index, clonedMesh, level, lowestLevel, def) {
     const _this = this;
     const currentOnBeforeRender = clonedMesh.onBeforeRender;
     clonedMesh.onBeforeRender = function () {
       const clonedMesh = this;
       const lod = clonedMesh.parent;
-      meshPending.then(mesh => {
+      _this.parser[functionName](index).then(mesh => {
         if (_this.options.onLoadMesh) {
           mesh = _this.options.onLoadMesh(lod, mesh, level, lowestLevel);
         }
@@ -176,7 +176,7 @@ export default class GLTFLodExtension {
 
         for (let level = 0; level < meshIndices.length - 1; level++) {
           const clonedMesh = mesh.clone();
-          this._assignOnBeforeRender(parser.loadMesh(meshIndices[level]),
+          this._assignOnBeforeRender('loadMesh', meshIndices[level],
             clonedMesh, level, lowestLevel, materialDef);
           lod.addLevel(clonedMesh, this._calculateDistance(level, lowestLevel, materialDef));
         }
@@ -267,7 +267,7 @@ export default class GLTFLodExtension {
             continue;
           }
           const clonedMesh = mesh.clone();
-          this._assignOnBeforeRender(parser.createNodeMesh(nodeIndices[level]),
+          this._assignOnBeforeRender('createNodeMesh', nodeIndices[level],
             clonedMesh, level, lowestLevel, nodeDef);
           lod.addLevel(clonedMesh, this._calculateDistance(level, lowestLevel, nodeDef));
         }
