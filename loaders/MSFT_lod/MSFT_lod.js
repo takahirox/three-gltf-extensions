@@ -9,19 +9,12 @@ const LOADING_MODES = {
   Progressive: 'progressive'
 };
 
-const removeLevel = (lod, obj) => {
-  const levels = lod.levels;
-  let readIndex = 0;
-  let writeIndex = 0;
-  for (readIndex = 0; readIndex < levels.length; readIndex++) {
-    if (levels[readIndex].object !== obj) {
-      levels[writeIndex++] = levels[readIndex];
-    }
-  }
-  if (writeIndex < readIndex) {
-    levels.length = writeIndex;
-    lod.remove(obj);
-  }
+const replaceLevelObject = (lod, object, levelNum) => {
+  const level = lod.levels[levelNum];
+  const oldObject = level.object;
+  level.object = object;
+  lod.remove(oldObject);
+  lod.add(object);
 };
 
 const loadScreenCoverages = (def) => {
@@ -39,6 +32,12 @@ const loadScreenCoverages = (def) => {
   }
 
   return screenCoverages;
+};
+
+const LOADING_STATES = {
+  NotStarted: 0,
+  Loading: 1,
+  Complete: 2
 };
 
 /**
@@ -117,24 +116,44 @@ export default class GLTFLodExtension {
     return 1.0 / c;
   }
 
-  _assignOnBeforeRender(functionName, index, clonedMesh, level, lowestLevel, def) {
+  // Set the lowest level first, and then progressively load the right level on demand.
+  _addProgressiveLoadingLevel(isNodeLOD, resourceIndex, lod, lowestMesh, level, lowestLevel, def, states) {
+    const currentOnBeforeRender = lowestMesh.onBeforeRender;
+    const clonedLowestMesh = lowestMesh.clone();
     const _this = this;
-    const currentOnBeforeRender = clonedMesh.onBeforeRender;
-    clonedMesh.onBeforeRender = function () {
-      const clonedMesh = this;
-      const lod = clonedMesh.parent;
-      _this.parser[functionName](index).then(mesh => {
+    // Using onBeforRender as a progressive loading trigger
+    clonedLowestMesh.onBeforeRender = function onBeforeRender() {
+      const clonedLowestMesh = this;
+      const lod = clonedLowestMesh.parent;
+      states[level] = LOADING_STATES.Loading;
+      const pending = isNodeLOD
+        ? _this.parser.createNodeMesh(resourceIndex)
+        : _this.parser.loadMesh(resourceIndex);
+      pending.then(mesh => {
+        states[level] = LOADING_STATES.Complete;
         if (_this.options.onLoadMesh) {
           mesh = _this.options.onLoadMesh(lod, mesh, level, lowestLevel);
         }
-        removeLevel(lod, clonedMesh);
-        lod.addLevel(mesh, _this._calculateDistance(level, lowestLevel, def));
+        replaceLevelObject(lod, mesh, level);
+
+        // Replace the higher level objects with this level object
+        // if they are not loaded (= using the lowest level now) yet.
+        for (let i = 0; i < level; i++) {
+          if (states[i] !== LOADING_STATES.Complete) {
+            const oldObject = lod.levels[i].object;
+            const clonedMesh = mesh.clone();
+            clonedMesh.onBeforeRender = oldObject.onBeforeRender;
+            replaceLevelObject(lod, clonedMesh, i);
+          }
+        }
+
         if (_this.options.onUpdate) {
           _this.options.onUpdate(lod, mesh, level, lowestLevel);
         }
       });
-      clonedMesh.onBeforeRender = currentOnBeforeRender;
+      clonedLowestMesh.onBeforeRender = currentOnBeforeRender;
     };
+    lod.addLevel(clonedLowestMesh, this._calculateDistance(level, lowestLevel, def));
   }
 
   // For LOD in materials
@@ -168,17 +187,18 @@ export default class GLTFLodExtension {
     const lowestLevel = meshIndices.length - 1;
 
     if (this.options.loadingMode === LOADING_MODES.Progressive) {
+      const states = new Array(meshIndices.length).fill(LOADING_STATES.NotStarted);
       const firstLoadLevel = meshIndices.length - 1;
+      states[firstLoadLevel] = LOADING_STATES.Loading;
       return parser.loadMesh(meshIndices[firstLoadLevel]).then(mesh => {
+        states[firstLoadLevel] = LOADING_STATES.Complete;
         if (this.options.onLoadMesh) {
           mesh = this.options.onLoadMesh(lod, mesh, firstLoadLevel, lowestLevel);
         }
 
         for (let level = 0; level < meshIndices.length - 1; level++) {
-          const clonedMesh = mesh.clone();
-          this._assignOnBeforeRender('loadMesh', meshIndices[level],
-            clonedMesh, level, lowestLevel, materialDef);
-          lod.addLevel(clonedMesh, this._calculateDistance(level, lowestLevel, materialDef));
+          this._addProgressiveLoadingLevel(
+            false, meshIndices[level], lod, mesh, level, lowestLevel, materialDef, states);
         }
         lod.addLevel(mesh, this._calculateDistance(firstLoadLevel, lowestLevel, materialDef));
 
@@ -245,11 +265,14 @@ export default class GLTFLodExtension {
     }
 
     if (this.options.loadingMode === LOADING_MODES.Progressive) {
+      const states = [];
       let firstLoadLevel = null;
-      for (let level = nodeIndices.length - 1; level >= 0; level--) {
+      for (let level = 0; level < nodeIndices.length; level++) {
         if (json.nodes[nodeIndices[level]].mesh !== undefined) {
           firstLoadLevel = level;
-          break;
+          states.push(LOADING_STATES.NotStarted);
+        } else {
+          states.push(LOADING_STATES.Complete);
         }
       }
 
@@ -257,7 +280,10 @@ export default class GLTFLodExtension {
         return Promise.resolve(lod);
       }
 
+      states[firstLoadLevel] = LOADING_STATES.Loading;
+
       return parser.createNodeMesh(nodeIndices[firstLoadLevel]).then(mesh => {
+        states[firstLoadLevel] = LOADING_STATES.Complete;
         if (this.options.onLoadMesh) {
           mesh = this.options.onLoadMesh(lod, mesh, firstLoadLevel, lowestLevel);
         }
@@ -266,10 +292,8 @@ export default class GLTFLodExtension {
           if (json.nodes[nodeIndices[level]].mesh === undefined) {
             continue;
           }
-          const clonedMesh = mesh.clone();
-          this._assignOnBeforeRender('createNodeMesh', nodeIndices[level],
-            clonedMesh, level, lowestLevel, nodeDef);
-          lod.addLevel(clonedMesh, this._calculateDistance(level, lowestLevel, nodeDef));
+          this._addProgressiveLoadingLevel(
+            true, nodeIndices[level], lod, mesh, level, lowestLevel, nodeDef, states);
         }
         lod.addLevel(mesh, this._calculateDistance(firstLoadLevel, lowestLevel, nodeDef));
 
