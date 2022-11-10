@@ -76,7 +76,7 @@ export default class GLTFLodExtension {
     return false;
   }
 
-  _hasLODMaterialInNode(nodeIndex) {
+  _hasLODMaterialOrSkinInNodes(nodeIndex) {
     const parser = this.parser;
     const json = parser.json;
     const nodeDef = json.nodes[nodeIndex];
@@ -88,6 +88,9 @@ export default class GLTFLodExtension {
     for (const nodeIndex of nodeIndices) {
       if (json.nodes[nodeIndex].mesh !== undefined &&
         this._hasLODMaterial(json.nodes[nodeIndex].mesh)) { 
+        return true;
+      }
+      if (json.nodes[nodeIndex].skin !== undefined) {
         return true;
       }
     }
@@ -242,9 +245,11 @@ export default class GLTFLodExtension {
 
     // If LODs are defined in both nodes and materials,
     // ignore the ones in the nodes and use the ones in the materials.
-    // @TODO: Process correctly
     // Refer to https://github.com/KhronosGroup/glTF/issues/1952
-    if (this._hasLODMaterialInNode(nodeIndex)) {
+    // Also, if LODs contain SkinnedMesh they are not handled correctly now
+    // so ignore LODs for now.
+    // @TODO: Process correctly
+    if (this._hasLODMaterialOrSkinInNodes(nodeIndex)) {
       return null;
     }
 
