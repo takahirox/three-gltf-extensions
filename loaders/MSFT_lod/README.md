@@ -75,5 +75,6 @@ a new level of LOD is added. This hooks if for setting up distance used for [Thr
 
 - If both node and material have LOD settings, the plugin uses the material one and ignore the other one so far. [#41](https://github.com/takahirox/three-gltf-extensions/issues/41)
 - Ignore material LOD if mesh has multiple primitives
+- Ignore node LOD if LODs have skin [#93](https://github.com/takahirox/three-gltf-extensions/issues/93)
 - `any` and `progressive` loading mode are not guaranteed that they work properly if `Three.js LOD` and associated objects
 are manipulated (eg. copy, clone) before all the levels loading completion.
