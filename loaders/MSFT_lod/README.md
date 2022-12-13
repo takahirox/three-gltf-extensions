@@ -41,12 +41,12 @@ other levels on demand.
 
 With LOD and progressive loading, you will get the following benefits
 * Shorter response time from the loader because it first loads only the lowest level
-* Better application runtime performance because of lower quality assets for further objects
+* Better application runtime performance because of lower quality assets for distant objects
 * Save network usage because of loading only the needed levels
 
 ## Compatible Three.js revision
 
-&gt;= r128dev
+&gt;= r148dev
 
 ## API
 
@@ -63,18 +63,16 @@ and when `onLoad` callback is fired by `GLTFLoader`. Allowed parameters are
   * `'all'`: Load all the levels at a time and `onLoad` callback is fired when all the levels are ready. Default
   * `'any'`: Load all the levels at a time and `onLoad` callback is fired when any of the levels is ready
   * `'progressive'`: First load only the lowest level and progressively load the others on demand. `onLoad` callback is fired when the lowest levels are ready
-* `onLoadMesh(lod: THREE.LOD, mesh: THREE.Mesh, level: integer, lowestLevel: integer) - THREE.Object3D` -- [optional] a callback function called before a
-new level `Three.js Mesh` object is added to the `Three.js LOD` object.
-This hook is for customizing the `Mesh` object and is expected to return a `Three.js Object3D` object added
-to the `Three.js LOD` object.
-* `onUpdate(lod: THREE.LOD, mesh: THREE.Mesh, level: integer, lowestLevel: integer)` -- [optional] a callback function called when a new level of LOD is added.
+* `onLoadNode(lod: THREE.LOD, node: THREE.Object3D, level: integer, lowestLevel: integer) - THREE.Object3D` -- [optional] a callback function called before a
+new LOD level `Three.js Object3D` object is added to the `Three.js LOD` object. This function is a hook for customizing the `Object3D` object and its descendant
+objects. The hook is expected to return a `Three.js Object3D` object added to the `Three.js LOD` object.
+* `onUpdate(lod: THREE.LOD, node: THREE.Object3D, level: integer, lowestLevel: integer)` -- [optional] a callback function called when a new level of LOD is added.
 * `calculateDistance(level: integer, lowestLevel: integer, coverages: Array) - number` -- [optional] a callback function fired right before
-a new level of LOD is added. This hooks if for setting up distance used for [Three.js LOD.addLevel](https://threejs.org/docs/#api/en/objects/LOD.addLevel) and expected to return number `distance` value. `coverages` is [`extras.MSFT_screencoverage`](https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Vendor/MSFT_lod) if defined, or an empty array.
+a new level of LOD is added. This function is a hook for setting up distance used for [Three.js LOD.addLevel](https://threejs.org/docs/#api/en/objects/LOD.addLevel) and
+expected to return number `distance` value. `coverages` is [`extras.MSFT_screencoverage`](https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Vendor/MSFT_lod) if defined, or an empty array.
 
 ## Limitations
 
-- If both node and material have LOD settings, the plugin uses the material one and ignore the other one so far. [#41](https://github.com/takahirox/three-gltf-extensions/issues/41)
-- Ignore material LOD if mesh has multiple primitives
-- Ignore node LOD if LODs have skin [#93](https://github.com/takahirox/three-gltf-extensions/issues/93)
+- Ignore material LOD
 - `any` and `progressive` loading mode are not guaranteed that they work properly if `Three.js LOD` and associated objects
 are manipulated (eg. copy, clone) before all the levels loading completion.
