@@ -28,6 +28,7 @@ This project provides you Three.js glTF loader/extension plugins even for such e
 * [EXT_texture_video](https://github.com/takahirox/EXT_texture_video) (Loader only)
 * [MSFT_lod](https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Vendor/MSFT_lod) (Loader only, in progress)
 * [MSFT_texture_dds](https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Vendor/MSFT_texture_dds) (Loader only)
+* [MANYFOLD_mesh_progressive](https://github.com/manyfold3d/glTF/tree/MANYFOLD_mesh_progressive/extensions/2.0/Vendor/MANYFOLD_mesh_progressive#readme) (Loader only)
 
 ## Compatible Three.js revision
 
